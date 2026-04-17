@@ -27,8 +27,7 @@ export type UserContext = z.infer<typeof UserContextSchema>;
 /**
  * Standard response envelopes.
  */
-export const SingleResponse = <T extends z.ZodTypeAny>(data: T) =>
-  z.object({ data });
+export const SingleResponse = <T extends z.ZodTypeAny>(data: T) => z.object({ data });
 
 export const ListResponse = <T extends z.ZodTypeAny>(item: T) =>
   z.object({

@@ -12,9 +12,8 @@ import type { UserContext } from "../types/index";
  * quickly without requiring a new JWT.
  */
 
-const DEFAULT_TTL_MS =
-  process.env["STAGE"] === "prod" ? 5 * 60 * 1000 : 1 * 60 * 1000;
-const TTL_MS = Number(process.env["AUTHZ_CACHE_TTL_MS"] ?? DEFAULT_TTL_MS);
+const DEFAULT_TTL_MS = process.env.STAGE === "prod" ? 5 * 60 * 1000 : 1 * 60 * 1000;
+const TTL_MS = Number(process.env.AUTHZ_CACHE_TTL_MS ?? DEFAULT_TTL_MS);
 
 interface CacheEntry {
   context: UserContext;

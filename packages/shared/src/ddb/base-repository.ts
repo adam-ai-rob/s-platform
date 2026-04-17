@@ -6,7 +6,7 @@ import {
   UpdateCommand,
 } from "@aws-sdk/lib-dynamodb";
 import { getDdbClient } from "./client";
-import { decodeNextToken, encodeNextToken, type PaginatedResult } from "./pagination";
+import { type PaginatedResult, decodeNextToken, encodeNextToken } from "./pagination";
 
 /**
  * BaseRepository — generic CRUD + GSI queries for a single DynamoDB table.
@@ -30,11 +30,13 @@ import { decodeNextToken, encodeNextToken, type PaginatedResult } from "./pagina
  * - No direct DynamoDBClient usage outside this file + derived repos
  */
 
-export interface BaseRepositoryOptions {
+export interface BaseRepositoryOptions<
+  TKeys extends Record<string, string> = Record<string, string>,
+> {
   tableName: string;
   keyFields: {
-    partitionKey: string;
-    sortKey?: string;
+    partitionKey: keyof TKeys & string;
+    sortKey?: keyof TKeys & string;
   };
 }
 
@@ -50,10 +52,10 @@ export interface QueryOptions {
 
 export abstract class BaseRepository<TEntity, TKeys extends Record<string, string>> {
   protected readonly tableName: string;
-  protected readonly partitionKey: string;
-  protected readonly sortKey?: string;
+  protected readonly partitionKey: keyof TKeys & string;
+  protected readonly sortKey?: keyof TKeys & string;
 
-  constructor(options: BaseRepositoryOptions) {
+  constructor(options: BaseRepositoryOptions<TKeys>) {
     this.tableName = options.tableName;
     this.partitionKey = options.keyFields.partitionKey;
     this.sortKey = options.keyFields.sortKey;

@@ -1,4 +1,4 @@
-import { createRemoteJWKSet, jwtVerify, type JWTPayload } from "jose";
+import { type JWTPayload, createRemoteJWKSet, jwtVerify } from "jose";
 import { UnauthorizedError } from "../errors/domain-error";
 
 /**
@@ -18,7 +18,7 @@ let jwks: ReturnType<typeof createRemoteJWKSet> | null = null;
 
 function getJwks(): ReturnType<typeof createRemoteJWKSet> {
   if (!jwks) {
-    const authnUrl = process.env["AUTHN_URL"];
+    const authnUrl = process.env.AUTHN_URL;
     if (!authnUrl) {
       throw new Error("AUTHN_URL env var not set — required for JWT verification");
     }
@@ -40,8 +40,8 @@ export interface AccessTokenPayload extends JWTPayload {
 export async function verifyAccessToken(token: string): Promise<AccessTokenPayload> {
   try {
     const { payload } = await jwtVerify(token, getJwks(), {
-      issuer: process.env["JWT_ISSUER"] ?? "s-authn",
-      audience: process.env["JWT_AUDIENCE"] ?? "s-platform",
+      issuer: process.env.JWT_ISSUER ?? "s-authn",
+      audience: process.env.JWT_AUDIENCE ?? "s-platform",
     });
 
     if (!payload.sub) {
@@ -51,8 +51,6 @@ export async function verifyAccessToken(token: string): Promise<AccessTokenPaylo
     return payload as AccessTokenPayload;
   } catch (err) {
     if (err instanceof UnauthorizedError) throw err;
-    throw new UnauthorizedError(
-      err instanceof Error ? err.message : "Token verification failed",
-    );
+    throw new UnauthorizedError(err instanceof Error ? err.message : "Token verification failed");
   }
 }

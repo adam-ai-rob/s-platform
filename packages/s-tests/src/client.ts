@@ -14,11 +14,7 @@ import { getStageConfig } from "./config";
 
 export interface TestClient {
   baseUrl: string;
-  request<T = unknown>(
-    method: string,
-    path: string,
-    options?: RequestOptions,
-  ): Promise<T>;
+  request<T = unknown>(method: string, path: string, options?: RequestOptions): Promise<T>;
   setToken(token: string | undefined): void;
   getToken(): string | undefined;
 }

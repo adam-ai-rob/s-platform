@@ -61,8 +61,8 @@ export function createApi<TEnv extends { Variables: Record<string, unknown> }>(
     c.json({
       data: {
         service: metadata.service,
-        stage: process.env["STAGE"] ?? "dev",
-        version: process.env["VERSION"] ?? metadata.version,
+        stage: process.env.STAGE ?? "dev",
+        version: process.env.VERSION ?? metadata.version,
         permissions: metadata.permissions,
         events: metadata.events,
         topics: metadata.topics,

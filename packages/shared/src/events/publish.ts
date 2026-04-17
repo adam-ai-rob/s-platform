@@ -20,7 +20,7 @@ let client: EventBridgeClient | null = null;
 function getClient(): EventBridgeClient {
   if (!client) {
     client = new EventBridgeClient({
-      region: process.env["AWS_REGION"] ?? "eu-west-1",
+      region: process.env.AWS_REGION ?? "eu-west-1",
     });
   }
   return client;
@@ -36,7 +36,7 @@ export interface PublishEventParams<T = unknown> {
 }
 
 export async function publishEvent<T = unknown>(params: PublishEventParams<T>): Promise<void> {
-  const busName = process.env["EVENT_BUS_NAME"];
+  const busName = process.env.EVENT_BUS_NAME;
   if (!busName) {
     throw new Error("EVENT_BUS_NAME env var not set — is the Lambda linked to platformEventBus?");
   }

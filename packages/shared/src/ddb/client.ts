@@ -17,7 +17,7 @@ let client: DynamoDBDocumentClient | null = null;
 export function getDdbClient(): DynamoDBDocumentClient {
   if (!client) {
     const ddb = new DynamoDBClient({
-      region: process.env["AWS_REGION"] ?? "eu-west-1",
+      region: process.env.AWS_REGION ?? "eu-west-1",
     });
     client = DynamoDBDocumentClient.from(ddb, {
       marshallOptions: {

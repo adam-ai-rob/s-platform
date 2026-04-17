@@ -21,8 +21,8 @@ export interface StageConfig {
 }
 
 export function getStageConfig(): StageConfig {
-  const stage = process.env["STAGE"] ?? "dev";
-  const explicitUrl = process.env["API_URL"];
+  const stage = process.env.STAGE ?? "dev";
+  const explicitUrl = process.env.API_URL;
 
   if (explicitUrl) {
     return { stage, apiUrl: explicitUrl };

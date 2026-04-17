@@ -9,5 +9,4 @@ import { getStageConfig } from "./config";
 
 const { stage, apiUrl } = getStageConfig();
 
-// biome-ignore lint/suspicious/noConsole: intentional one-time banner
 console.log(`\n🧪 Running e2e tests against stage=${stage}  url=${apiUrl}\n`);
