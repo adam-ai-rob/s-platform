@@ -14,9 +14,9 @@
 
 type Severity = "DEBUG" | "INFO" | "WARN" | "ERROR";
 
-const SERVICE = process.env["SERVICE_NAME"] ?? "unknown";
-const STAGE = process.env["STAGE"] ?? "dev";
-const LOG_LEVEL: Severity = (process.env["LOG_LEVEL"] as Severity) ?? "INFO";
+const SERVICE = process.env.SERVICE_NAME ?? "unknown";
+const STAGE = process.env.STAGE ?? "dev";
+const LOG_LEVEL: Severity = (process.env.LOG_LEVEL as Severity) ?? "INFO";
 
 const SEVERITY_RANK: Record<Severity, number> = {
   DEBUG: 10,
@@ -41,7 +41,6 @@ function emit(severity: Severity, message: string, fields?: Record<string, unkno
     ...fields,
   };
 
-  // biome-ignore lint/suspicious/noConsole: logger is the one place console is allowed
   console.log(JSON.stringify(entry));
 }
 

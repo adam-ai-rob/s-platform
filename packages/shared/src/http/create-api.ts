@@ -1,5 +1,6 @@
 import { swaggerUI } from "@hono/swagger-ui";
 import { OpenAPIHono } from "@hono/zod-openapi";
+import { authMiddleware } from "../auth/middleware";
 import { globalErrorHandler } from "../errors/handler";
 import { traceMiddleware } from "../trace/middleware";
 
@@ -32,13 +33,9 @@ export interface ApiMetadata {
  *   GET /openapi.json  — public, auto-generated OpenAPI 3.1 spec
  *   GET /docs          — public, Swagger UI
  *
- * Trace middleware is applied to all routes. Global error handler is
+ * Trace middleware runs on all routes. Global error handler is
  * registered. Modules add their own routes via `app.route(...)` or
  * `app.openapi(...)`.
- *
- * Note: /info requires an auth middleware to be attached separately —
- * see @s/shared/auth once implemented. For now, /info is public to
- * unblock initial scaffolding; swap to authMiddleware() before prod.
  *
  * Usage:
  *   const app = createApi<AppEnv>({
@@ -58,12 +55,14 @@ export function createApi<TEnv extends { Variables: Record<string, unknown> }>(
 
   app.get("/health", (c) => c.json({ status: "ok" }));
 
-  app.get("/info", (c) =>
+  // /info requires authentication so only platform users can introspect
+  // biome-ignore lint/suspicious/noExplicitAny: generic Hono middleware adapter
+  app.get("/info", authMiddleware() as any, (c) =>
     c.json({
       data: {
         service: metadata.service,
-        stage: process.env["STAGE"] ?? "dev",
-        version: process.env["VERSION"] ?? metadata.version,
+        stage: process.env.STAGE ?? "dev",
+        version: process.env.VERSION ?? metadata.version,
         permissions: metadata.permissions,
         events: metadata.events,
         topics: metadata.topics,

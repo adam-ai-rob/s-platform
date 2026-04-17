@@ -4,9 +4,7 @@
   "private": true,
   "type": "module",
   "description": "Monorepo for the s-platform — serverless, event-driven, DDD-based microservice platform on AWS.",
-  "workspaces": [
-    "packages/*"
-  ],
+  "workspaces": ["packages/*"],
   "scripts": {
     "dev": "sst dev",
     "deploy": "sst deploy",

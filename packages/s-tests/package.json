@@ -1,0 +1,23 @@
+{
+  "name": "@s/tests",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "End-to-end journey tests. Run against a deployed stage (dev/test/prod/pr-N).",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "bun test --timeout 60000",
+    "test:dev": "STAGE=dev bun test --timeout 60000",
+    "test:test": "STAGE=test bun test --timeout 60000",
+    "test:prod": "STAGE=prod bun test --timeout 60000 --filter=read-only"
+  },
+  "dependencies": {
+    "@s/shared": "workspace:*",
+    "ulid": "^2.3.0",
+    "zod": "^3.23.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "bun-types": "latest"
+  }
+}
