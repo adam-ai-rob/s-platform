@@ -1,6 +1,6 @@
 import { GetPublicKeyCommand, KMSClient, SignCommand } from "@aws-sdk/client-kms";
 import { logger } from "@s/shared/logger";
-import { type JWK, importSPKI } from "jose";
+import { exportJWK, importSPKI, type JWK } from "jose";
 import { ulid } from "ulid";
 
 /**
@@ -126,20 +126,24 @@ export async function getJwks(): Promise<{ keys: JwksKey[] }> {
 
   if (!res.PublicKey) throw new Error("KMS returned no public key");
 
-  // res.PublicKey is DER-encoded SPKI. Wrap as PEM for jose.importSPKI.
+  // res.PublicKey is DER-encoded SPKI. Wrap as PEM for jose.importSPKI,
+  // then use jose.exportJWK — importSPKI returns a KeyObject under Node,
+  // which can't be passed to crypto.subtle.exportKey directly.
   const pem = derToPem(res.PublicKey, "PUBLIC KEY");
-  const publicKey = (await importSPKI(pem, "RS256", {
-    extractable: true,
-  })) as CryptoKey;
-  const exported = await crypto.subtle.exportKey("jwk", publicKey);
+  const keyLike = await importSPKI(pem, "RS256", { extractable: true });
+  const jwk = await exportJWK(keyLike);
+
+  if (!jwk.n || !jwk.e) {
+    throw new Error("KMS public key missing RSA components (n, e)");
+  }
 
   const key: JwksKey = {
     kid: getKeyAlias(),
     kty: "RSA",
     alg: "RS256",
     use: "sig",
-    n: exported.n as string,
-    e: exported.e as string,
+    n: jwk.n,
+    e: jwk.e,
   };
 
   jwksCache = { keys: [key], cachedAt: now };
