@@ -1,6 +1,6 @@
 import { GetPublicKeyCommand, KMSClient, SignCommand } from "@aws-sdk/client-kms";
 import { logger } from "@s/shared/logger";
-import { exportJWK, importSPKI, type JWK } from "jose";
+import { type JWK, exportJWK, importSPKI } from "jose";
 import { ulid } from "ulid";
 
 /**

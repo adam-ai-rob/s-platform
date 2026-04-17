@@ -111,10 +111,7 @@ export function createApi<TEnv extends { Variables: Record<string, unknown> }>(
   });
 
   // Swagger UI points at the openapi.json sibling — prefix-aware.
-  app.get(
-    "/docs",
-    swaggerUI({ url: `${metadata.basePath ?? ""}/openapi.json` }),
-  );
+  app.get("/docs", swaggerUI({ url: `${metadata.basePath ?? ""}/openapi.json` }));
 
   // biome-ignore lint/suspicious/noExplicitAny: generic Hono context
   app.onError(globalErrorHandler as any);

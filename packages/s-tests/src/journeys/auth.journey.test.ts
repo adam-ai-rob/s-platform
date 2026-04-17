@@ -173,7 +173,6 @@ describe("auth journey", () => {
 
   beforeAll(() => {
     // Warm-up info: readable test ID for debugging
-    // biome-ignore lint/suspicious/noConsole: test banner
     console.log(`  journey email: ${email}`);
   });
 });
