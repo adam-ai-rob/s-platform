@@ -59,7 +59,12 @@ export const gateway = new sst.aws.ApiGatewayV2("PlatformGateway", {
   ...(domain && {
     domain: {
       name: domain.apiDomain,
-      dns: sst.aws.dns({ zone: domain.zoneName }),
+      // sst.aws.dns() with no args auto-resolves the hosted zone by
+      // suffix-matching the domain name. `s-api.smartiqi.com` is the
+      // closest zone match for dev/test/prod.s-api.smartiqi.com and
+      // the apex. Passing an explicit zoneId/zoneName caused "no
+      // matching zone found" in SST's internal getZone invocation.
+      dns: sst.aws.dns(),
     },
   }),
 });

@@ -9,24 +9,26 @@
  * parent `smartiqi.com` zone in the common account (679821015569).
  *
  * See s-architecture/setup/02-cross-account-dns.md for delegation setup.
+ *
+ * `sst.aws.dns()` resolves the hosted zone by suffix-matching the
+ * requested domain, so we don't need to pass the zone ID explicitly.
  */
 
 export interface DomainConfig {
   apiDomain: string;
-  zoneName: string;
 }
 
 export function getDomainConfig(): DomainConfig | undefined {
   const stage = $app.stage;
 
   if (stage === "prod") {
-    return { apiDomain: "s-api.smartiqi.com", zoneName: "s-api.smartiqi.com" };
+    return { apiDomain: "s-api.smartiqi.com" };
   }
   if (stage === "test") {
-    return { apiDomain: "test.s-api.smartiqi.com", zoneName: "s-api.smartiqi.com" };
+    return { apiDomain: "test.s-api.smartiqi.com" };
   }
   if (stage === "dev") {
-    return { apiDomain: "dev.s-api.smartiqi.com", zoneName: "s-api.smartiqi.com" };
+    return { apiDomain: "dev.s-api.smartiqi.com" };
   }
 
   // pr-{N}, personal dev stages — no custom domain
