@@ -4,24 +4,25 @@ import { logger } from "../logger/logger";
 import type { UserContext } from "../types/index";
 import { getCached, hashToken, setCached } from "./cache";
 import { verifyAccessToken } from "./verify";
+import { fetchPermissions } from "./view-lookup";
 
 /**
  * Auth middleware for Hono.
  *
- * For protected routes that are NOT behind a Lambda authorizer (the
- * authorizer handles this at the gateway layer for most routes).
- *
- * Currently used by `/info` which needs full Hono context.
- *
  * Flow:
  *   1. Extract Bearer token from Authorization header
- *   2. Hash token → check cache
- *   3. On miss: verify JWT → build UserContext → cache
+ *   2. Hash token → check in-memory cache
+ *   3. On miss: verify JWT → load permissions from AuthzView → build
+ *      UserContext → cache for AUTHZ_CACHE_TTL_MS
  *   4. Set c.get("user") for downstream handlers
  *
- * NOTE: permissions come from authz_view in the full implementation.
- * For now, this middleware sets permissions: [] from the token payload.
- * Wire up the authz_view lookup once s-authz is deployed.
+ * Permissions are read from the `AuthzView` DynamoDB table (owned by
+ * s-authz). Each API Lambda is linked to this table via SST and
+ * receives `AUTHZ_VIEW_TABLE_NAME` as an env var.
+ *
+ * If AUTHZ_VIEW_TABLE_NAME is unset, the middleware runs with
+ * `permissions: []` and logs a warning — suitable for local dev
+ * against a partial stack.
  */
 
 export type AuthEnv = {
@@ -50,10 +51,10 @@ export function authMiddleware(): MiddlewareHandler<AuthEnv> {
 
     const payload = await verifyAccessToken(token);
 
-    // TODO: once s-authz is deployed, load permissions from authz_view:
-    //   const view = await AuthzViewRepository.get(payload.sub);
-    //   const permissions = view?.permissions ?? [];
-    const permissions: UserContext["permissions"] = [];
+    // Load permissions from AuthzView (owned by s-authz).
+    // System tokens bypass the lookup — they carry their own authority.
+    const permissions: UserContext["permissions"] =
+      payload.system === true ? [] : await fetchPermissions(payload.sub);
 
     const context: UserContext = {
       userId: payload.sub,

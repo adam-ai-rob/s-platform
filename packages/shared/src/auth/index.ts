@@ -7,3 +7,4 @@ export {
   requireSystem,
   type AuthEnv,
 } from "./middleware";
+export { fetchPermissions } from "./view-lookup";

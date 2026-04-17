@@ -1,0 +1,13 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": ".",
+    "types": ["bun-types", "node"],
+    "paths": {
+      "@s-user/core/*": ["./core/src/*"],
+      "@s-user/functions/*": ["./functions/src/*"]
+    }
+  },
+  "include": ["core/src/**/*.ts", "functions/src/**/*.ts", "tests/**/*.ts"],
+  "exclude": ["node_modules"]
+}
