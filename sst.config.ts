@@ -34,10 +34,10 @@ export default $config({
 
     // Per-module stacks. Each adds routes to the shared gateway and
     // declares its own tables, Lambdas, event rules, etc.
+    const authn = await import("./infra/s-authn");
     //
     // Uncomment as modules are added.
     //
-    // const authn = await import("./infra/s-authn");
     // const authz = await import("./infra/s-authz");
     // const user = await import("./infra/s-user");
     // const group = await import("./infra/s-group");
@@ -45,6 +45,8 @@ export default $config({
     return {
       api: shared.gateway.url,
       eventBus: shared.platformEventBus.name,
+      authnUsersTable: authn.authnUsersTable.name,
+      authnRefreshTokensTable: authn.authnRefreshTokensTable.name,
     };
   },
 });

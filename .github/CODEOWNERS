@@ -14,8 +14,8 @@
 /packages/shared/           @robo-sk @adam-ai-rob
 
 # Per-module ownership — add one line per module as created
-# /packages/s-authn/          @robo-sk
-# /infra/s-authn.ts           @robo-sk
+/packages/s-authn/          @robo-sk
+/infra/s-authn.ts           @robo-sk
 # /packages/s-authz/          @robo-sk
 # /infra/s-authz.ts           @robo-sk
 # /packages/s-user/           @robo-sk
