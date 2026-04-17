@@ -34,19 +34,24 @@ export default $config({
 
     // Per-module stacks. Each adds routes to the shared gateway and
     // declares its own tables, Lambdas, event rules, etc.
+    //
+    // s-authz is imported before s-group because s-group's infra links
+    // the authzViewTable for cross-module auth-middleware lookups.
     const authn = await import("./infra/s-authn");
-    //
-    // Uncomment as modules are added.
-    //
-    // const authz = await import("./infra/s-authz");
-    // const user = await import("./infra/s-user");
-    // const group = await import("./infra/s-group");
+    const authz = await import("./infra/s-authz");
+    const user = await import("./infra/s-user");
+    const group = await import("./infra/s-group");
 
     return {
       api: shared.gateway.url,
       eventBus: shared.platformEventBus.name,
       authnUsersTable: authn.authnUsersTable.name,
       authnRefreshTokensTable: authn.authnRefreshTokensTable.name,
+      authzRolesTable: authz.authzRolesTable.name,
+      authzViewTable: authz.authzViewTable.name,
+      userProfilesTable: user.userProfilesTable.name,
+      groupsTable: group.groupsTable.name,
+      groupUsersTable: group.groupUsersTable.name,
     };
   },
 });
