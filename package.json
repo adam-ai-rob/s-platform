@@ -14,7 +14,7 @@
     "lint:check": "biome check .",
     "format": "biome format --write .",
     "test": "turbo run test",
-    "test:e2e": "STAGE=${STAGE:-dev} bun test packages/s-tests",
+    "test:e2e": "cd packages/s-tests && STAGE=${STAGE:-dev} bun run test:e2e",
     "new-module": "./scripts/new-module.sh"
   },
   "devDependencies": {

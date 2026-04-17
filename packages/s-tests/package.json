@@ -6,10 +6,11 @@
   "description": "End-to-end journey tests. Run against a deployed stage (dev/test/prod/pr-N).",
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "test": "bun test --timeout 60000",
-    "test:dev": "STAGE=dev bun test --timeout 60000",
-    "test:test": "STAGE=test bun test --timeout 60000",
-    "test:prod": "STAGE=prod bun test --timeout 60000 --filter=read-only"
+    "test": "bun test src/smoke.test.ts --timeout 60000",
+    "test:e2e": "bun test src --timeout 60000",
+    "test:dev": "STAGE=dev bun test src --timeout 60000",
+    "test:test": "STAGE=test bun test src --timeout 60000",
+    "test:prod": "STAGE=prod bun test src/smoke.test.ts --timeout 60000"
   },
   "dependencies": {
     "@s/shared": "workspace:*",
