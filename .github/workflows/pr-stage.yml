@@ -40,10 +40,16 @@ jobs:
           aws-region: ${{ vars.AWS_REGION }}
 
       - name: Deploy
+        run: bun sst deploy --stage $STAGE --print-logs
+
+      - name: Resolve API URL
         id: deploy
         run: |
-          bun sst deploy --stage $STAGE --print-logs | tee /tmp/sst-deploy.log
-          API_URL=$(grep -oP 'api:\s*\K.*' /tmp/sst-deploy.log | tail -1 || echo "unknown")
+          API_URL=$(bun sst output api --stage $STAGE)
+          if [ -z "$API_URL" ]; then
+            echo "::error::Could not resolve API URL for stage $STAGE"
+            exit 1
+          fi
           echo "api_url=$API_URL" >> "$GITHUB_OUTPUT"
 
       - name: Run e2e tests against PR stage
