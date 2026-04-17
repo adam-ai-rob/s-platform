@@ -88,6 +88,7 @@ export const authzStreamHandler = new sst.aws.Function("AuthzStreamHandler", {
   environment: {
     STAGE: $app.stage,
     SERVICE_NAME: "s-authz-stream",
+    EVENT_BUS_NAME: platformEventBus.name,
   },
   permissions: [
     {

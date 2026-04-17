@@ -39,6 +39,7 @@ export const userStreamHandler = new sst.aws.Function("UserStreamHandler", {
   environment: {
     STAGE: $app.stage,
     SERVICE_NAME: "s-user-stream",
+    EVENT_BUS_NAME: platformEventBus.name,
   },
   permissions: [
     {

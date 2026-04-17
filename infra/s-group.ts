@@ -64,6 +64,7 @@ export const groupStreamHandler = new sst.aws.Function("GroupStreamHandler", {
   environment: {
     STAGE: $app.stage,
     SERVICE_NAME: "s-group-stream",
+    EVENT_BUS_NAME: platformEventBus.name,
   },
   permissions: [
     {
