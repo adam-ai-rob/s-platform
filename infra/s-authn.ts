@@ -1,7 +1,7 @@
 import * as aws from "@pulumi/aws";
 import * as pulumi from "@pulumi/pulumi";
 import { authzViewTable } from "./s-authz";
-import { gateway, jwtSigningKeyAlias, platformEventBus } from "./shared";
+import { createDlqWithAlarm, gateway, jwtSigningKeyAlias, platformEventBus } from "./shared";
 
 /**
  * s-authn infrastructure:
@@ -92,6 +92,8 @@ gateway.route("ANY /authn/{proxy+}", authnApi.arn);
 
 // ─── Stream Handler Lambda ────────────────────────────────────────────────────
 
+const authnStreamDlq = createDlqWithAlarm("AuthnStream");
+
 export const authnStreamHandler = new sst.aws.Function("AuthnStreamHandler", {
   link: [authnUsersTable, authnRefreshTokensTable, platformEventBus],
   environment: {
@@ -109,6 +111,10 @@ export const authnStreamHandler = new sst.aws.Function("AuthnStreamHandler", {
       ],
       resources: ["*"],
     },
+    {
+      actions: ["sqs:SendMessage"],
+      resources: [authnStreamDlq.arn],
+    },
   ],
   handler: "packages/s-authn/functions/src/stream-handler.handler",
 });
@@ -120,4 +126,7 @@ new aws.lambda.EventSourceMapping("AuthnUsersStreamMapping", {
   batchSize: 10,
   maximumRetryAttempts: 3,
   maximumRecordAgeInSeconds: 3600,
+  destinationConfig: {
+    onFailure: { destination: authnStreamDlq.arn },
+  },
 });

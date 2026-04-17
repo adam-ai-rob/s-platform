@@ -1,5 +1,5 @@
 import * as aws from "@pulumi/aws";
-import { gateway, platformEventBus } from "./shared";
+import { allowEventBridgeToDlq, createDlqWithAlarm, gateway, platformEventBus } from "./shared";
 
 /**
  * s-authz infrastructure:
@@ -83,6 +83,8 @@ gateway.route("ANY /authz/{proxy+}", authzApi.arn);
 
 // ─── Stream handler (roles + view streams) ────────────────────────────────────
 
+const authzStreamDlq = createDlqWithAlarm("AuthzStream");
+
 export const authzStreamHandler = new sst.aws.Function("AuthzStreamHandler", {
   link: [authzRolesTable, authzViewTable, platformEventBus],
   environment: {
@@ -100,6 +102,10 @@ export const authzStreamHandler = new sst.aws.Function("AuthzStreamHandler", {
       ],
       resources: ["*"],
     },
+    {
+      actions: ["sqs:SendMessage"],
+      resources: [authzStreamDlq.arn],
+    },
   ],
   handler: "packages/s-authz/functions/src/stream-handler.handler",
 });
@@ -111,6 +117,9 @@ new aws.lambda.EventSourceMapping("AuthzRolesStreamMapping", {
   batchSize: 10,
   maximumRetryAttempts: 3,
   maximumRecordAgeInSeconds: 3600,
+  destinationConfig: {
+    onFailure: { destination: authzStreamDlq.arn },
+  },
 });
 
 new aws.lambda.EventSourceMapping("AuthzViewStreamMapping", {
@@ -120,6 +129,9 @@ new aws.lambda.EventSourceMapping("AuthzViewStreamMapping", {
   batchSize: 10,
   maximumRetryAttempts: 3,
   maximumRecordAgeInSeconds: 3600,
+  destinationConfig: {
+    onFailure: { destination: authzStreamDlq.arn },
+  },
 });
 
 // ─── Event handler (user.* and group.* events → rebuild view) ─────────────────
@@ -151,10 +163,14 @@ const authzSubscriptionsRule = new aws.cloudwatch.EventRule("AuthzSubscriptions"
   }),
 });
 
+const authzEventDlq = createDlqWithAlarm("AuthzEvent");
+allowEventBridgeToDlq("AuthzEvent", authzEventDlq);
+
 new aws.cloudwatch.EventTarget("AuthzSubscriptionsTarget", {
   rule: authzSubscriptionsRule.name,
   eventBusName: platformEventBus.name,
   arn: authzEventHandler.nodes.function.arn,
+  deadLetterConfig: { arn: authzEventDlq.arn },
 });
 
 new aws.lambda.Permission("AuthzEventHandlerInvoke", {

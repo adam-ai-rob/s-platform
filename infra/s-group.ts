@@ -1,6 +1,6 @@
 import * as aws from "@pulumi/aws";
 import { authzViewTable } from "./s-authz";
-import { gateway, platformEventBus } from "./shared";
+import { allowEventBridgeToDlq, createDlqWithAlarm, gateway, platformEventBus } from "./shared";
 
 /**
  * s-group infrastructure:
@@ -59,6 +59,8 @@ gateway.route("ANY /group/{proxy+}", groupApi.arn);
 
 // ─── Stream handler (Groups + GroupUsers) ─────────────────────────────────────
 
+const groupStreamDlq = createDlqWithAlarm("GroupStream");
+
 export const groupStreamHandler = new sst.aws.Function("GroupStreamHandler", {
   link: [groupsTable, groupUsersTable, platformEventBus],
   environment: {
@@ -76,6 +78,10 @@ export const groupStreamHandler = new sst.aws.Function("GroupStreamHandler", {
       ],
       resources: ["*"],
     },
+    {
+      actions: ["sqs:SendMessage"],
+      resources: [groupStreamDlq.arn],
+    },
   ],
   handler: "packages/s-group/functions/src/stream-handler.handler",
 });
@@ -87,6 +93,9 @@ new aws.lambda.EventSourceMapping("GroupsStreamMapping", {
   batchSize: 10,
   maximumRetryAttempts: 3,
   maximumRecordAgeInSeconds: 3600,
+  destinationConfig: {
+    onFailure: { destination: groupStreamDlq.arn },
+  },
 });
 
 new aws.lambda.EventSourceMapping("GroupUsersStreamMapping", {
@@ -96,6 +105,9 @@ new aws.lambda.EventSourceMapping("GroupUsersStreamMapping", {
   batchSize: 10,
   maximumRetryAttempts: 3,
   maximumRecordAgeInSeconds: 3600,
+  destinationConfig: {
+    onFailure: { destination: groupStreamDlq.arn },
+  },
 });
 
 // ─── Event handler (user.registered → domain auto-assign) ─────────────────────
@@ -119,10 +131,14 @@ const groupOnUserRegisteredRule = new aws.cloudwatch.EventRule("GroupOnUserRegis
   }),
 });
 
+const groupEventDlq = createDlqWithAlarm("GroupEvent");
+allowEventBridgeToDlq("GroupEvent", groupEventDlq);
+
 new aws.cloudwatch.EventTarget("GroupOnUserRegisteredTarget", {
   rule: groupOnUserRegisteredRule.name,
   eventBusName: platformEventBus.name,
   arn: groupEventHandler.nodes.function.arn,
+  deadLetterConfig: { arn: groupEventDlq.arn },
 });
 
 new aws.lambda.Permission("GroupEventHandlerInvoke", {

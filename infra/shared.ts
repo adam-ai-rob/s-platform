@@ -11,6 +11,7 @@
  */
 
 import * as aws from "@pulumi/aws";
+import type * as pulumi from "@pulumi/pulumi";
 import { getDomainConfig } from "./domains";
 
 // ─── KMS: JWT Signing Key (RSA-4096) ──────────────────────────────────────────
@@ -75,3 +76,90 @@ export const gateway = new sst.aws.ApiGatewayV2("PlatformGateway", {
 
 // OPTIONS /{proxy+} — CORS preflight for all routes, no auth
 // gateway-level CORS handles this, but keeping as explicit route is a belt-and-suspenders choice.
+
+// ─── SNS: Platform Alarms ─────────────────────────────────────────────────────
+
+/**
+ * Single topic that fans out every CloudWatch alarm across the platform.
+ * Subscribed via email for now; add Slack/PagerDuty by subscribing additional
+ * endpoints (tracked as a follow-up).
+ *
+ * Note: SNS email subscriptions are `PendingConfirmation` until the recipient
+ * clicks the confirmation link. Expect a one-time email per stage on first
+ * deploy.
+ */
+export const platformAlarmsTopic = new aws.sns.Topic("PlatformAlarms", {
+  name: `platform-alarms-${$app.stage}`,
+  displayName: `s-platform alarms (${$app.stage})`,
+});
+
+new aws.sns.TopicSubscription("PlatformAlarmsEmail", {
+  topic: platformAlarmsTopic.arn,
+  protocol: "email",
+  endpoint: "robert.hikl@outlook.com",
+});
+
+// ─── DLQ Helpers ──────────────────────────────────────────────────────────────
+
+export interface DlqBundle {
+  queue: aws.sqs.Queue;
+  arn: pulumi.Output<string>;
+}
+
+/**
+ * Create a DLQ + CloudWatch alarm pair. Alarm fires when at least one message
+ * sits in the DLQ (indicating a handler failed past its retry budget) and
+ * publishes to the platform alarms SNS topic.
+ *
+ * For DDB-stream consumers, wire via `EventSourceMapping.destinationConfig`
+ * and grant the Lambda `sqs:SendMessage` on the DLQ ARN.
+ *
+ * For EventBridge targets, wire via `EventTarget.deadLetterConfig.arn` and
+ * add a `QueuePolicy` allowing `events.amazonaws.com` to send messages.
+ */
+export function createDlqWithAlarm(name: string): DlqBundle {
+  const queue = new aws.sqs.Queue(`${name}Dlq`, {
+    name: `${name}-dlq-${$app.stage}`,
+    messageRetentionSeconds: 1_209_600, // 14 days
+  });
+
+  new aws.cloudwatch.MetricAlarm(`${name}DlqAlarm`, {
+    name: `${name}-dlq-not-empty-${$app.stage}`,
+    alarmDescription: `${name} DLQ has at least one message — handler failed past its retry budget`,
+    namespace: "AWS/SQS",
+    metricName: "ApproximateNumberOfMessagesVisible",
+    statistic: "Maximum",
+    period: 60,
+    evaluationPeriods: 1,
+    threshold: 1,
+    comparisonOperator: "GreaterThanOrEqualToThreshold",
+    dimensions: { QueueName: queue.name },
+    alarmActions: [platformAlarmsTopic.arn],
+    treatMissingData: "notBreaching",
+  });
+
+  return { queue, arn: queue.arn };
+}
+
+/**
+ * Grant EventBridge the right to SendMessage to a DLQ. Use for DLQs wired
+ * onto `EventTarget.deadLetterConfig.arn`.
+ */
+export function allowEventBridgeToDlq(name: string, dlq: DlqBundle): void {
+  new aws.sqs.QueuePolicy(`${name}DlqPolicy`, {
+    queueUrl: dlq.queue.id,
+    policy: dlq.queue.arn.apply((arn) =>
+      JSON.stringify({
+        Version: "2012-10-17",
+        Statement: [
+          {
+            Effect: "Allow",
+            Principal: { Service: "events.amazonaws.com" },
+            Action: "sqs:SendMessage",
+            Resource: arn,
+          },
+        ],
+      }),
+    ),
+  });
+}
