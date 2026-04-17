@@ -47,7 +47,9 @@ jobs:
           echo "api_url=$API_URL" >> "$GITHUB_OUTPUT"
 
       - name: Run e2e tests against PR stage
-        run: STAGE=$STAGE bun run test:e2e
+        env:
+          API_URL: ${{ steps.deploy.outputs.api_url }}
+        run: STAGE=$STAGE API_URL=$API_URL bun run test:e2e
 
       - name: Comment PR with stage details
         uses: actions/github-script@v7
