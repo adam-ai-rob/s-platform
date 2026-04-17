@@ -118,7 +118,7 @@ new aws.lambda.EventSourceMapping("AuthzRolesStreamMapping", {
   maximumRetryAttempts: 3,
   maximumRecordAgeInSeconds: 3600,
   destinationConfig: {
-    onFailure: { destination: authzStreamDlq.arn },
+    onFailure: { destinationArn: authzStreamDlq.arn },
   },
 });
 
@@ -130,7 +130,7 @@ new aws.lambda.EventSourceMapping("AuthzViewStreamMapping", {
   maximumRetryAttempts: 3,
   maximumRecordAgeInSeconds: 3600,
   destinationConfig: {
-    onFailure: { destination: authzStreamDlq.arn },
+    onFailure: { destinationArn: authzStreamDlq.arn },
   },
 });
 

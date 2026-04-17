@@ -71,7 +71,7 @@ new aws.lambda.EventSourceMapping("UserProfilesStreamMapping", {
   maximumRetryAttempts: 3,
   maximumRecordAgeInSeconds: 3600,
   destinationConfig: {
-    onFailure: { destination: userStreamDlq.arn },
+    onFailure: { destinationArn: userStreamDlq.arn },
   },
 });
 

@@ -94,7 +94,7 @@ new aws.lambda.EventSourceMapping("GroupsStreamMapping", {
   maximumRetryAttempts: 3,
   maximumRecordAgeInSeconds: 3600,
   destinationConfig: {
-    onFailure: { destination: groupStreamDlq.arn },
+    onFailure: { destinationArn: groupStreamDlq.arn },
   },
 });
 
@@ -106,7 +106,7 @@ new aws.lambda.EventSourceMapping("GroupUsersStreamMapping", {
   maximumRetryAttempts: 3,
   maximumRecordAgeInSeconds: 3600,
   destinationConfig: {
-    onFailure: { destination: groupStreamDlq.arn },
+    onFailure: { destinationArn: groupStreamDlq.arn },
   },
 });
 
