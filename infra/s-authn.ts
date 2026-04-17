@@ -54,6 +54,12 @@ export const authnApi = new sst.aws.Function("AuthnApi", {
     AUTHN_REFRESH_TOKENS_TABLE_NAME: authnRefreshTokensTable.name,
   },
   handler: "packages/s-authn/functions/src/handler.handler",
+  nodejs: {
+    // @node-rs/argon2 ships prebuilt .node binaries per platform — don't let
+    // esbuild try to bundle them. Installed fresh at build time for Lambda's
+    // linux-x64-gnu runtime.
+    install: ["@node-rs/argon2"],
+  },
 });
 
 // Grant KMS Sign + GetPublicKey
@@ -85,11 +91,22 @@ gateway.route("ANY /authn/{proxy+}", authnApi.arn);
 // ─── Stream Handler Lambda ────────────────────────────────────────────────────
 
 export const authnStreamHandler = new sst.aws.Function("AuthnStreamHandler", {
-  link: [platformEventBus],
+  link: [authnUsersTable, authnRefreshTokensTable, platformEventBus],
   environment: {
     STAGE: $app.stage,
     SERVICE_NAME: "s-authn-stream",
   },
+  permissions: [
+    {
+      actions: [
+        "dynamodb:DescribeStream",
+        "dynamodb:GetRecords",
+        "dynamodb:GetShardIterator",
+        "dynamodb:ListStreams",
+      ],
+      resources: ["*"],
+    },
+  ],
   handler: "packages/s-authn/functions/src/stream-handler.handler",
 });
 

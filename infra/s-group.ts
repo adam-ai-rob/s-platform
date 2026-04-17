@@ -60,11 +60,22 @@ gateway.route("ANY /group/{proxy+}", groupApi.arn);
 // ─── Stream handler (Groups + GroupUsers) ─────────────────────────────────────
 
 export const groupStreamHandler = new sst.aws.Function("GroupStreamHandler", {
-  link: [platformEventBus],
+  link: [groupsTable, groupUsersTable, platformEventBus],
   environment: {
     STAGE: $app.stage,
     SERVICE_NAME: "s-group-stream",
   },
+  permissions: [
+    {
+      actions: [
+        "dynamodb:DescribeStream",
+        "dynamodb:GetRecords",
+        "dynamodb:GetShardIterator",
+        "dynamodb:ListStreams",
+      ],
+      resources: ["*"],
+    },
+  ],
   handler: "packages/s-group/functions/src/stream-handler.handler",
 });
 

@@ -84,11 +84,22 @@ gateway.route("ANY /authz/{proxy+}", authzApi.arn);
 // ─── Stream handler (roles + view streams) ────────────────────────────────────
 
 export const authzStreamHandler = new sst.aws.Function("AuthzStreamHandler", {
-  link: [platformEventBus],
+  link: [authzRolesTable, authzViewTable, platformEventBus],
   environment: {
     STAGE: $app.stage,
     SERVICE_NAME: "s-authz-stream",
   },
+  permissions: [
+    {
+      actions: [
+        "dynamodb:DescribeStream",
+        "dynamodb:GetRecords",
+        "dynamodb:GetShardIterator",
+        "dynamodb:ListStreams",
+      ],
+      resources: ["*"],
+    },
+  ],
   handler: "packages/s-authz/functions/src/stream-handler.handler",
 });
 

@@ -35,11 +35,22 @@ gateway.route("ANY /user/{proxy+}", userApi.arn);
 // ─── Stream Handler ───────────────────────────────────────────────────────────
 
 export const userStreamHandler = new sst.aws.Function("UserStreamHandler", {
-  link: [platformEventBus],
+  link: [userProfilesTable, platformEventBus],
   environment: {
     STAGE: $app.stage,
     SERVICE_NAME: "s-user-stream",
   },
+  permissions: [
+    {
+      actions: [
+        "dynamodb:DescribeStream",
+        "dynamodb:GetRecords",
+        "dynamodb:GetShardIterator",
+        "dynamodb:ListStreams",
+      ],
+      resources: ["*"],
+    },
+  ],
   handler: "packages/s-user/functions/src/stream-handler.handler",
 });
 
