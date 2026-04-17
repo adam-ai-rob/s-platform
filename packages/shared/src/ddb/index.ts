@@ -1,11 +1,3 @@
-// DDB SDK — placeholder for Phase 2.
-//
-// Will export:
-//   - getDdbClient() — singleton DynamoDBDocumentClient
-//   - BaseRepository<TEntity, TKeys>  — generic CRUD + queryByIndex
-//   - Pagination helpers (encodeNextToken, decodeNextToken)
-//   - isConditionalCheckFailed(err) guard
-//
-// See s-architecture/docs/08-data-access-patterns.md.
-
-export {};
+export { getDdbClient, isConditionalCheckFailed } from "./client";
+export { encodeNextToken, decodeNextToken, type PaginatedResult } from "./pagination";
+export { BaseRepository, type BaseRepositoryOptions, type QueryOptions } from "./base-repository";
