@@ -1,0 +1,113 @@
+name: PR Stage
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, closed]
+
+concurrency:
+  group: pr-stage-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  id-token: write
+  contents: read
+  pull-requests: write
+
+jobs:
+  deploy:
+    if: github.event.action != 'closed'
+    name: Deploy PR stage
+    runs-on: ubuntu-latest
+    environment: dev
+    env:
+      STAGE: pr-${{ github.event.pull_request.number }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Bun
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ vars.AWS_ACCOUNT_ID }}:role/GitHubActionsRole
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Deploy
+        id: deploy
+        run: |
+          bun sst deploy --stage $STAGE --print-logs | tee /tmp/sst-deploy.log
+          API_URL=$(grep -oP 'api:\s*\K.*' /tmp/sst-deploy.log | tail -1 || echo "unknown")
+          echo "api_url=$API_URL" >> "$GITHUB_OUTPUT"
+
+      - name: Run e2e tests against PR stage
+        run: STAGE=$STAGE bun run test:e2e
+
+      - name: Comment PR with stage details
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const apiUrl = '${{ steps.deploy.outputs.api_url }}';
+            const stage = `pr-${context.issue.number}`;
+            const body = [
+              `🚀 **PR stage deployed:** \`${stage}\``,
+              ``,
+              `- **API:** ${apiUrl}`,
+              `- **Destroyed automatically** when this PR closes.`,
+              ``,
+              `Run tests locally against this stage: \`STAGE=${stage} bun run test:e2e\``,
+            ].join('\n');
+
+            const { data: comments } = await github.rest.issues.listComments({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+            });
+            const existing = comments.find(c => c.body?.startsWith('🚀 **PR stage deployed:**'));
+            if (existing) {
+              await github.rest.issues.updateComment({
+                comment_id: existing.id,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body,
+              });
+            }
+
+  teardown:
+    if: github.event.action == 'closed'
+    name: Remove PR stage
+    runs-on: ubuntu-latest
+    environment: dev
+    env:
+      STAGE: pr-${{ github.event.pull_request.number }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Bun
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ vars.AWS_ACCOUNT_ID }}:role/GitHubActionsRole
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Remove
+        run: bun sst remove --stage $STAGE --print-logs

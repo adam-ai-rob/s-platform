@@ -1,0 +1,35 @@
+# Dependencies
+node_modules/
+
+# SST
+.sst/
+sst-env.d.ts
+
+# Build artifacts
+dist/
+.turbo/
+*.tsbuildinfo
+
+# Environment
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# Editor
+.vscode/
+.idea/
+*.swp
+.DS_Store
+
+# Logs
+*.log
+npm-debug.log*
+bun-debug.log*
+
+# Coverage
+coverage/
+.nyc_output/
+
+# Local temp files
+tmp/

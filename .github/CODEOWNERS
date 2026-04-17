@@ -1,0 +1,31 @@
+# Per-package ownership for s-platform.
+#
+# Format: <path> <owner> [<additional owners>]
+#
+# When an AI agent owns a module, add it alongside the human maintainer:
+#   /packages/s-authn/ @agent-authn @robo-sk
+
+# Global defaults — maintainers of the platform
+*                           @robo-sk @adam-ai-rob
+
+# Shared infrastructure and cross-cutting packages require maintainer review
+/infra/shared.ts            @robo-sk @adam-ai-rob
+/infra/domains.ts           @robo-sk @adam-ai-rob
+/packages/shared/           @robo-sk @adam-ai-rob
+
+# Per-module ownership — add one line per module as created
+# /packages/s-authn/          @robo-sk
+# /infra/s-authn.ts           @robo-sk
+# /packages/s-authz/          @robo-sk
+# /infra/s-authz.ts           @robo-sk
+# /packages/s-user/           @robo-sk
+# /infra/s-user.ts            @robo-sk
+# /packages/s-group/          @robo-sk
+# /infra/s-group.ts           @robo-sk
+
+# s-tests is owned by all module agents (cross-cutting integration suite)
+/packages/s-tests/          @robo-sk @adam-ai-rob
+
+# Scripts and CI are maintainer-only
+/scripts/                   @robo-sk @adam-ai-rob
+/.github/                   @robo-sk @adam-ai-rob
