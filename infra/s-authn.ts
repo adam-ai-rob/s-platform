@@ -1,5 +1,6 @@
 import * as aws from "@pulumi/aws";
 import * as pulumi from "@pulumi/pulumi";
+import { authzViewTable } from "./s-authz";
 import { gateway, jwtSigningKeyAlias, platformEventBus } from "./shared";
 
 /**
@@ -42,7 +43,7 @@ export const authnRefreshTokensTable = new sst.aws.Dynamo("AuthnRefreshTokens", 
 // ─── API Lambda ───────────────────────────────────────────────────────────────
 
 export const authnApi = new sst.aws.Function("AuthnApi", {
-  link: [authnUsersTable, authnRefreshTokensTable, platformEventBus],
+  link: [authnUsersTable, authnRefreshTokensTable, authzViewTable, platformEventBus],
   environment: {
     STAGE: $app.stage,
     SERVICE_NAME: "s-authn",
@@ -52,6 +53,7 @@ export const authnApi = new sst.aws.Function("AuthnApi", {
     AUTHN_URL: gateway.url, // for @s/shared/auth JWKS self-reference
     AUTHN_USERS_TABLE_NAME: authnUsersTable.name,
     AUTHN_REFRESH_TOKENS_TABLE_NAME: authnRefreshTokensTable.name,
+    AUTHZ_VIEW_TABLE_NAME: authzViewTable.name,
   },
   handler: "packages/s-authn/functions/src/handler.handler",
   nodejs: {
