@@ -1,0 +1,31 @@
+{
+  "name": "@s/authz",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "s-authz — roles, permissions, authz-view materialized view.",
+  "exports": {
+    "./core/*": "./core/src/*.ts",
+    "./functions/*": "./functions/src/*.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "bun test",
+    "lint": "biome check --write ."
+  },
+  "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.650.0",
+    "@aws-sdk/lib-dynamodb": "^3.650.0",
+    "@aws-sdk/util-dynamodb": "^3.650.0",
+    "@hono/swagger-ui": "^0.4.0",
+    "@hono/zod-openapi": "^0.16.0",
+    "@s/shared": "workspace:*",
+    "hono": "^4.6.0",
+    "ulid": "^2.3.0",
+    "zod": "^3.23.0"
+  },
+  "devDependencies": {
+    "@types/aws-lambda": "^8.10.143",
+    "bun-types": "latest"
+  }
+}

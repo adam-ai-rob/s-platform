@@ -35,6 +35,44 @@
         "bun-types": "latest",
       },
     },
+    "packages/s-authz": {
+      "name": "@s/authz",
+      "version": "0.1.0",
+      "dependencies": {
+        "@aws-sdk/client-dynamodb": "^3.650.0",
+        "@aws-sdk/lib-dynamodb": "^3.650.0",
+        "@aws-sdk/util-dynamodb": "^3.650.0",
+        "@hono/swagger-ui": "^0.4.0",
+        "@hono/zod-openapi": "^0.16.0",
+        "@s/shared": "workspace:*",
+        "hono": "^4.6.0",
+        "ulid": "^2.3.0",
+        "zod": "^3.23.0",
+      },
+      "devDependencies": {
+        "@types/aws-lambda": "^8.10.143",
+        "bun-types": "latest",
+      },
+    },
+    "packages/s-group": {
+      "name": "@s/group",
+      "version": "0.1.0",
+      "dependencies": {
+        "@aws-sdk/client-dynamodb": "^3.650.0",
+        "@aws-sdk/lib-dynamodb": "^3.650.0",
+        "@aws-sdk/util-dynamodb": "^3.650.0",
+        "@hono/swagger-ui": "^0.4.0",
+        "@hono/zod-openapi": "^0.16.0",
+        "@s/shared": "workspace:*",
+        "hono": "^4.6.0",
+        "ulid": "^2.3.0",
+        "zod": "^3.23.0",
+      },
+      "devDependencies": {
+        "@types/aws-lambda": "^8.10.143",
+        "bun-types": "latest",
+      },
+    },
     "packages/s-tests": {
       "name": "@s/tests",
       "version": "0.1.0",
@@ -45,6 +83,25 @@
       },
       "devDependencies": {
         "@types/node": "^22.0.0",
+        "bun-types": "latest",
+      },
+    },
+    "packages/s-user": {
+      "name": "@s/user",
+      "version": "0.1.0",
+      "dependencies": {
+        "@aws-sdk/client-dynamodb": "^3.650.0",
+        "@aws-sdk/lib-dynamodb": "^3.650.0",
+        "@aws-sdk/util-dynamodb": "^3.650.0",
+        "@hono/swagger-ui": "^0.4.0",
+        "@hono/zod-openapi": "^0.16.0",
+        "@s/shared": "workspace:*",
+        "hono": "^4.6.0",
+        "ulid": "^2.3.0",
+        "zod": "^3.23.0",
+      },
+      "devDependencies": {
+        "@types/aws-lambda": "^8.10.143",
         "bun-types": "latest",
       },
     },
@@ -213,9 +270,15 @@
 
     "@s/authn": ["@s/authn@workspace:packages/s-authn"],
 
+    "@s/authz": ["@s/authz@workspace:packages/s-authz"],
+
+    "@s/group": ["@s/group@workspace:packages/s-group"],
+
     "@s/shared": ["@s/shared@workspace:packages/shared"],
 
     "@s/tests": ["@s/tests@workspace:packages/s-tests"],
+
+    "@s/user": ["@s/user@workspace:packages/s-user"],
 
     "@sinonjs/commons": ["@sinonjs/commons@3.0.1", "", { "dependencies": { "type-detect": "4.0.8" } }, "sha512-K3mCHKQ9sVh8o1C9cxkwxaOmXoAMlDxC1mYyHrjqOWEcBjYr76t96zL2zlj5dUGZ3HSw240X1qgH3Mjf1yJWpQ=="],
 

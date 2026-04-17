@@ -1,0 +1,13 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": ".",
+    "types": ["bun-types", "node"],
+    "paths": {
+      "@s-authz/core/*": ["./core/src/*"],
+      "@s-authz/functions/*": ["./functions/src/*"]
+    }
+  },
+  "include": ["core/src/**/*.ts", "functions/src/**/*.ts", "tests/**/*.ts"],
+  "exclude": ["node_modules"]
+}

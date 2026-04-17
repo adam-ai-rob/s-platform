@@ -16,12 +16,12 @@
 # Per-module ownership — add one line per module as created
 /packages/s-authn/          @robo-sk
 /infra/s-authn.ts           @robo-sk
-# /packages/s-authz/          @robo-sk
-# /infra/s-authz.ts           @robo-sk
-# /packages/s-user/           @robo-sk
-# /infra/s-user.ts            @robo-sk
-# /packages/s-group/          @robo-sk
-# /infra/s-group.ts           @robo-sk
+/packages/s-authz/          @robo-sk
+/infra/s-authz.ts           @robo-sk
+/packages/s-user/           @robo-sk
+/infra/s-user.ts            @robo-sk
+/packages/s-group/          @robo-sk
+/infra/s-group.ts           @robo-sk
 
 # s-tests is owned by all module agents (cross-cutting integration suite)
 /packages/s-tests/          @robo-sk @adam-ai-rob
