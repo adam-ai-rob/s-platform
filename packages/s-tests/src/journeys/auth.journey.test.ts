@@ -137,6 +137,25 @@ describe("auth journey", () => {
     client.setToken(accessToken);
   });
 
+  test("[10a] admin endpoint 403s for user without role (authz_view wiring)", async () => {
+    // Freshly-registered user has no roles → AuthzView has no permissions →
+    // requirePermission("authz_admin") must fail-closed with 403.
+    // Regression guard for the s-authz AUTHZ_VIEW_TABLE_NAME wiring.
+    client.setToken(accessToken);
+    try {
+      await client.request("POST", "/authz/admin/roles", {
+        body: { id: "test-role", name: "Test Role", permissions: [] },
+      });
+      throw new Error("Expected 403");
+    } catch (err) {
+      if (err instanceof TestHttpError) {
+        expect(err.status).toBe(403);
+        return;
+      }
+      throw err;
+    }
+  });
+
   test("[10] /health on every module — smoke", async () => {
     for (const module of ["authn", "authz", "user", "group"]) {
       client.setToken(undefined);
@@ -154,7 +173,6 @@ describe("auth journey", () => {
 
   beforeAll(() => {
     // Warm-up info: readable test ID for debugging
-    // biome-ignore lint/suspicious/noConsole: test banner
     console.log(`  journey email: ${email}`);
   });
 });

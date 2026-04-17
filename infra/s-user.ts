@@ -1,4 +1,5 @@
 import * as aws from "@pulumi/aws";
+import { authzViewTable } from "./s-authz";
 import { gateway, platformEventBus } from "./shared";
 
 /**
@@ -20,12 +21,13 @@ export const userProfilesTable = new sst.aws.Dynamo("UserProfiles", {
 // ─── API Lambda ───────────────────────────────────────────────────────────────
 
 export const userApi = new sst.aws.Function("UserApi", {
-  link: [userProfilesTable, platformEventBus],
+  link: [userProfilesTable, authzViewTable, platformEventBus],
   environment: {
     STAGE: $app.stage,
     SERVICE_NAME: "s-user",
     USER_PROFILES_TABLE_NAME: userProfilesTable.name,
     AUTHN_URL: gateway.url, // for authMiddleware JWKS
+    AUTHZ_VIEW_TABLE_NAME: authzViewTable.name,
   },
   handler: "packages/s-user/functions/src/handler.handler",
 });
