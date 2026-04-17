@@ -1,6 +1,6 @@
 import * as aws from "@pulumi/aws";
 import { authzViewTable } from "./s-authz";
-import { gateway, platformEventBus } from "./shared";
+import { allowEventBridgeToDlq, createDlqWithAlarm, gateway, platformEventBus } from "./shared";
 
 /**
  * s-user infrastructure:
@@ -36,6 +36,8 @@ gateway.route("ANY /user/{proxy+}", userApi.arn);
 
 // ─── Stream Handler ───────────────────────────────────────────────────────────
 
+const userStreamDlq = createDlqWithAlarm("UserStream");
+
 export const userStreamHandler = new sst.aws.Function("UserStreamHandler", {
   link: [userProfilesTable, platformEventBus],
   environment: {
@@ -53,6 +55,10 @@ export const userStreamHandler = new sst.aws.Function("UserStreamHandler", {
       ],
       resources: ["*"],
     },
+    {
+      actions: ["sqs:SendMessage"],
+      resources: [userStreamDlq.arn],
+    },
   ],
   handler: "packages/s-user/functions/src/stream-handler.handler",
 });
@@ -64,6 +70,9 @@ new aws.lambda.EventSourceMapping("UserProfilesStreamMapping", {
   batchSize: 10,
   maximumRetryAttempts: 3,
   maximumRecordAgeInSeconds: 3600,
+  destinationConfig: {
+    onFailure: { destinationArn: userStreamDlq.arn },
+  },
 });
 
 // ─── Event Handler (user.registered → create profile) ─────────────────────────
@@ -86,10 +95,14 @@ const userRegisteredRule = new aws.cloudwatch.EventRule("UserOnUserRegistered", 
   }),
 });
 
+const userEventDlq = createDlqWithAlarm("UserEvent");
+allowEventBridgeToDlq("UserEvent", userEventDlq);
+
 new aws.cloudwatch.EventTarget("UserOnUserRegisteredTarget", {
   rule: userRegisteredRule.name,
   eventBusName: platformEventBus.name,
   arn: userEventHandler.nodes.function.arn,
+  deadLetterConfig: { arn: userEventDlq.arn },
 });
 
 new aws.lambda.Permission("UserEventHandlerInvoke", {
