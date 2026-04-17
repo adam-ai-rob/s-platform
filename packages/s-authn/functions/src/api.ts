@@ -8,6 +8,7 @@ const app = createApi<AppEnv>({
   title: "s-authn — Authentication Service",
   description: "Platform identity, credentials, JWT issuance, JWKS, and refresh-token management.",
   version: "1.0.0",
+  basePath: "/authn",
   permissions: {
     authn_admin: "Full CRUD on AuthnUsers, view audit logs (Phase 2)",
     authn_read: "Read-only access to AuthnUser records (Phase 2)",

@@ -18,6 +18,19 @@ export interface ApiMetadata {
   title: string;
   description: string;
   version: string;
+  /**
+   * Mount path under the shared API Gateway. Every module Lambda is
+   * reached via a path-prefix rule (`ANY /{module}/{proxy+}`), and the
+   * Lambda sees that full prefix. Supply it here so /health, /info,
+   * /openapi.json, /docs and all mounted routes resolve correctly.
+   *
+   * Example: `basePath: "/authn"` → `/authn/health`, `/authn/info`,
+   * `/authn/openapi.json`, `/authn/auth/login`, etc.
+   *
+   * Leave `undefined` only for single-module deployments where the
+   * Lambda serves the gateway root.
+   */
+  basePath?: string;
   permissions: Record<string, string>;
   events: { publishes: string[]; subscribes: string[] };
   topics: Record<string, string>;
@@ -49,7 +62,11 @@ export interface ApiMetadata {
 export function createApi<TEnv extends { Variables: Record<string, unknown> }>(
   metadata: ApiMetadata,
 ) {
-  const app = new OpenAPIHono<TEnv>();
+  const root = new OpenAPIHono<TEnv>();
+  // Apply basePath so every subsequently-registered route is prefixed
+  // (including /health, /info, /openapi.json, /docs AND whatever the
+  // caller later mounts via `app.route(...)`).
+  const app = metadata.basePath ? root.basePath(metadata.basePath) : root;
 
   app.use("*", traceMiddleware());
 
@@ -71,6 +88,7 @@ export function createApi<TEnv extends { Variables: Record<string, unknown> }>(
     }),
   );
 
+  // app.doc registers at the current basePath — e.g. /authn/openapi.json
   app.doc("/openapi.json", {
     openapi: "3.1.0",
     info: {
@@ -92,7 +110,11 @@ export function createApi<TEnv extends { Variables: Record<string, unknown> }>(
     bearerFormat: "JWT",
   });
 
-  app.get("/docs", swaggerUI({ url: "/openapi.json" }));
+  // Swagger UI points at the openapi.json sibling — prefix-aware.
+  app.get(
+    "/docs",
+    swaggerUI({ url: `${metadata.basePath ?? ""}/openapi.json` }),
+  );
 
   // biome-ignore lint/suspicious/noExplicitAny: generic Hono context
   app.onError(globalErrorHandler as any);

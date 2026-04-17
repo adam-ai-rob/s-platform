@@ -9,6 +9,7 @@ const app = createApi<AppEnv>({
   description:
     "Roles, permissions, and the materialized AuthzView used by every other module's auth middleware.",
   version: "1.0.0",
+  basePath: "/authz",
   permissions: {
     authz_admin: "Manage roles and role assignments",
   },

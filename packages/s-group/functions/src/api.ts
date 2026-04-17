@@ -8,6 +8,7 @@ const app = createApi<AppEnv>({
   title: "s-group — Groups and Memberships",
   description: "Groups, memberships, and domain-based auto-assignment on user.registered.",
   version: "1.0.0",
+  basePath: "/group",
   permissions: {
     group_admin: "Create/update/delete groups and manage memberships",
   },

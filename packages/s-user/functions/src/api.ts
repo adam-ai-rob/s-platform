@@ -8,6 +8,7 @@ const app = createApi<AppEnv>({
   description:
     "User profile data (names, avatar, preferences, metadata). Profiles are created automatically from s-authn's user.registered event.",
   version: "1.0.0",
+  basePath: "/user",
   permissions: {
     user_admin: "Read/update any user's profile (Phase 2)",
   },
@@ -20,6 +21,7 @@ const app = createApi<AppEnv>({
   },
 });
 
-app.route("/user", userRoutes);
+// basePath already provides /user; mount user routes at the base
+app.route("/", userRoutes);
 
 export default app;
