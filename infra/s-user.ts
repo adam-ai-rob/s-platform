@@ -47,12 +47,11 @@ export const userStreamHandler = new sst.aws.Function("UserStreamHandler", {
   },
   permissions: [
     {
-      actions: [
-        "dynamodb:DescribeStream",
-        "dynamodb:GetRecords",
-        "dynamodb:GetShardIterator",
-        "dynamodb:ListStreams",
-      ],
+      actions: ["dynamodb:DescribeStream", "dynamodb:GetRecords", "dynamodb:GetShardIterator"],
+      resources: [userProfilesTable.nodes.table.streamArn],
+    },
+    {
+      actions: ["dynamodb:ListStreams"],
       resources: ["*"],
     },
     {
