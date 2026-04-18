@@ -64,8 +64,10 @@ export const authnApi = new sst.aws.Function("AuthnApi", {
   nodejs: {
     // @node-rs/argon2 ships prebuilt .node binaries per platform — don't let
     // esbuild try to bundle them. Installed fresh at build time for Lambda's
-    // linux-x64-gnu runtime.
-    install: ["@node-rs/argon2"],
+    // linux-x64-gnu runtime. Include the platform-specific subpackage
+    // explicitly so local-host bun install doesn't skip it as an optional
+    // cross-platform dep (happens when deploying from macOS).
+    install: ["@node-rs/argon2", "@node-rs/argon2-linux-x64-gnu"],
   },
 });
 
