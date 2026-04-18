@@ -1,7 +1,12 @@
 import * as aws from "@pulumi/aws";
-import * as pulumi from "@pulumi/pulumi";
 import { authzViewTable } from "./s-authz";
-import { createDlqWithAlarm, gateway, jwtSigningKeyAlias, platformEventBus } from "./shared";
+import {
+  createDlqWithAlarm,
+  gateway,
+  jwtSigningKey,
+  jwtSigningKeyAlias,
+  platformEventBus,
+} from "./shared";
 
 /**
  * s-authn infrastructure:
@@ -64,21 +69,20 @@ export const authnApi = new sst.aws.Function("AuthnApi", {
   },
 });
 
-// Grant KMS Sign + GetPublicKey
+// Grant KMS Sign + GetPublicKey — scoped to the one JWT signing key.
+// Aliases can't be used directly as IAM resource ARNs; reference the key ARN.
 const authnKmsPolicy = new aws.iam.Policy("AuthnApiKmsPolicy", {
-  policy: jwtSigningKeyAlias.targetKeyId.apply((_keyId) =>
-    pulumi.all([jwtSigningKeyAlias.arn]).apply(([_aliasArn]) =>
-      JSON.stringify({
-        Version: "2012-10-17",
-        Statement: [
-          {
-            Action: ["kms:Sign", "kms:GetPublicKey"],
-            Effect: "Allow",
-            Resource: "*", // aliases don't work directly as resource; production narrows to key ARN
-          },
-        ],
-      }),
-    ),
+  policy: jwtSigningKey.arn.apply((keyArn) =>
+    JSON.stringify({
+      Version: "2012-10-17",
+      Statement: [
+        {
+          Action: ["kms:Sign", "kms:GetPublicKey"],
+          Effect: "Allow",
+          Resource: keyArn,
+        },
+      ],
+    }),
   ),
 });
 
@@ -102,13 +106,14 @@ export const authnStreamHandler = new sst.aws.Function("AuthnStreamHandler", {
     EVENT_BUS_NAME: platformEventBus.name,
   },
   permissions: [
+    // Stream data-plane actions scoped to the specific stream ARN.
     {
-      actions: [
-        "dynamodb:DescribeStream",
-        "dynamodb:GetRecords",
-        "dynamodb:GetShardIterator",
-        "dynamodb:ListStreams",
-      ],
+      actions: ["dynamodb:DescribeStream", "dynamodb:GetRecords", "dynamodb:GetShardIterator"],
+      resources: [authnUsersTable.nodes.table.streamArn],
+    },
+    // ListStreams is a service-wide action and cannot be scoped to an ARN.
+    {
+      actions: ["dynamodb:ListStreams"],
       resources: ["*"],
     },
     {

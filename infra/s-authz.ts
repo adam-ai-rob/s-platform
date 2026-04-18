@@ -94,12 +94,11 @@ export const authzStreamHandler = new sst.aws.Function("AuthzStreamHandler", {
   },
   permissions: [
     {
-      actions: [
-        "dynamodb:DescribeStream",
-        "dynamodb:GetRecords",
-        "dynamodb:GetShardIterator",
-        "dynamodb:ListStreams",
-      ],
+      actions: ["dynamodb:DescribeStream", "dynamodb:GetRecords", "dynamodb:GetShardIterator"],
+      resources: [authzRolesTable.nodes.table.streamArn, authzViewTable.nodes.table.streamArn],
+    },
+    {
+      actions: ["dynamodb:ListStreams"],
       resources: ["*"],
     },
     {

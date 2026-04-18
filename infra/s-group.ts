@@ -70,12 +70,11 @@ export const groupStreamHandler = new sst.aws.Function("GroupStreamHandler", {
   },
   permissions: [
     {
-      actions: [
-        "dynamodb:DescribeStream",
-        "dynamodb:GetRecords",
-        "dynamodb:GetShardIterator",
-        "dynamodb:ListStreams",
-      ],
+      actions: ["dynamodb:DescribeStream", "dynamodb:GetRecords", "dynamodb:GetShardIterator"],
+      resources: [groupsTable.nodes.table.streamArn, groupUsersTable.nodes.table.streamArn],
+    },
+    {
+      actions: ["dynamodb:ListStreams"],
       resources: ["*"],
     },
     {
