@@ -1,0 +1,37 @@
+{
+  "name": "@s/shared",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Shared utilities for all s-platform modules: errors, logger, tracing, HTTP factory, auth SDK, events, DDB BaseRepository.",
+  "exports": {
+    ".": "./src/index.ts",
+    "./errors": "./src/errors/index.ts",
+    "./logger": "./src/logger/index.ts",
+    "./trace": "./src/trace/index.ts",
+    "./http": "./src/http/index.ts",
+    "./auth": "./src/auth/index.ts",
+    "./events": "./src/events/index.ts",
+    "./ddb": "./src/ddb/index.ts",
+    "./types": "./src/types/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "bun test"
+  },
+  "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.650.0",
+    "@aws-sdk/client-eventbridge": "^3.650.0",
+    "@aws-sdk/lib-dynamodb": "^3.650.0",
+    "@aws-sdk/util-dynamodb": "^3.650.0",
+    "@hono/swagger-ui": "^0.4.0",
+    "@hono/zod-openapi": "^0.16.0",
+    "hono": "^4.6.0",
+    "jose": "^5.6.0",
+    "ulid": "^2.3.0",
+    "zod": "^3.23.0"
+  },
+  "devDependencies": {
+    "@types/aws-lambda": "^8.10.143"
+  }
+}

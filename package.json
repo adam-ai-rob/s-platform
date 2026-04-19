@@ -1,0 +1,33 @@
+{
+  "name": "s-platform",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Monorepo for the s-platform — serverless, event-driven, DDD-based microservice platform on AWS.",
+  "workspaces": ["packages/*"],
+  "scripts": {
+    "dev": "sst dev",
+    "deploy": "sst deploy",
+    "remove": "sst remove",
+    "typecheck": "turbo run typecheck",
+    "lint": "biome check --write .",
+    "lint:check": "biome check .",
+    "format": "biome format --write .",
+    "test": "turbo run test",
+    "test:e2e": "cd packages/s-tests && STAGE=${STAGE:-dev} bun run test:e2e",
+    "new-module": "./scripts/new-module.sh"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^1.8.0",
+    "@pulumi/aws": "^7.0.0",
+    "@pulumi/pulumi": "^3.200.0",
+    "@types/node": "^22.0.0",
+    "sst": "^3.0.0",
+    "turbo": "^2.0.0",
+    "typescript": "^5.5.0"
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "packageManager": "bun@1.1.38"
+}

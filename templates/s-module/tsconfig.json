@@ -1,0 +1,12 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": ".",
+    "paths": {
+      "@s/{module}/core/*": ["./core/src/*"],
+      "@s/{module}/functions/*": ["./functions/src/*"]
+    }
+  },
+  "include": ["core/src/**/*.ts", "functions/src/**/*.ts", "tests/**/*.ts"],
+  "exclude": ["node_modules"]
+}

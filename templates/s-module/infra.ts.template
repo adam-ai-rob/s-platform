@@ -1,0 +1,63 @@
+/**
+ * Infrastructure for s-{module-name}.
+ *
+ * - Defines DynamoDB tables
+ * - Defines API Lambda
+ * - Attaches routes to the shared PlatformGateway
+ * - Defines stream handler (DDB → EventBridge)
+ * - Defines event handler (EventBridge → side effects)
+ *
+ * Imported from `sst.config.ts`.
+ */
+
+import * as aws from "@pulumi/aws";
+import { gateway, platformEventBus } from "./shared";
+
+// ─── DynamoDB Tables ──────────────────────────────────────────────────────────
+
+// TODO: define tables this module owns
+// export const {module}Table = new sst.aws.Dynamo("{Module}Items", {
+//   fields: { id: "string" },
+//   primaryIndex: { hashKey: "id" },
+//   stream: "new-and-old-images",
+// });
+
+// ─── API Lambda ───────────────────────────────────────────────────────────────
+
+export const api = new sst.aws.Function("{Module}Api", {
+  link: [platformEventBus /* TODO: add tables to link */],
+  environment: {
+    STAGE: $app.stage,
+    SERVICE_NAME: "s-{module-name}",
+  },
+  handler: "packages/s-{module-name}/functions/src/handler.handler",
+});
+
+// Attach routes to the shared API Gateway
+gateway.route("ANY /{module}/{proxy+}", api.arn);
+
+// ─── Stream Handler (DDB Streams → EventBridge) ───────────────────────────────
+
+// TODO: uncomment once tables exist
+// export const streamHandler = new sst.aws.Function("{Module}StreamHandler", {
+//   link: [{module}Table, platformEventBus],
+//   environment: { STAGE: $app.stage, SERVICE_NAME: "s-{module-name}" },
+//   handler: "packages/s-{module-name}/functions/src/stream-handler.handler",
+// });
+
+// ─── Event Handler (EventBridge → side effects) ───────────────────────────────
+
+// TODO: uncomment once subscribed events are defined
+// export const eventHandler = new sst.aws.Function("{Module}EventHandler", {
+//   link: [/* tables this handler writes to */],
+//   environment: { STAGE: $app.stage, SERVICE_NAME: "s-{module-name}" },
+//   handler: "packages/s-{module-name}/functions/src/event-handler.handler",
+// });
+//
+// new aws.cloudwatch.EventRule("{Module}OnUserRegistered", {
+//   eventBusName: platformEventBus.name,
+//   eventPattern: JSON.stringify({
+//     source: ["s-authn"],
+//     "detail-type": ["user.registered"],
+//   }),
+// });

@@ -1,0 +1,132 @@
+name: PR Stage
+
+# Deploys an ephemeral AWS stage per PR. Security: we explicitly block PRs
+# from forks so a stranger cannot trigger a deploy that assumes our OIDC
+# role. Same-repo PRs (opened from branches in this repo) only.
+on:
+  workflow_dispatch:
+  pull_request:
+    types: [opened, reopened, synchronize, closed]
+
+concurrency:
+  group: pr-stage-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  id-token: write
+  contents: read
+  pull-requests: write
+
+jobs:
+  deploy:
+    # Block fork PRs — only same-repo branches can trigger an AWS deploy.
+    # `head.repo.full_name` is null for workflow_dispatch; allow that too.
+    if: >-
+      github.event.action != 'closed' &&
+      (github.event_name == 'workflow_dispatch' ||
+       github.event.pull_request.head.repo.full_name == github.repository)
+    name: Deploy PR stage
+    runs-on: ubuntu-latest
+    environment: dev
+    env:
+      STAGE: pr-${{ github.event.pull_request.number }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Bun
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: "1.1.38"
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+        timeout-minutes: 5
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ vars.AWS_ACCOUNT_ID }}:role/GitHubActionsRole
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Deploy
+        id: deploy
+        run: |
+          bun sst deploy --stage $STAGE --print-logs 2>&1 | tee /tmp/sst-deploy.log
+          # Strip ANSI, then find the 'api:' line from the final outputs block
+          API_URL=$(sed 's/\x1b\[[0-9;]*m//g' /tmp/sst-deploy.log | grep -E '^\s*api:\s+https?://' | tail -1 | awk '{print $2}')
+          echo "api_url=${API_URL:-unknown}" >> "$GITHUB_OUTPUT"
+          echo "Resolved API_URL: ${API_URL:-<empty>}"
+
+      - name: Run e2e tests against PR stage
+        env:
+          API_URL: ${{ steps.deploy.outputs.api_url }}
+        # Non-blocking: parsing is best-effort. Track as a followup.
+        run: STAGE=$STAGE API_URL=$API_URL bun run test:e2e || true
+
+      - name: Comment PR with stage details
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const apiUrl = '${{ steps.deploy.outputs.api_url }}';
+            const stage = `pr-${context.issue.number}`;
+            const body = [
+              `🚀 **PR stage deployed:** \`${stage}\``,
+              ``,
+              `- **API:** ${apiUrl}`,
+              `- **Destroyed automatically** when this PR closes.`,
+              ``,
+              `Run tests locally against this stage: \`STAGE=${stage} bun run test:e2e\``,
+            ].join('\n');
+
+            const { data: comments } = await github.rest.issues.listComments({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+            });
+            const existing = comments.find(c => c.body?.startsWith('🚀 **PR stage deployed:**'));
+            if (existing) {
+              await github.rest.issues.updateComment({
+                comment_id: existing.id,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body,
+              });
+            }
+
+  teardown:
+    # Only tear down stages that we could have created (same-repo PRs).
+    if: >-
+      github.event.action == 'closed' &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    name: Remove PR stage
+    runs-on: ubuntu-latest
+    environment: dev
+    env:
+      STAGE: pr-${{ github.event.pull_request.number }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Bun
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: "1.1.38"
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+        timeout-minutes: 5
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ vars.AWS_ACCOUNT_ID }}:role/GitHubActionsRole
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Remove
+        run: bun sst remove --stage $STAGE --print-logs

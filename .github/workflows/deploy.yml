@@ -1,0 +1,57 @@
+name: Deploy
+
+on:
+  push:
+    branches:
+      - stage/dev
+      - stage/test
+      - stage/prod
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  deploy:
+    name: Deploy ${{ github.ref_name }}
+    runs-on: ubuntu-latest
+    environment: ${{
+      github.ref_name == 'stage/prod' && 'prod'
+      || github.ref_name == 'stage/test' && 'test'
+      || 'dev'
+      }}
+    env:
+      STAGE: ${{
+        github.ref_name == 'stage/prod' && 'prod'
+        || github.ref_name == 'stage/test' && 'test'
+        || 'dev'
+        }}
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Bun
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: "1.1.38"
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+        timeout-minutes: 5
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ vars.AWS_ACCOUNT_ID }}:role/GitHubActionsRole
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Deploy
+        run: bun sst deploy --stage $STAGE --print-logs
+
+      - name: Smoke tests
+        run: STAGE=$STAGE bun run test:e2e -- --filter=smoke || true
+        # Non-blocking for now; tighten once s-tests journeys are in place.
