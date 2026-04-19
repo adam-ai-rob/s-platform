@@ -16,8 +16,15 @@ let client: DynamoDBDocumentClient | null = null;
 
 export function getDdbClient(): DynamoDBDocumentClient {
   if (!client) {
+    const endpoint = process.env.DDB_ENDPOINT;
     const ddb = new DynamoDBClient({
       region: process.env.AWS_REGION ?? "eu-west-1",
+      ...(endpoint
+        ? {
+            endpoint,
+            credentials: { accessKeyId: "local", secretAccessKey: "local" },
+          }
+        : {}),
     });
     client = DynamoDBDocumentClient.from(ddb, {
       marshallOptions: {
@@ -30,6 +37,14 @@ export function getDdbClient(): DynamoDBDocumentClient {
     });
   }
   return client;
+}
+
+/**
+ * Reset the cached DynamoDB client. Intended for tests that reconfigure
+ * `DDB_ENDPOINT` between suites. Never call from production code.
+ */
+export function __resetDdbClientForTests(): void {
+  client = null;
 }
 
 /**

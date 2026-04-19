@@ -1,0 +1,7 @@
+[install]
+# Pin the package registry to public npm explicitly, even when a
+# user-level ~/.npmrc or ~/.bunfig.toml points elsewhere. Prevents
+# `bun install` from re-writing bun.lock with URLs from a private
+# mirror (e.g. AWS CodeArtifact or JFrog Artifactory) that CI can't
+# authenticate to. See PR #43 for context.
+registry = "https://registry.npmjs.org/"
