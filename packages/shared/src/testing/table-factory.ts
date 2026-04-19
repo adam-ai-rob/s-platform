@@ -74,7 +74,7 @@ export async function createTable(endpoint: string, schema: TableSchema): Promis
   };
 
   await client.send(new CreateTableCommand(input));
-  await waitUntilTableExists({ client, maxWaitTime: 10 }, { TableName: schema.tableName });
+  await waitUntilTableExists({ client, maxWaitTime: 30 }, { TableName: schema.tableName });
   client.destroy();
 }
 

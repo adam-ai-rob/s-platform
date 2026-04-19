@@ -1,4 +1,5 @@
 import * as net from "node:net";
+import { DynamoDBClient, ListTablesCommand } from "@aws-sdk/client-dynamodb";
 import DynamoDbLocal from "dynamodb-local";
 
 /**
@@ -33,13 +34,39 @@ async function findFreePort(): Promise<number> {
   });
 }
 
+async function waitUntilReady(endpoint: string, timeoutMs = 20000): Promise<void> {
+  const client = new DynamoDBClient({
+    endpoint,
+    region: "local",
+    credentials: { accessKeyId: "local", secretAccessKey: "local" },
+  });
+  const deadline = Date.now() + timeoutMs;
+  let lastErr: unknown = null;
+  while (Date.now() < deadline) {
+    try {
+      await client.send(new ListTablesCommand({}));
+      client.destroy();
+      return;
+    } catch (err) {
+      lastErr = err;
+      await new Promise((r) => setTimeout(r, 200));
+    }
+  }
+  client.destroy();
+  throw new Error(
+    `DynamoDB local at ${endpoint} not ready after ${timeoutMs}ms: ${String(lastErr)}`,
+  );
+}
+
 export async function startLocalDynamo(): Promise<LocalDynamo> {
   const port = await findFreePort();
   // -inMemory avoids creating files on disk; -sharedDb keeps a single
   // namespace across regions so tests don't need to match AWS_REGION.
   await DynamoDbLocal.launch(port, null, ["-inMemory", "-sharedDb"]);
+  const endpoint = `http://127.0.0.1:${port}`;
+  await waitUntilReady(endpoint);
   return {
-    endpoint: `http://127.0.0.1:${port}`,
+    endpoint,
     port,
     stop: async () => {
       DynamoDbLocal.stop(port);
