@@ -2,7 +2,7 @@
 
 Authentication service for the s-platform. Owns platform user identity, credentials, JWT issuance, and JWKS publication.
 
-See [`CLAUDE.md`](./CLAUDE.md) for agent rules and [platform architecture docs](https://github.com/adam-ai-rob/s-architecture).
+See [`CLAUDE.md`](./CLAUDE.md) for agent rules and [platform architecture docs](../../docs/architecture/README.md).
 
 ## Scope (this module)
 

@@ -2,7 +2,7 @@
 
 Serverless, event-driven, DDD-based microservice platform on AWS. Monorepo containing all platform modules.
 
-> **Architecture spec:** [`adam-ai-rob/s-architecture`](https://github.com/adam-ai-rob/s-architecture) — read this first before contributing.
+> **Architecture spec:** [`docs/architecture/`](./docs/architecture/README.md) — read this first before contributing.
 
 ## Quick Facts
 
@@ -35,7 +35,7 @@ aws sso login --profile itinn-bot
 bun sst dev --stage robert
 ```
 
-See [`s-architecture/docs/11-local-development.md`](https://github.com/adam-ai-rob/s-architecture/blob/main/docs/11-local-development.md) for full setup.
+See [`docs/architecture/11-local-development.md`](./docs/architecture/11-local-development.md) for full setup.
 
 ## Repo Layout
 
@@ -97,7 +97,7 @@ feature/task   ── PR ──► main  ──► stage/dev  ──► stage/te
 
 - `stage/*` branches are deployment-only. Never commit directly; only fast-forward merge.
 - Every PR gets an ephemeral `pr-{N}` stage automatically (deployed on open, destroyed on close).
-- See [`s-architecture/docs/10-deployment.md`](https://github.com/adam-ai-rob/s-architecture/blob/main/docs/10-deployment.md).
+- See [`docs/architecture/10-deployment.md`](./docs/architecture/10-deployment.md).
 
 ## Current Status
 

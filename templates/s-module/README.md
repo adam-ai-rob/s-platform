@@ -31,4 +31,4 @@ s-{module-name}/
 
 ## Conventions
 
-See [monorepo CLAUDE.md](../../CLAUDE.md) and [architecture docs](https://github.com/adam-ai-rob/s-architecture).
+See [monorepo CLAUDE.md](../../CLAUDE.md) and [architecture docs](../../docs/architecture/README.md).

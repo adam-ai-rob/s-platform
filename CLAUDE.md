@@ -4,10 +4,13 @@ This file is read by every AI agent working on any module. Per-module agents als
 
 ## ⚠️ Read First
 
-1. **Platform architecture:** [`adam-ai-rob/s-architecture`](https://github.com/adam-ai-rob/s-architecture) — **read all 11 docs before writing code**.
-2. Your module's `CLAUDE.md` (in `packages/s-{module}/`).
-3. `packages/shared/src/index.ts` — utilities available to every module.
-4. This file.
+1. **Platform architecture:** [`./docs/architecture/`](./docs/architecture/README.md) — **read all 11 docs before writing code**.
+2. Your module's `CLAUDE.md` (in `packages/s-{module}/`) — declares that module's bounded context, DynamoDB tables, events, permissions, and API surface.
+3. [`packages/shared/CLAUDE.md`](./packages/shared/CLAUDE.md) if (and only if) you are touching shared utilities.
+4. `packages/shared/src/index.ts` — utilities available to every module.
+5. This file.
+
+A module-scoped agent needs only these five reading points — it does not need to read other modules' `CLAUDE.md` files. Cross-module coupling goes through events or HTTP APIs, not shared code.
 
 ## Non-Negotiable Rules
 

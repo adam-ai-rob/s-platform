@@ -2,6 +2,8 @@
 
 Groups (company / team / building) and user memberships.
 
+Read [monorepo CLAUDE.md](../../CLAUDE.md) and [architecture docs](../../docs/architecture/README.md) first.
+
 ## Bounded Context
 
 **Owns:** groups, memberships, domain-based auto-assignment, invitation/approval state.
