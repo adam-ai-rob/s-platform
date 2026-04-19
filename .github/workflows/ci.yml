@@ -26,9 +26,19 @@ jobs:
           distribution: temurin
           java-version: "17"
 
+      - name: Cache Bun install dir
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.bun/install/cache
+            node_modules/.bun
+          key: bun-install-${{ runner.os }}-${{ hashFiles('bun.lock') }}
+          restore-keys: |
+            bun-install-${{ runner.os }}-
+
       - name: Install dependencies
-        run: bun install --frozen-lockfile --verbose
-        timeout-minutes: 10
+        run: bun install --frozen-lockfile
+        timeout-minutes: 5
 
       - name: Typecheck
         run: bun run typecheck
