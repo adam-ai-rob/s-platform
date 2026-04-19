@@ -12,6 +12,17 @@
       "inputs": ["src/**/*.ts", "package.json"],
       "outputs": []
     },
+    "test:integration": {
+      "dependsOn": ["^typecheck"],
+      "inputs": [
+        "src/**/*.ts",
+        "core/src/**/*.ts",
+        "functions/src/**/*.ts",
+        "tests/integration/**/*.ts",
+        "package.json"
+      ],
+      "outputs": []
+    },
     "build": {
       "dependsOn": ["^build"],
       "inputs": ["src/**/*.ts", "tsconfig.json", "package.json"],
