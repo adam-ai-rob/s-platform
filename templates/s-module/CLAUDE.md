@@ -1,6 +1,6 @@
 # s-{module-name} — AI Agent Rules
 
-This module is owned by a dedicated AI agent. Read this file + the [platform CLAUDE.md](../../CLAUDE.md) + [architecture docs](https://github.com/adam-ai-rob/s-architecture/tree/main/docs) before making changes.
+This module is owned by a dedicated AI agent. Read this file + the [platform CLAUDE.md](../../CLAUDE.md) + [architecture docs](../../docs/architecture/README.md) before making changes.
 
 ## Bounded Context
 

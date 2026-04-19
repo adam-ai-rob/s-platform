@@ -2,7 +2,7 @@
 
 Authentication service: identity, credentials, JWT issuance, JWKS, refresh tokens, magic links, password reset, email verification.
 
-Read [monorepo CLAUDE.md](../../CLAUDE.md) and [architecture docs](https://github.com/adam-ai-rob/s-architecture/tree/main/docs) first.
+Read [monorepo CLAUDE.md](../../CLAUDE.md) and [architecture docs](../../docs/architecture/README.md) first.
 
 ## Bounded Context
 

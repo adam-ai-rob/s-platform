@@ -2,7 +2,7 @@
 
 Authorization: roles, user-role and group-role assignments, materialized `AuthzView` per-user used by every other module's auth middleware.
 
-Read [monorepo CLAUDE.md](../../CLAUDE.md) first.
+Read [monorepo CLAUDE.md](../../CLAUDE.md) and [architecture docs](../../docs/architecture/README.md) first.
 
 ## Bounded Context
 

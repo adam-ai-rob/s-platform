@@ -8,7 +8,7 @@
  * itinn-bot account (058264437321). NS records pointing to it live in the
  * parent `smartiqi.com` zone in the common account (679821015569).
  *
- * See s-architecture/setup/02-cross-account-dns.md for delegation setup.
+ * See docs/setup/02-cross-account-dns.md for delegation setup.
  *
  * `sst.aws.dns()` resolves the hosted zone by suffix-matching the
  * requested domain, so we don't need to pass the zone ID explicitly.

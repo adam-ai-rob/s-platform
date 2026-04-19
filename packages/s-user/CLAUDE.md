@@ -2,7 +2,7 @@
 
 User profile data: names, avatar, preferences, metadata. Profile records share the user ID with the `s-authn` identity record.
 
-Read [monorepo CLAUDE.md](../../CLAUDE.md) and [architecture docs](https://github.com/adam-ai-rob/s-architecture/tree/main/docs) first.
+Read [monorepo CLAUDE.md](../../CLAUDE.md) and [architecture docs](../../docs/architecture/README.md) first.
 
 ## Bounded Context
 

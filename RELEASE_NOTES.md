@@ -5,7 +5,9 @@ Versioning: **CalVer** (`vYYYY.MM.N`). Releases cut on merge to `stage/prod`.
 ## Unreleased
 
 ### Changes
-_(none yet)_
+- **Docs**: Vendored architecture docs into the monorepo at `docs/architecture/` and `docs/setup/` (previously in the sibling `adam-ai-rob/s-architecture` repo, which will be deleted). Root `CLAUDE.md`, module CLAUDE.md files, templates, and `infra/domains.ts` now reference the in-repo paths.
+- **Docs**: Added `packages/shared/CLAUDE.md` and `packages/s-tests/CLAUDE.md` so every package in `packages/` now has its own agent contract; module-scoped agents have a tight, explicit reading list.
+- **Docs**: Root `CLAUDE.md` "Read First" section now spells out the per-module reading list explicitly.
 
 ## v2026.04.1 — 2026-04-17
 
