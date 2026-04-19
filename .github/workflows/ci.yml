@@ -29,22 +29,22 @@ jobs:
       - name: Cache Bun install dir
         uses: actions/cache@v4
         with:
-          path: |
-            ~/.bun/install/cache
-            node_modules/.bun
+          path: ~/.bun/install/cache
           key: bun-install-${{ runner.os }}-${{ hashFiles('bun.lock') }}
           restore-keys: |
             bun-install-${{ runner.os }}-
 
-      # Cold install is ~5-6 min because @pulumi/aws (~61 MB, 2578 .d.ts files)
-      # has to extract and hardlink on a fresh runner. After the first run
-      # populates the cache, subsequent runs finish in <30s — well inside 5 min.
+      # Cold install can be ~6-8 min because @pulumi/aws (61 MB, 2578 .d.ts
+      # files) is extracted and hardlinked on every fresh runner. --verbose
+      # is kept on so a future regression shows up in logs as a stuck line
+      # rather than silent-hang-then-timeout.
       # TODO: when the platform/module SST split lands (docs/plan.md Phase 3),
-      # move @pulumi/aws + @pulumi/pulumi into a dedicated infra workspace so
-      # the test lane never installs them, and tighten this back to 5 min.
+      # move @pulumi/aws + @pulumi/pulumi out of root into the platform/
+      # workspace so the test lane doesn't install them — then tighten back
+      # to 5 min and drop --verbose.
       - name: Install dependencies
-        run: bun install --frozen-lockfile
-        timeout-minutes: 10
+        run: bun install --frozen-lockfile --verbose
+        timeout-minutes: 15
 
       - name: Typecheck
         run: bun run typecheck

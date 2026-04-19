@@ -42,18 +42,16 @@ jobs:
       - name: Cache Bun install dir
         uses: actions/cache@v4
         with:
-          path: |
-            ~/.bun/install/cache
-            node_modules/.bun
+          path: ~/.bun/install/cache
           key: bun-install-${{ runner.os }}-${{ hashFiles('bun.lock') }}
           restore-keys: |
             bun-install-${{ runner.os }}-
 
-      # See docs/plan.md — cold install is ~5-6 min due to @pulumi/aws.
+      # See docs/plan.md — cold install is ~6-8 min due to @pulumi/aws.
       # Tighten back to 5 min once Pulumi moves out of root workspace.
       - name: Install dependencies
-        run: bun install --frozen-lockfile
-        timeout-minutes: 10
+        run: bun install --frozen-lockfile --verbose
+        timeout-minutes: 15
 
       - name: Configure AWS credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@v4
