@@ -15,7 +15,17 @@ import { SignJWT, exportJWK, generateKeyPair } from "jose";
 export interface JwtStub {
   baseUrl: string;
   port: number;
+  /** Sign a test access token for a given subject. */
   sign(options: SignOptions): Promise<string>;
+  /**
+   * Sign an arbitrary payload, matching the signature expected by
+   * `packages/s-authn/core/src/tokens/token.service.ts#JwtSigner`.
+   * Tests inject this via `__setSignJwtForTests` so s-authn issues
+   * tokens that the stub's JWKS endpoint can verify.
+   */
+  signPayload(payload: Record<string, unknown>, expiresInSeconds: number): Promise<string>;
+  /** Get the stub's JWKS for injecting as a JwksProvider. */
+  getJwks(): { keys: unknown[] };
   stop(): Promise<void>;
 }
 
@@ -80,6 +90,18 @@ export async function startJwtStub(): Promise<JwtStub> {
         .setIssuedAt()
         .setExpirationTime(expiresIn ?? "5m");
       return jwt.sign(privateKey);
+    },
+    async signPayload(payload, expiresInSeconds) {
+      const jwt = new SignJWT(payload)
+        .setProtectedHeader({ alg: "RS256", kid: "test-key-1" })
+        .setIssuer(process.env.JWT_ISSUER ?? "s-authn")
+        .setAudience(process.env.JWT_AUDIENCE ?? "s-platform")
+        .setIssuedAt()
+        .setExpirationTime(`${expiresInSeconds}s`);
+      return jwt.sign(privateKey);
+    },
+    getJwks() {
+      return jwks as { keys: unknown[] };
     },
     stop: () =>
       new Promise<void>((resolve, reject) => {

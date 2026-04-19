@@ -10,7 +10,8 @@
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "test": "bun test",
+    "test": "bun test tests/*.test.ts",
+    "test:integration": "bun test tests/integration --timeout 60000",
     "lint": "biome check --write ."
   },
   "dependencies": {
