@@ -1,0 +1,8 @@
+[install]
+# SST spawns its own `bun install` inside `platform/.sst/platform/` to
+# install Pulumi providers. That nested install doesn't always pick up
+# the repo-root bunfig.toml, so pin the registry here too — otherwise
+# it falls back to the user-level ~/.npmrc which often points at an
+# expired private mirror (AWS CodeArtifact, JFrog, GitHub Packages).
+# Same rationale as the root bunfig.toml; see PR #43.
+registry = "https://registry.npmjs.org/"

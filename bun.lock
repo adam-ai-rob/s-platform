@@ -15,6 +15,18 @@
         "zod-to-json-schema": "^3.23.0",
       },
     },
+    "modules/s-authz": {
+      "name": "@s/module-s-authz",
+      "version": "0.1.0",
+      "dependencies": {
+        "@pulumi/aws": "^7.0.0",
+        "@pulumi/pulumi": "^3.200.0",
+        "@s/infra-shared": "workspace:*",
+      },
+      "devDependencies": {
+        "sst": "^3.0.0",
+      },
+    },
     "packages/infra-shared": {
       "name": "@s/infra-shared",
       "version": "0.1.0",
@@ -405,6 +417,8 @@
     "@s/group": ["@s/group@workspace:packages/s-group"],
 
     "@s/infra-shared": ["@s/infra-shared@workspace:packages/infra-shared"],
+
+    "@s/module-s-authz": ["@s/module-s-authz@workspace:modules/s-authz"],
 
     "@s/platform-infra": ["@s/platform-infra@workspace:platform"],
 
