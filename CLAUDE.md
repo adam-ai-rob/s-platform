@@ -108,6 +108,17 @@ Response Zod schemas define the public API contract. **Any change requires expli
 
 Adding new optional fields is safe but note in the PR description. Reviewers MUST flag any response schema change.
 
+### Contract backwards-compatibility (automated)
+
+`.github/workflows/ci.yml` runs `scripts/contract-diff.ts` on every PR and fails if any module's OpenAPI or AsyncAPI contract removes a path, event, required field, narrows a type, or removes an enum value. These are breaking changes for callers and subscribers. Attach the `breaking-api-change` label to the PR to override — the label **must** be paired with a migration plan in the PR description (e.g. "both `email` and `emailAddress` emitted for two releases; `email` removed in v2026.08"). Additive changes (new endpoint, new optional field, widened enum) pass without a label.
+
+### PR labels
+
+| Label | Effect |
+|---|---|
+| `deployed-test` | Triggers `.github/workflows/pr-deployed-test.yml` — deploys the PR's changed modules to `dev` and runs the full journey. On pass: dev stays at PR's code (saves a rollback cycle). On fail: dev is restored from `origin/main`. Only ONE PR at a time (shared `touches-dev` concurrency group with the stage/dev deploy workflow). |
+| `breaking-api-change` | Overrides the contract backwards-compatibility check. Requires a migration plan in the PR description. |
+
 ### Postman collection
 
 When adding/modifying endpoints, update `packages/s-{module}/docs/postman/{module}.postman_collection.json` in the same PR.

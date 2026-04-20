@@ -1,0 +1,228 @@
+name: PR Deployed Test
+
+# Opt-in workflow that deploys the PR's branch to the shared `dev`
+# stage, runs the full e2e journey against `dev.s-api.smartiqi.com`,
+# and:
+#
+#   - on PASS → leaves dev in the PR's state. The PR is likely to merge
+#     shortly, at which point the stage/dev FF redeploys main's state
+#     on top (same code if the PR is the tip of main, so usually a no-op).
+#     Avoids a pointless rollback deploy cycle.
+#
+#   - on FAIL → restores dev from origin/main. The failing PR's code
+#     shouldn't linger on a stage that other agents / humans may hit.
+#
+# Triggers:
+#   - The PR is labelled `deployed-test` (add via `gh pr edit N --add-label deployed-test`).
+#   - Manually via Actions → Run workflow (pick the PR branch).
+#
+# Serialization:
+#   - Shared concurrency group `touches-dev` with deploy.yml's stage/dev
+#     branch path. A stage/dev FF queues behind an in-flight deployed
+#     test (or vice versa) — no races on dev's gateway / tables.
+#   - Only ONE PR deployed test runs against dev at a time.
+#
+# Security:
+#   - Fork PRs blocked (same rule as every other AWS-touching workflow).
+
+on:
+  workflow_dispatch:
+  pull_request:
+    types: [labeled, synchronize]
+
+concurrency:
+  group: touches-dev
+  cancel-in-progress: false
+
+permissions:
+  id-token: write
+  contents: read
+  pull-requests: write
+
+env:
+  STAGE: dev
+
+jobs:
+  deployed-test:
+    # Three guards: (1) fork PRs blocked; (2) only run if `deployed-test`
+    # label is present (covers both the initial `labeled` event and any
+    # `synchronize` event after the label was added); (3) `workflow_dispatch`
+    # runs unconditionally because someone clicked the button.
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.pull_request.head.repo.full_name == github.repository &&
+       contains(github.event.pull_request.labels.*.name, 'deployed-test'))
+    name: Deploy PR to dev + run e2e
+    runs-on: ubuntu-latest
+    environment: dev
+    timeout-minutes: 25
+    outputs:
+      changed_modules: ${{ steps.detect.outputs.changed_modules }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.3.6"
+
+      - uses: actions/cache@v4
+        with:
+          path: ~/.bun/install/cache
+          key: bun-install-${{ runner.os }}-${{ hashFiles('bun.lock') }}
+          restore-keys: |
+            bun-install-${{ runner.os }}-
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+        timeout-minutes: 5
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ vars.AWS_ACCOUNT_ID }}:role/GitHubActionsRole
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Detect changed modules
+        id: detect
+        # Emit a space-separated list of module names (subset of
+        # authz authn user group) whose `modules/s-X/**` or
+        # `packages/s-X/**` paths differ from main. Also flag
+        # `platform` and `shared` changes as "redeploy everything".
+        run: |
+          set -euo pipefail
+          git fetch origin main --depth=1
+          CHANGED=""
+          DIFF_ALL=0
+          if git diff --name-only origin/main -- \
+               'platform/**' 'packages/shared/**' 'packages/infra-shared/**' \
+               'package.json' 'bun.lock' | grep -q . ; then
+            DIFF_ALL=1
+          fi
+          for m in authz authn user group; do
+            if [ "$DIFF_ALL" = "1" ] || git diff --name-only origin/main -- \
+                 "modules/s-$m/**" "packages/s-$m/**" | grep -q . ; then
+              CHANGED="$CHANGED $m"
+            fi
+          done
+          CHANGED=$(echo "$CHANGED" | xargs || true)
+          if [ -z "$CHANGED" ]; then
+            echo "No module-related changes vs main — nothing to redeploy."
+            echo "changed_modules=" >> "$GITHUB_OUTPUT"
+          else
+            echo "Modules to redeploy to dev: $CHANGED"
+            echo "changed_modules=$CHANGED" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Deploy platform + affected modules to dev (PR's code)
+        if: steps.detect.outputs.changed_modules != ''
+        # Order matches the bootstrap: platform → authz → rest (parallel
+        # within this step is not trivial to express in bash, so serial
+        # — still quick because dev is warm). If a deploy fails here,
+        # the next step (Restore) catches it via `if: failure()`.
+        run: |
+          set -euo pipefail
+          # Always redeploy platform if any module changed — cheap idempotent
+          # no-op when unchanged, insurance when shared or platform changed.
+          (cd platform && bun sst deploy --stage $STAGE --print-logs)
+          # s-authz first if it's in the set.
+          for m in ${{ steps.detect.outputs.changed_modules }}; do
+            if [ "$m" = "authz" ]; then
+              (cd modules/s-authz && bun sst deploy --stage $STAGE --print-logs)
+            fi
+          done
+          for m in ${{ steps.detect.outputs.changed_modules }}; do
+            if [ "$m" != "authz" ]; then
+              (cd "modules/s-$m" && bun sst deploy --stage $STAGE --print-logs)
+            fi
+          done
+
+      - name: Run full e2e journey against dev
+        if: steps.detect.outputs.changed_modules != ''
+        # STAGE=dev → packages/s-tests/src/config.ts resolves
+        # https://dev.s-api.smartiqi.com. Blocking — this is the signal
+        # the label-dispatch is asking for.
+        run: STAGE=$STAGE bun run test:e2e
+
+      - name: Comment PR with outcome
+        if: always() && steps.detect.outputs.changed_modules != ''
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const outcome = '${{ job.status }}';
+            const modules = '${{ steps.detect.outputs.changed_modules }}';
+            const body = outcome === 'success'
+              ? [
+                  `✅ **Deployed test passed** — dev is now at this PR's code.`,
+                  ``,
+                  `Modules redeployed to dev: \`${modules}\``,
+                  `API: https://dev.s-api.smartiqi.com`,
+                  ``,
+                  `⚠️  dev stays at the PR's code until the next deploy (either this PR merging + stage/dev FF, or another deployed-test run). Intentional — saves a rollback cycle.`,
+                ].join('\n')
+              : [
+                  `❌ **Deployed test failed** — dev is being restored from \`origin/main\` in the next step.`,
+                  ``,
+                  `Modules affected: \`${modules}\``,
+                  `Check the workflow logs for details.`,
+                ].join('\n');
+            await github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body,
+            });
+
+  restore-on-failure:
+    # Runs only if `deployed-test` failed AND there were modules to
+    # redeploy. Restores dev from origin/main by redeploying the same
+    # modules the failed run touched.
+    needs: deployed-test
+    if: always() && needs.deployed-test.result == 'failure' && needs.deployed-test.outputs.changed_modules != ''
+    name: Restore dev from main
+    runs-on: ubuntu-latest
+    environment: dev
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 1
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.3.6"
+
+      - uses: actions/cache@v4
+        with:
+          path: ~/.bun/install/cache
+          key: bun-install-${{ runner.os }}-${{ hashFiles('bun.lock') }}
+          restore-keys: |
+            bun-install-${{ runner.os }}-
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+        timeout-minutes: 5
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ vars.AWS_ACCOUNT_ID }}:role/GitHubActionsRole
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Redeploy platform + affected modules from main
+        run: |
+          set -euo pipefail
+          (cd platform && bun sst deploy --stage $STAGE --print-logs)
+          for m in ${{ needs.deployed-test.outputs.changed_modules }}; do
+            if [ "$m" = "authz" ]; then
+              (cd modules/s-authz && bun sst deploy --stage $STAGE --print-logs)
+            fi
+          done
+          for m in ${{ needs.deployed-test.outputs.changed_modules }}; do
+            if [ "$m" != "authz" ]; then
+              (cd "modules/s-$m" && bun sst deploy --stage $STAGE --print-logs)
+            fi
+          done

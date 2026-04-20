@@ -75,3 +75,27 @@ jobs:
             exit 1
           fi
         timeout-minutes: 3
+
+      - name: Contract backwards-compatibility
+        # Fail the PR if any module's OpenAPI or AsyncAPI contract
+        # removes an endpoint / event / required field, narrows a type,
+        # or removes an enum value — all of these break existing
+        # consumers. Additive changes (new endpoint, new optional field,
+        # widened enum) pass.
+        #
+        # An intentional breaking change is allowed when the PR carries
+        # the `breaking-api-change` label. The label MUST be paired with
+        # a migration plan in the PR description (see CLAUDE.md).
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          git fetch origin main --depth=1
+          if gh pr view "${{ github.event.pull_request.number }}" \
+               --json labels --jq '.labels[].name' 2>/dev/null \
+               | grep -qx 'breaking-api-change'; then
+            export CONTRACT_DIFF_ALLOW_BREAKING=1
+            echo "PR carries 'breaking-api-change' label — breaking changes permitted."
+          fi
+          bun run scripts/contract-diff.ts
+        timeout-minutes: 2

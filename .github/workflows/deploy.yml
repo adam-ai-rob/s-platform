@@ -19,7 +19,11 @@ on:
       - stage/prod
 
 concurrency:
-  group: deploy-${{ github.ref }}
+  # For stage/dev: share the `touches-dev` group with pr-deployed-test.yml
+  # so a FF to stage/dev and an opt-in PR deployed test can't race on
+  # dev's gateway / tables. For test and prod: per-stage groups as
+  # before (no PR-test workflow targets them).
+  group: ${{ github.ref == 'refs/heads/stage/dev' && 'touches-dev' || format('deploy-{0}', github.ref) }}
   cancel-in-progress: false
 
 permissions:
