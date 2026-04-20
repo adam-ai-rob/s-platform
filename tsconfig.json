@@ -1,8 +1,8 @@
 {
   "extends": "./tsconfig.base.json",
   "compilerOptions": {
-    "types": ["node", "bun", "sst"]
+    "types": ["node", "bun"]
   },
-  "include": ["sst.config.ts", "infra/**/*.ts", "packages/**/*.ts", "scripts/**/*.ts"],
+  "include": ["packages/**/*.ts", "scripts/**/*.ts"],
   "exclude": ["node_modules", ".sst", "dist", ".turbo", "platform", "modules"]
 }
