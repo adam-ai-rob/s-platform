@@ -15,6 +15,14 @@
         "zod-to-json-schema": "^3.23.0",
       },
     },
+    "packages/infra-shared": {
+      "name": "@s/infra-shared",
+      "version": "0.1.0",
+      "dependencies": {
+        "@pulumi/aws": "^7.0.0",
+        "@pulumi/pulumi": "^3.200.0",
+      },
+    },
     "packages/s-authn": {
       "name": "@s/authn",
       "version": "0.1.0",
@@ -128,6 +136,18 @@
         "@types/node": "^22.0.0",
         "dynamodb-local": "^0.0.34",
         "zod-to-json-schema": "^3.23.0",
+      },
+    },
+    "platform": {
+      "name": "@s/platform-infra",
+      "version": "0.1.0",
+      "dependencies": {
+        "@pulumi/aws": "^7.0.0",
+        "@pulumi/pulumi": "^3.200.0",
+        "@s/infra-shared": "workspace:*",
+      },
+      "devDependencies": {
+        "sst": "^3.0.0",
       },
     },
   },
@@ -383,6 +403,10 @@
     "@s/authz": ["@s/authz@workspace:packages/s-authz"],
 
     "@s/group": ["@s/group@workspace:packages/s-group"],
+
+    "@s/infra-shared": ["@s/infra-shared@workspace:packages/infra-shared"],
+
+    "@s/platform-infra": ["@s/platform-infra@workspace:platform"],
 
     "@s/shared": ["@s/shared@workspace:packages/shared"],
 

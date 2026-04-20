@@ -5,6 +5,7 @@ Versioning: **CalVer** (`vYYYY.MM.N`). Releases cut on merge to `stage/prod`.
 ## Unreleased
 
 ### Changes
+- **Feature**: Phase 3 scaffolding — new `platform/` SST app (Tier 1) owning API Gateway v2, EventBridge bus + archive, KMS JWT signing key, SNS alarms topic, DNS + cert; publishes outputs to SSM `/s-platform/{stage}/*` for module SST apps to consume. New `packages/infra-shared/` workspace hosts the DLQ + alarm wiring and the SSM read/write helpers shared by the platform tier and (future) module tiers. Root `sst.config.ts` + `infra/` are untouched — existing stages keep deploying the old way until follow-up PRs migrate each module to its own SST app (s-authz → s-authn/s-user/s-group). New runbook `docs/runbooks/fresh-stage-bootstrap.md` documents the deploy order for fresh stages. (Issue #46)
 - **Docs**: Vendored architecture docs into the monorepo at `docs/architecture/` and `docs/setup/` (previously in the sibling `adam-ai-rob/s-architecture` repo, which will be deleted). Root `CLAUDE.md`, module CLAUDE.md files, templates, and `infra/domains.ts` now reference the in-repo paths.
 - **Docs**: Added `packages/shared/CLAUDE.md` and `packages/s-tests/CLAUDE.md` so every package in `packages/` now has its own agent contract; module-scoped agents have a tight, explicit reading list.
 - **Docs**: Root `CLAUDE.md` "Read First" section now spells out the per-module reading list explicitly.
