@@ -23,6 +23,18 @@
       ],
       "outputs": []
     },
+    "test:contract": {
+      "dependsOn": ["^typecheck"],
+      "inputs": [
+        "src/**/*.ts",
+        "core/src/**/*.ts",
+        "functions/src/**/*.ts",
+        "tests/contract/**/*.ts",
+        "../*/contracts/*.json",
+        "package.json"
+      ],
+      "outputs": []
+    },
     "build": {
       "dependsOn": ["^build"],
       "inputs": ["src/**/*.ts", "tsconfig.json", "package.json"],

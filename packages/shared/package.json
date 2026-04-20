@@ -35,6 +35,7 @@
   "devDependencies": {
     "@types/aws-lambda": "^8.10.143",
     "@types/node": "^22.0.0",
-    "dynamodb-local": "^0.0.34"
+    "dynamodb-local": "^0.0.34",
+    "zod-to-json-schema": "^3.23.0"
   }
 }

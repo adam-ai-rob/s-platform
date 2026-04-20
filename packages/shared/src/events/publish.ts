@@ -1,5 +1,6 @@
 import { EventBridgeClient, PutEventsCommand } from "@aws-sdk/client-eventbridge";
 import { ulid } from "ulid";
+import type { ZodType } from "zod";
 import { logger } from "../logger/logger";
 import type { PlatformEvent } from "./envelope";
 
@@ -30,6 +31,14 @@ export interface PublishEventParams<T = unknown> {
   eventName: string;
   source: string; // module name, e.g. "s-authn"
   payload: T;
+  /**
+   * Optional Zod schema for the payload. When supplied, the payload is
+   * parsed against the schema before PutEvents — a failure throws an
+   * Error with a descriptive message (the producer Lambda will retry).
+   * Producers pass the same schema that their AsyncAPI doc advertises
+   * so published events are guaranteed to match their declared contract.
+   */
+  schema?: ZodType<T>;
   correlationId?: string;
   traceId?: string;
   occurredAt?: string;
@@ -39,6 +48,20 @@ export async function publishEvent<T = unknown>(params: PublishEventParams<T>): 
   const busName = process.env.EVENT_BUS_NAME;
   if (!busName) {
     throw new Error("EVENT_BUS_NAME env var not set — is the Lambda linked to platformEventBus?");
+  }
+
+  if (params.schema) {
+    const result = params.schema.safeParse(params.payload);
+    if (!result.success) {
+      logger.error("❌ Event payload failed schema validation", {
+        errorCode: "EVENT_SCHEMA_VIOLATION",
+        eventName: params.eventName,
+        issues: result.error.issues,
+      });
+      throw new Error(
+        `Event ${params.eventName} payload did not match its declared schema: ${result.error.message}`,
+      );
+    }
   }
 
   const envelope: PlatformEvent<T> = {

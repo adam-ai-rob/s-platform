@@ -1,4 +1,5 @@
 import { unmarshall } from "@aws-sdk/util-dynamodb";
+import { userEventCatalog } from "@s-user/core/events";
 import type { UserProfile } from "@s-user/core/profiles/profiles.entity";
 import { publishEvent } from "@s/shared/events";
 import { logger } from "@s/shared/logger";
@@ -39,6 +40,7 @@ async function processRecord(record: DynamoDBRecord): Promise<void> {
   await publishEvent({
     source: "s-user",
     eventName,
+    schema: userEventCatalog[eventName].schema,
     payload: {
       userId: newImage.userId,
       firstName: newImage.firstName,

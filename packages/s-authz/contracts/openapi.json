@@ -1,0 +1,339 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "s-authz HTTP API",
+    "version": "1.0.0"
+  },
+  "components": {
+    "securitySchemes": {
+      "Bearer": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    },
+    "schemas": {
+      "Permission": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "value": {
+            "type": "array",
+            "items": {
+              "nullable": true
+            }
+          }
+        },
+        "required": ["id"]
+      },
+      "PermissionsResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": {
+              "userId": {
+                "type": "string"
+              },
+              "permissions": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/Permission"
+                }
+              }
+            },
+            "required": ["userId", "permissions"]
+          }
+        },
+        "required": ["data"]
+      },
+      "AuthzRole": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "permissions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Permission"
+            }
+          },
+          "childRoleIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "system": {
+            "type": "boolean"
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "permissions",
+          "childRoleIds",
+          "system",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "RoleResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/AuthzRole"
+          }
+        },
+        "required": ["data"]
+      },
+      "CreateRoleBody": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 500
+          },
+          "permissions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Permission"
+            },
+            "default": []
+          },
+          "childRoleIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "default": []
+          }
+        },
+        "required": ["name"]
+      }
+    },
+    "parameters": {}
+  },
+  "paths": {
+    "/authz/user/me/permissions": {
+      "get": {
+        "tags": ["Authz"],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "summary": "Get the caller's effective permissions",
+        "responses": {
+          "200": {
+            "description": "Permissions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PermissionsResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/authz/admin/roles": {
+      "post": {
+        "tags": ["Authz Admin"],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "summary": "Create a role",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateRoleBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RoleResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Role name already exists"
+          }
+        }
+      }
+    },
+    "/authz/admin/roles/{id}": {
+      "get": {
+        "tags": ["Authz Admin"],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "summary": "Get a role",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Role",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RoleResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found"
+          }
+        }
+      },
+      "delete": {
+        "tags": ["Authz Admin"],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "summary": "Delete a role",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Deleted"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "409": {
+            "description": "System roles cannot be deleted"
+          }
+        }
+      }
+    },
+    "/authz/admin/users/{userId}/roles/{roleId}": {
+      "post": {
+        "tags": ["Authz Admin"],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "summary": "Assign a role to a user",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "userId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "roleId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Assigned"
+          },
+          "404": {
+            "description": "Role not found"
+          },
+          "409": {
+            "description": "Already assigned"
+          }
+        }
+      },
+      "delete": {
+        "tags": ["Authz Admin"],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "summary": "Unassign a role from a user",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "userId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "roleId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Unassigned"
+          },
+          "404": {
+            "description": "Assignment not found"
+          }
+        }
+      }
+    }
+  }
+}
