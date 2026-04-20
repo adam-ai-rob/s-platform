@@ -22,9 +22,10 @@ s-platform/
 ├── .github/
 │   ├── CODEOWNERS                     # Per-package ownership for AI agents
 │   └── workflows/
-│       ├── ci.yml                     # PR: typecheck, lint, unit tests
-│       ├── deploy.yml                 # stage/* branches → deploy
-│       └── pr-stage.yml               # PR open → deploy pr-{N}, close → remove
+│       ├── ci.yml                     # PR: typecheck, lint, unit, integration, contract, contract backwards-compat
+│       ├── deploy.yml                 # stage/* branches → multi-job deploy (platform → s-authz → modules)
+│       ├── pr-deployed-test.yml       # PR label 'deployed-test' → deploy to dev, run journey, rollback only on fail
+│       └── full-e2e.yml               # workflow_dispatch → run journey against dev/test/prod
 ├── infra/                             # SST stack definitions
 │   ├── shared.ts                      # API Gateway, EventBridge bus, KMS, domain
 │   ├── s-authn.ts                     # s-authn Lambdas + tables

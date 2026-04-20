@@ -145,83 +145,17 @@ jobs:
 
 All three must pass before PR can merge. Turborepo caches typecheck/lint/test results across runs.
 
-## Per-PR Ephemeral Stage Workflow
+## PR Verification
 
-**File:** `.github/workflows/pr-stage.yml`
-**Triggers:** PR opened, PR synchronize, PR closed.
+Every PR goes through three layers of checks, progressively more realistic:
 
-```yaml
-name: PR Stage
-on:
-  pull_request:
-    types: [opened, synchronize, reopened, closed]
+1. **CI only** (always, ~90s): `.github/workflows/ci.yml` — typecheck, lint, unit, integration (dynamodb-local + JWT stub), contract, contract backwards-compatibility. Covers ~80% of regressions without any AWS deploy.
 
-permissions:
-  id-token: write
-  contents: read
-  pull-requests: write
+2. **On-demand deployed test** (opt-in per PR via `deployed-test` label): `.github/workflows/pr-deployed-test.yml` — deploys the PR's changed modules to the shared `dev` stage and runs the full auth journey against `dev.s-api.smartiqi.com`. On pass, dev stays at the PR's code (saves a rollback cycle before merge). On fail, `origin/main` is redeployed to dev automatically.
 
-jobs:
-  deploy-pr-stage:
-    if: github.event.action != 'closed'
-    runs-on: ubuntu-latest
-    environment: dev  # reuses dev environment secrets
-    steps:
-      - uses: actions/checkout@v4
-      - uses: oven-sh/setup-bun@v1
-      - run: bun install
+3. **On-demand full journey** (manual): `.github/workflows/full-e2e.yml` — run the journey against dev / test / prod. Useful for confirming a stage is healthy without waiting for a new merge.
 
-      - uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: arn:aws:iam::${{ vars.AWS_ACCOUNT_ID }}:role/GitHubActionsRole
-          aws-region: ${{ vars.AWS_REGION }}
-
-      - name: Deploy PR stage
-        run: bun sst deploy --stage pr-${{ github.event.pull_request.number }} --print-logs
-
-      - name: Run e2e tests against PR stage
-        run: STAGE=pr-${{ github.event.pull_request.number }} bun run test:e2e
-
-      - name: Comment PR with stage URL
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const url = process.env.API_URL;
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: `🚀 PR stage deployed: \`pr-${context.issue.number}\`\nAPI: ${url}`,
-            });
-
-  remove-pr-stage:
-    if: github.event.action == 'closed'
-    runs-on: ubuntu-latest
-    environment: dev
-    steps:
-      - uses: actions/checkout@v4
-      - uses: oven-sh/setup-bun@v1
-      - run: bun install
-
-      - uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: arn:aws:iam::${{ vars.AWS_ACCOUNT_ID }}:role/GitHubActionsRole
-          aws-region: ${{ vars.AWS_REGION }}
-
-      - name: Remove PR stage
-        run: bun sst remove --stage pr-${{ github.event.pull_request.number }} --print-logs
-```
-
-**Benefits:**
-
-- Every PR has a fully isolated AWS stack
-- Integration tests run against real AWS (not mocks)
-- Agents get real feedback (EventBridge routing, DDB throttling, Lambda cold starts)
-- Close PR → stage destroyed → $0 ongoing cost
-
-**What's deployed:** the full SST app — all module Lambdas, DynamoDB tables, EventBridge bus, stream handlers. Stage scope isolates everything.
-
-**Turbo change detection** (optional): if only `s-user` changed, configure Turbo to skip unchanged modules' integration tests — speeds up PR feedback.
+There is no automatic per-PR `pr-{N}` stage. That model was tried (retired alongside the Phase-3 SST-app split) and traded for the label-driven approach above: most PRs don't need real AWS verification, and the ones that do get an explicit, more realistic signal via `deployed-test` against the continuously-warm dev stage. See `packages/s-tests/CLAUDE.md` for the full run matrix and the `CLAUDE.md` PR-labels section for usage.
 
 ## Main Deploy Workflow
 

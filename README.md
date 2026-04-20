@@ -57,9 +57,10 @@ s-platform/
 ├── scripts/
 │   └── new-module.sh         # `bun run new-module s-{name}`
 ├── .github/workflows/
-│   ├── ci.yml                # PR: typecheck + lint + test
-│   ├── deploy.yml            # stage/* branches → deploy
-│   └── pr-stage.yml          # PR open → deploy pr-{N}, close → remove
+│   ├── ci.yml                 # PR: typecheck + lint + test + contract backwards-compat
+│   ├── deploy.yml             # stage/* branches → deploy the 5-app stack
+│   ├── pr-deployed-test.yml   # PR label 'deployed-test' → deploy to dev + journey
+│   └── full-e2e.yml           # manual dispatch → run journey against dev/test/prod
 ├── sst.config.ts
 ├── package.json              # Bun workspace root
 ├── biome.json

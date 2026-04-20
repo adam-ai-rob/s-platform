@@ -94,13 +94,12 @@ STAGE=pr-42   API_URL=https://xyz.execute-api.eu-west-1.amazonaws.com bun test -
 STAGE=prod    bun test --timeout 60000 --filter=read-only
 ```
 
-In CI, same journey runs from four places:
-- **`pr-stage.yml`** — on every PR, against the ephemeral `pr-{N}` stage, with a one-register warm-up for cold Lambdas.
+In CI, same journey runs from three places:
 - **`deploy.yml` smoke job** — after each stage deploy (stage/dev, stage/test, stage/prod).
 - **`full-e2e.yml`** — on-demand via Actions → Run workflow, stage dropdown (dev/test/prod). Blocking. Use this to sanity-check a stage without redeploying.
 - **`pr-deployed-test.yml`** — opt-in per PR (label `deployed-test` or manual dispatch). Deploys the PR's changed modules to the real `dev` stage, runs the full journey against `dev.s-api.smartiqi.com`, leaves dev at the PR's code on success (saves a rollback cycle before merge) or restores dev from `origin/main` on failure. Serialized via a shared `touches-dev` concurrency group with `deploy.yml`'s stage/dev deploys — no races. Use when you want the most realistic signal before merging, at the cost of dev being temporarily the PR's code.
 
-A journey run is the acceptance gate for a PR — if the pr-{N} stage journey run fails, the PR should not merge.
+PRs that DON'T carry the `deployed-test` label rely on CI (typecheck / lint / unit / integration / contract / contract-diff) as the acceptance signal — the integration harness (`@s/shared/testing`) uses a local dynamodb + JWT stub and catches most regressions without AWS. Add `deployed-test` when the risk profile warrants a real-AWS round-trip (infra changes, event-handler rewrites, security-sensitive changes).
 
 ## Change rules
 

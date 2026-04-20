@@ -366,10 +366,11 @@ With `sst dev` running:
 - Check consumer Lambda permissions (`lambda:InvokeFunction` from `events.amazonaws.com`).
 - Check DLQ for failures: `aws sqs receive-message --queue-url ...`.
 
-### Per-PR stage not cleaning up
+### Ephemeral stage not cleaning up
 
-- Check `pr-stage.yml` workflow ran on PR close.
-- Manual cleanup: `bun sst remove --stage pr-{N}`.
+PRs no longer get automatic `pr-{N}` stages (retired — every PR runs CI locally, and the `deployed-test` label deploys to the shared `dev` instead). If you created a personal stage manually:
+
+- Manual cleanup per module (reverse bootstrap order): `cd modules/s-X && bun sst remove --stage <name>`, then `cd platform && bun sst remove --stage <name>`.
 
 ## Keeping Local Dev Fast
 
