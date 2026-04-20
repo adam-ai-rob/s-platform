@@ -15,10 +15,11 @@ A module-scoped agent needs only these five reading points — it does not need 
 **Infra-only agents** (deploy-time helpers, SST app config, gateway/bus/KMS/SNS wiring) additionally read:
 
 - [`platform/`](./platform/) — Tier-1 SST app owning API Gateway v2, EventBridge bus, KMS, SNS. Deploys first on any fresh stage.
+- [`modules/s-{module}/`](./modules/) — one Tier-2 SST app per module. Each reads platform ARNs from SSM at deploy time.
 - [`packages/infra-shared/CLAUDE.md`](./packages/infra-shared/CLAUDE.md) — shared DLQ + SSM helpers used by the platform app and every module SST app.
 - [`docs/runbooks/fresh-stage-bootstrap.md`](./docs/runbooks/fresh-stage-bootstrap.md) — deploy order + SSM contract between platform and modules.
 
-Phase 3 migration is in progress (Issue #46). The root `sst.config.ts` + `infra/` still owns the existing `dev`/`test`/`prod` stages; the new `platform/` tier is additive until module SST apps land in follow-up PRs.
+There is no root SST app. Every stage (dev, test, prod, pr-{N}, personal) boots `platform/` first, then the 4 module apps in `modules/*`.
 
 ## Non-Negotiable Rules
 
@@ -132,11 +133,18 @@ git checkout stage/dev && git merge main --ff-only && git push origin stage/dev 
 
 ```bash
 bun install
-bunx sst dev --stage $USER         # Local dev
 bun run typecheck                  # TypeScript check
 bun run lint                       # Biome check + auto-fix
 bun run test                       # Unit tests
 bun run test:e2e                   # Journey tests (requires deployed stage)
+
+# Deploy — one app at a time. See docs/runbooks/fresh-stage-bootstrap.md
+# for the bootstrap order (platform → s-authz → others).
+bun run deploy:platform -- --stage $USER
+bun run deploy:authz    -- --stage $USER
+bun run deploy:authn    -- --stage $USER
+bun run deploy:user     -- --stage $USER
+bun run deploy:group    -- --stage $USER
 ```
 
 **Always use `bun` / `bunx`. Never `npm` / `npx`.**
