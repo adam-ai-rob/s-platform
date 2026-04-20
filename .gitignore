@@ -41,6 +41,3 @@ coverage/
 # Local temp files
 tmp/
 
-# Local-only WIP: per-module SST apps architecture proposal.
-# Not ready to commit. Remove this line when promoting to a PR.
-/docs/plan.md
