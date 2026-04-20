@@ -4,12 +4,12 @@ How to stand up a new `s-platform` stage (dev, test, prod, or a scratch
 `phase3-{name}` stage) from zero, using the Phase-3 split where the
 platform tier and each module deploy independently.
 
-> **Status (2026-04):** Phase 3 is in progress. Today only the `platform/`
-> tier is independently deployable; module SST apps (`modules/s-{name}/`)
-> land in follow-up PRs. Until all modules are migrated, existing stages
-> (`dev`, `test`, `prod`) keep using the legacy root `sst.config.ts`.
-> This runbook describes the end-state; intermediate steps flag what's
-> not wired up yet.
+> **Status (2026-04):** Phase 3 is in progress. `platform/` and
+> `modules/s-authz/` are independently deployable today; `modules/s-authn`,
+> `modules/s-user`, `modules/s-group` land in follow-up PRs. Until all
+> modules are migrated, existing stages (`dev`, `test`, `prod`) keep
+> using the legacy root `sst.config.ts`. This runbook describes the
+> end-state; intermediate steps flag what's not wired up yet.
 
 ## Bootstrap order
 
@@ -74,18 +74,46 @@ Expected output (order may vary):
 in `platform/infra/alarms.ts`. Click it; otherwise DLQ alarms stay in
 `PendingConfirmation`.
 
-## Step 2 — Deploy s-authz (planned)
-
-> Not wired yet. In the follow-up PR that lands `modules/s-authz/`:
+## Step 2 — Deploy s-authz
 
 ```bash
 cd modules/s-authz
 bun sst deploy --stage phase3-dev
 ```
 
-This will additionally publish `/s-platform/phase3-dev/authz-view-table-name`
-so every other module's API Lambda picks it up as
-`AUTHZ_VIEW_TABLE_NAME`.
+This reads the platform outputs from SSM at deploy time, creates its own
+DDB tables + Lambdas + stream/event handlers, registers
+`ANY /authz/{proxy+}` against the imported gateway via raw Pulumi
+(`aws.apigatewayv2.Integration` + `Route` + a `Lambda.Permission` scoped
+to the `/authz/*` source ARN), and additionally publishes:
+
+```
+/s-platform/{stage}/authz-view-table-name
+/s-platform/{stage}/authz-view-table-arn
+```
+
+Every other module's API Lambda will pick those up at deploy time —
+`authz-view-table-name` as the `AUTHZ_VIEW_TABLE_NAME` env var, the ARN
+as an IAM-policy resource for `dynamodb:GetItem`.
+
+Verify:
+
+```bash
+aws ssm get-parameters-by-path \
+  --path /s-platform/phase3-dev \
+  --region eu-west-1 --profile itinn-bot \
+  --query 'Parameters[?contains(Name, `authz`)].Name'
+```
+
+Smoke-test the route (no auth required on `/health`):
+
+```bash
+GW=$(aws ssm get-parameter --name /s-platform/phase3-dev/gateway-url \
+  --region eu-west-1 --profile itinn-bot --query 'Parameter.Value' --output text)
+curl -sS $GW/authz/health          # {"status":"ok"}
+curl -sS -o /dev/null -w '%{http_code}\n' $GW/authz/info   # 401 (Missing Bearer token — expected)
+curl -sS $GW/authz/openapi.json | head -c 200               # OpenAPI 3.1 spec
+```
 
 ## Step 3 — Deploy the remaining modules (planned)
 
@@ -138,3 +166,11 @@ each app's teardown.
 - **SNS alarm emails still `PendingConfirmation` days later:** check the
   spam folder of the address in `platform/infra/alarms.ts`; AWS
   re-prompts after 3 days; otherwise re-subscribe.
+- **SST's nested `bun install` fails with 401 against a private mirror:**
+  SST spawns its own `bun install` inside `{app}/.sst/platform/` which
+  doesn't always inherit the repo-root `bunfig.toml`. Each SST app has
+  its own `bunfig.toml` to pin the registry to public npm, but if a
+  user-level `~/.npmrc` has an expired token AWS CodeArtifact /
+  JFrog / GitHub Packages still wins. Prefix the deploy command with
+  `NPM_CONFIG_REGISTRY=https://registry.npmjs.org/` to override for that
+  invocation, or refresh the mirror token.
