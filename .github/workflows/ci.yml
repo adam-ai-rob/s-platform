@@ -72,7 +72,11 @@ jobs:
         # when they run `bun run lint`).
         run: |
           bun run contracts:build
-          bunx --bun biome format --write 'packages/*/contracts/**/*.json'
+          bunx --bun biome format --write \
+            packages/s-authn/contracts \
+            packages/s-authz/contracts \
+            packages/s-user/contracts \
+            packages/s-group/contracts
           if ! git diff --quiet -- packages/*/contracts/; then
             echo "Contracts are stale. Run 'bun run contracts:build && bun run lint' and commit the result."
             git --no-pager diff -- packages/*/contracts/
