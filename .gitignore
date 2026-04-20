@@ -22,6 +22,13 @@ dist/
 *.swp
 .DS_Store
 
+# Claude Code — track shared project config (settings.json, commands/, agents/,
+# hooks/, skills/); ignore transient runtime state and per-user overrides.
+.claude/settings.local.json
+.claude/scheduled_tasks.lock
+.claude/state/
+.claude/cache/
+
 # Logs
 *.log
 npm-debug.log*

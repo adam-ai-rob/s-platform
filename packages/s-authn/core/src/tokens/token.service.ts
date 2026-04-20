@@ -36,7 +36,42 @@ function getKeyAlias(): string {
 
 // ─── JWT signing ──────────────────────────────────────────────────────────────
 
+export type JwtSigner = (
+  payload: Record<string, unknown>,
+  expiresInSeconds: number,
+) => Promise<string>;
+
+export type JwksProvider = () => Promise<{ keys: JwksKey[] }>;
+
+let signJwtImpl: JwtSigner | null = null;
+let jwksProviderImpl: JwksProvider | null = null;
+
+/**
+ * Test-only: replace the KMS-backed JWT signer with a local implementation
+ * so integration tests can issue tokens without real AWS KMS. Pass `null`
+ * to restore the default (KMS) implementation. Never call from production.
+ */
+export function __setSignJwtForTests(fn: JwtSigner | null): void {
+  signJwtImpl = fn;
+}
+
+/**
+ * Test-only: replace the KMS-backed JWKS provider. Pass `null` to restore
+ * the default. Never call from production.
+ */
+export function __setJwksProviderForTests(fn: JwksProvider | null): void {
+  jwksProviderImpl = fn;
+}
+
 async function signJwt(
+  payload: Record<string, unknown>,
+  expiresInSeconds: number,
+): Promise<string> {
+  if (signJwtImpl) return signJwtImpl(payload, expiresInSeconds);
+  return defaultSignJwt(payload, expiresInSeconds);
+}
+
+async function defaultSignJwt(
   payload: Record<string, unknown>,
   expiresInSeconds: number,
 ): Promise<string> {
@@ -113,6 +148,8 @@ let jwksCache: { keys: JwksKey[]; cachedAt: number } | null = null;
 const JWKS_CACHE_TTL_MS = 3_600_000; // 1 hour
 
 export async function getJwks(): Promise<{ keys: JwksKey[] }> {
+  if (jwksProviderImpl) return jwksProviderImpl();
+
   const now = Date.now();
   if (jwksCache && now - jwksCache.cachedAt < JWKS_CACHE_TTL_MS) {
     return { keys: jwksCache.keys };
