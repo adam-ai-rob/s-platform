@@ -85,12 +85,19 @@ describe("user lifecycle", () => {
 
 ## Running
 
+Locally — uses the stage URL resolver in `src/config.ts` (dev/test/prod have custom domains; any other stage needs `API_URL` set explicitly):
+
 ```bash
 bun run test:e2e                                # against dev (default)
 STAGE=test    bun test --timeout 60000
-STAGE=pr-42   bun test --timeout 60000          # against a PR ephemeral stage
+STAGE=pr-42   API_URL=https://xyz.execute-api.eu-west-1.amazonaws.com bun test --timeout 60000
 STAGE=prod    bun test --timeout 60000 --filter=read-only
 ```
+
+In CI, same journey runs from three places:
+- **`pr-stage.yml`** — on every PR, against the ephemeral `pr-{N}` stage, with a one-register warm-up for cold Lambdas.
+- **`deploy.yml` smoke job** — after each stage deploy (stage/dev, stage/test, stage/prod).
+- **`full-e2e.yml`** — on-demand via Actions → Run workflow, stage dropdown (dev/test/prod). Blocking. Use this to sanity-check a stage without redeploying.
 
 A journey run is the acceptance gate for a PR — if the pr-{N} stage journey run fails, the PR should not merge.
 
