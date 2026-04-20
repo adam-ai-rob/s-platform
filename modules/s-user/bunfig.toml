@@ -1,0 +1,3 @@
+[install]
+# See ../../platform/bunfig.toml and the root bunfig.toml for rationale.
+registry = "https://registry.npmjs.org/"

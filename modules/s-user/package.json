@@ -1,0 +1,20 @@
+{
+  "name": "@s/module-s-user",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Tier-2 SST app for the s-user module — UserProfiles table, API Lambda, stream + event handlers. Reads platform + s-authz ARNs from SSM.",
+  "scripts": {
+    "dev": "sst dev",
+    "deploy": "sst deploy",
+    "remove": "sst remove"
+  },
+  "dependencies": {
+    "@pulumi/aws": "^7.0.0",
+    "@pulumi/pulumi": "^3.200.0",
+    "@s/infra-shared": "workspace:*"
+  },
+  "devDependencies": {
+    "sst": "^3.0.0"
+  }
+}
