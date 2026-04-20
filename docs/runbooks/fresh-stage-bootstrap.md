@@ -4,12 +4,13 @@ How to stand up a new `s-platform` stage (dev, test, prod, or a scratch
 `phase3-{name}` stage) from zero, using the Phase-3 split where the
 platform tier and each module deploy independently.
 
-> **Status (2026-04):** Phase 3 is in progress. `platform/` and
-> `modules/s-authz/` are independently deployable today; `modules/s-authn`,
-> `modules/s-user`, `modules/s-group` land in follow-up PRs. Until all
-> modules are migrated, existing stages (`dev`, `test`, `prod`) keep
-> using the legacy root `sst.config.ts`. This runbook describes the
-> end-state; intermediate steps flag what's not wired up yet.
+> **Status (2026-04):** All four modules (`s-authz`, `s-authn`,
+> `s-user`, `s-group`) are now independently deployable from
+> `modules/s-{name}/`. Validated end-to-end on the `phase3-dev` scratch
+> stage — 12/12 journey tests pass. The root `sst.config.ts` + `infra/`
+> still own the existing `dev` / `test` / `prod` stages until the final
+> cut-over PR lands; fresh stages should use the per-module apps
+> described below.
 
 ## Bootstrap order
 
@@ -115,9 +116,7 @@ curl -sS -o /dev/null -w '%{http_code}\n' $GW/authz/info   # 401 (Missing Bearer
 curl -sS $GW/authz/openapi.json | head -c 200               # OpenAPI 3.1 spec
 ```
 
-## Step 3 — Deploy the remaining modules (planned)
-
-> Not wired yet. In follow-up PRs that land each module's own SST app:
+## Step 3 — Deploy the remaining modules
 
 ```bash
 cd modules/s-authn && bun sst deploy --stage phase3-dev
@@ -125,17 +124,54 @@ cd modules/s-user  && bun sst deploy --stage phase3-dev
 cd modules/s-group && bun sst deploy --stage phase3-dev
 ```
 
-Each module's `sst.config.ts` reads the platform outputs + the authz-view
-table name from SSM at deploy time and registers its routes against the
-imported gateway id.
+The three can deploy in parallel — they each only depend on
+`platform/` + `s-authz` being up already. Each module's `sst.config.ts`
+reads the platform outputs + the authz-view table name + ARN from SSM
+and registers its routes against the imported gateway id.
 
-## Step 4 — Smoke-test
+s-authn additionally reads `jwt-signing-key-arn` to attach a
+`kms:Sign` + `kms:GetPublicKey` policy on the API Lambda.
+
+Smoke-test every module's public `/health` endpoint:
 
 ```bash
-STAGE=phase3-dev bun run test:e2e
+GW=$(aws ssm get-parameter --name /s-platform/phase3-dev/gateway-url \
+  --region eu-west-1 --profile itinn-bot --query 'Parameter.Value' --output text)
+for m in authn authz user group; do
+  printf "/%s/health → " "$m"
+  curl -sS -w "HTTP %{http_code}\n" $GW/$m/health
+done
+```
+
+All four should return `{"status":"ok"} HTTP 200`.
+
+## Step 4 — Run the auth journey
+
+```bash
+STAGE=phase3-dev \
+  API_URL=$(aws ssm get-parameter --name /s-platform/phase3-dev/gateway-url \
+    --region eu-west-1 --profile itinn-bot --query 'Parameter.Value' --output text) \
+  bun run test:e2e
 ```
 
 Expect 12/12 in `packages/s-tests/src/journeys/auth.journey.test.ts`.
+
+**Cold-start caveat on a brand-new stage:** the first register in a
+fresh stage warms three cold Lambdas in series (s-authn stream handler
+→ s-user/s-group/s-authz event handlers) — DDB Streams + EventBridge
+delivery on top of that can push total latency to ~20s. The journey's
+`eventually()` window is 15s. If you see test [2] fail with a 404
+"Profile not found" error on the first run of a new stage, warm the
+pipeline with one manual register and re-run:
+
+```bash
+curl -sS -X POST $GW/authn/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"email":"warmup-'$(date +%s)'@example.com","password":"Warmup1234!"}' \
+  > /dev/null
+sleep 20
+STAGE=phase3-dev API_URL=$GW bun run test:e2e   # should hit 12/12
+```
 
 ## Teardown
 
