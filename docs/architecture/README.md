@@ -22,6 +22,17 @@ These docs are the single source of truth for how modules are built, deployed, t
 
 One-time setup runbooks live in [`../setup/`](../setup/README.md).
 
+## Architecture Decision Records
+
+Past architectural decisions are preserved in [`adr/`](./adr/) as an
+append-only record — kept so the trade-offs and rejected alternatives
+survive for future re-evaluation. The realized architecture in the
+numbered docs above is authoritative; ADRs describe how we got there.
+
+| ADR | Status | Summary |
+|---|---|---|
+| [001 — Per-module SST apps + contracts](./adr/001-per-module-sst-apps-and-contracts.md) | Accepted, realized 2026-04 | Platform tier + per-module SST apps, OpenAPI/AsyncAPI contracts, testing pyramid. Implemented via PRs #48–#55. |
+
 ## Quick Facts
 
 | | |
@@ -33,7 +44,7 @@ One-time setup runbooks live in [`../setup/`](../setup/README.md).
 | **IaC** | SST v3 (Ion, Pulumi-based) |
 | **Repo** | [adam-ai-rob/s-platform](https://github.com/adam-ai-rob/s-platform) (monorepo — code + docs) |
 | **Versioning** | CalVer `vYYYY.MM.N` |
-| **Stages** | `dev`, `test`, `prod`, plus ephemeral `pr-{N}` per pull request |
+| **Stages** | `dev`, `test`, `prod`. PRs run CI-only by default; opt into a real-AWS deploy against `dev` via the `deployed-test` label. |
 
 ## Who This Is For
 
