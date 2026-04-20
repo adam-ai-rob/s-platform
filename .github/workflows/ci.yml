@@ -66,11 +66,15 @@ jobs:
       - name: Contracts in sync
         # Regenerate contracts and fail if they differ from the committed
         # artifacts — forces developers to run `bun run contracts:build`
-        # whenever they change an event catalog or route.
+        # whenever they change an event catalog or route. Biome's JSON
+        # formatter compacts short arrays, so apply it to the fresh
+        # output before diffing (matching what developers get locally
+        # when they run `bun run lint`).
         run: |
           bun run contracts:build
+          bunx --bun biome format --write 'packages/*/contracts/**/*.json'
           if ! git diff --quiet -- packages/*/contracts/; then
-            echo "Contracts are stale. Run 'bun run contracts:build' and commit the result."
+            echo "Contracts are stale. Run 'bun run contracts:build && bun run lint' and commit the result."
             git --no-pager diff -- packages/*/contracts/
             exit 1
           fi
