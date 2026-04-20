@@ -80,10 +80,10 @@ Unless explicitly told otherwise:
 1. **Create a feature branch** from `main` (`fix/...`, `feat/...`)
 2. **Commit to the branch**, never directly to `main` or `stage/*`
 3. **Open a PR** targeting `main`
-4. **PR stage auto-deploys** (`pr-{N}`) with e2e tests
+4. **CI runs** (typecheck, lint, unit, integration, contract, contract backwards-compat). Add the `deployed-test` label if you want a real-AWS round-trip against dev before merging — see the PR labels table below.
 5. **Start review** — spawn reviewer + coder agents
 6. **Report back** — issues found, decisions, LGTM status
-7. **Merge** only after explicit user approval
+7. **Merge** only after explicit user approval; FF `stage/dev` from main to deploy
 
 ### Release notes
 
