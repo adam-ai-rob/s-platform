@@ -48,3 +48,4 @@ Read [monorepo CLAUDE.md](../../CLAUDE.md) and [architecture docs](../../docs/ar
 
 - Schema changes to `UserProfile` response require explicit approval.
 - Subscribers to `user.profile.*` events are in other modules — additions/changes to emitted events need coordination.
+- Breaking changes to the OpenAPI or AsyncAPI contracts are blocked in CI by `scripts/contract-diff.ts` — add the `breaking-api-change` label + migration plan to override.
