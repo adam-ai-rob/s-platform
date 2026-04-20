@@ -1,8 +1,11 @@
 name: PR Stage
 
-# Deploys an ephemeral AWS stage per PR. Security: we explicitly block PRs
-# from forks so a stranger cannot trigger a deploy that assumes our OIDC
-# role. Same-repo PRs (opened from branches in this repo) only.
+# Deploys an ephemeral AWS stage (`pr-{N}`) for every PR. Platform tier
+# plus all four modules, in bootstrap order. Tears down in reverse on
+# PR close.
+#
+# Security: fork PRs cannot assume our OIDC role. Same-repo PRs only.
+
 on:
   workflow_dispatch:
   pull_request:
@@ -17,75 +20,181 @@ permissions:
   contents: read
   pull-requests: write
 
+env:
+  STAGE: pr-${{ github.event.pull_request.number }}
+
 jobs:
-  deploy:
+  deploy-platform:
     # Block fork PRs — only same-repo branches can trigger an AWS deploy.
     # `head.repo.full_name` is null for workflow_dispatch; allow that too.
     if: >-
       github.event.action != 'closed' &&
       (github.event_name == 'workflow_dispatch' ||
        github.event.pull_request.head.repo.full_name == github.repository)
-    name: Deploy PR stage
+    name: Deploy platform/ (pr-${{ github.event.pull_request.number }})
     runs-on: ubuntu-latest
     environment: dev
-    env:
-      STAGE: pr-${{ github.event.pull_request.number }}
+    outputs:
+      api_url: ${{ steps.platform.outputs.api_url }}
     steps:
       - uses: actions/checkout@v4
-
-      - name: Install Bun
-        uses: oven-sh/setup-bun@v2
+      - uses: oven-sh/setup-bun@v2
         with:
           bun-version: "1.3.6"
-
-      - name: Cache Bun install dir
-        uses: actions/cache@v4
+      - uses: actions/cache@v4
         with:
           path: ~/.bun/install/cache
           key: bun-install-${{ runner.os }}-${{ hashFiles('bun.lock') }}
           restore-keys: |
             bun-install-${{ runner.os }}-
-
-      # See docs/plan.md — cold install is ~5-6 min due to @pulumi/aws.
-      # Tighten back to 5 min once Pulumi moves out of root workspace.
       - name: Install dependencies
-        run: bun install --frozen-lockfile --verbose
-        timeout-minutes: 15
-
+        run: bun install --frozen-lockfile
+        timeout-minutes: 5
       - name: Configure AWS credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: arn:aws:iam::${{ vars.AWS_ACCOUNT_ID }}:role/GitHubActionsRole
           aws-region: ${{ vars.AWS_REGION }}
-
-      - name: Deploy
-        id: deploy
+      - name: Deploy platform
+        id: platform
+        working-directory: platform
         run: |
           bun sst deploy --stage $STAGE --print-logs 2>&1 | tee /tmp/sst-deploy.log
-          # Strip ANSI, then find the 'api:' line from the final outputs block
-          API_URL=$(sed 's/\x1b\[[0-9;]*m//g' /tmp/sst-deploy.log | grep -E '^\s*api:\s+https?://' | tail -1 | awk '{print $2}')
+          # The gatewayUrl is an explicit output of platform/sst.config.ts.
+          API_URL=$(sed 's/\x1b\[[0-9;]*m//g' /tmp/sst-deploy.log | grep -E '^\s*gatewayUrl:\s+https?://' | tail -1 | awk '{print $2}')
           echo "api_url=${API_URL:-unknown}" >> "$GITHUB_OUTPUT"
           echo "Resolved API_URL: ${API_URL:-<empty>}"
 
-      - name: Run e2e tests against PR stage
-        env:
-          API_URL: ${{ steps.deploy.outputs.api_url }}
-        # Non-blocking: parsing is best-effort. Track as a followup.
-        run: STAGE=$STAGE API_URL=$API_URL bun run test:e2e || true
+  deploy-authz:
+    if: >-
+      github.event.action != 'closed' &&
+      (github.event_name == 'workflow_dispatch' ||
+       github.event.pull_request.head.repo.full_name == github.repository)
+    needs: deploy-platform
+    name: Deploy modules/s-authz (pr-${{ github.event.pull_request.number }})
+    runs-on: ubuntu-latest
+    environment: dev
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.3.6"
+      - uses: actions/cache@v4
+        with:
+          path: ~/.bun/install/cache
+          key: bun-install-${{ runner.os }}-${{ hashFiles('bun.lock') }}
+          restore-keys: |
+            bun-install-${{ runner.os }}-
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+        timeout-minutes: 5
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ vars.AWS_ACCOUNT_ID }}:role/GitHubActionsRole
+          aws-region: ${{ vars.AWS_REGION }}
+      - name: Deploy s-authz
+        working-directory: modules/s-authz
+        run: bun sst deploy --stage $STAGE --print-logs
 
-      - name: Comment PR with stage details
-        uses: actions/github-script@v7
+  deploy-modules:
+    if: >-
+      github.event.action != 'closed' &&
+      (github.event_name == 'workflow_dispatch' ||
+       github.event.pull_request.head.repo.full_name == github.repository)
+    needs: deploy-authz
+    name: Deploy modules/s-${{ matrix.module }} (pr-${{ github.event.pull_request.number }})
+    runs-on: ubuntu-latest
+    environment: dev
+    strategy:
+      fail-fast: false
+      matrix:
+        module: [authn, user, group]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.3.6"
+      - uses: actions/cache@v4
+        with:
+          path: ~/.bun/install/cache
+          key: bun-install-${{ runner.os }}-${{ hashFiles('bun.lock') }}
+          restore-keys: |
+            bun-install-${{ runner.os }}-
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+        timeout-minutes: 5
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ vars.AWS_ACCOUNT_ID }}:role/GitHubActionsRole
+          aws-region: ${{ vars.AWS_REGION }}
+      - name: Deploy s-${{ matrix.module }}
+        working-directory: modules/s-${{ matrix.module }}
+        run: bun sst deploy --stage $STAGE --print-logs
+
+  e2e:
+    if: >-
+      github.event.action != 'closed' &&
+      (github.event_name == 'workflow_dispatch' ||
+       github.event.pull_request.head.repo.full_name == github.repository)
+    needs: [deploy-platform, deploy-modules]
+    name: E2E journey (pr-${{ github.event.pull_request.number }})
+    runs-on: ubuntu-latest
+    environment: dev
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.3.6"
+      - uses: actions/cache@v4
+        with:
+          path: ~/.bun/install/cache
+          key: bun-install-${{ runner.os }}-${{ hashFiles('bun.lock') }}
+          restore-keys: |
+            bun-install-${{ runner.os }}-
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+        timeout-minutes: 5
+      - name: Warm up + run e2e journey
+        env:
+          API_URL: ${{ needs.deploy-platform.outputs.api_url }}
+        run: |
+          # First register on a fresh stage can exceed the journey's 15s
+          # eventually() window due to three cold Lambdas in series.
+          # Warm the pipeline with one throwaway register, then run the
+          # real suite. See docs/runbooks/fresh-stage-bootstrap.md.
+          curl -sS -X POST "$API_URL/authn/auth/register" \
+            -H "Content-Type: application/json" \
+            -d "{\"email\":\"warmup-$(date +%s)@example.com\",\"password\":\"Warmup1234!\"}" \
+            -o /dev/null -w "warmup: HTTP %{http_code}\n" || true
+          sleep 20
+          STAGE=$STAGE API_URL=$API_URL bun run test:e2e || true
+          # Non-blocking: tighten to blocking once we've observed warm-up
+          # reliability over a few PR cycles.
+
+  comment:
+    if: >-
+      github.event.action != 'closed' &&
+      (github.event_name == 'workflow_dispatch' ||
+       github.event.pull_request.head.repo.full_name == github.repository)
+    needs: [deploy-platform, deploy-modules]
+    name: Comment PR with stage details
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@v7
         with:
           script: |
-            const apiUrl = '${{ steps.deploy.outputs.api_url }}';
+            const apiUrl = '${{ needs.deploy-platform.outputs.api_url }}';
             const stage = `pr-${context.issue.number}`;
             const body = [
               `🚀 **PR stage deployed:** \`${stage}\``,
               ``,
               `- **API:** ${apiUrl}`,
+              `- **Modules:** platform · s-authz · s-authn · s-user · s-group`,
               `- **Destroyed automatically** when this PR closes.`,
               ``,
-              `Run tests locally against this stage: \`STAGE=${stage} bun run test:e2e\``,
+              `Run tests locally against this stage: \`STAGE=${stage} API_URL=${apiUrl} bun run test:e2e\``,
             ].join('\n');
 
             const { data: comments } = await github.rest.issues.listComments({
@@ -118,33 +227,33 @@ jobs:
     name: Remove PR stage
     runs-on: ubuntu-latest
     environment: dev
-    env:
-      STAGE: pr-${{ github.event.pull_request.number }}
     steps:
       - uses: actions/checkout@v4
-
-      - name: Install Bun
-        uses: oven-sh/setup-bun@v2
+      - uses: oven-sh/setup-bun@v2
         with:
           bun-version: "1.3.6"
-
-      - name: Cache Bun install dir
-        uses: actions/cache@v4
+      - uses: actions/cache@v4
         with:
           path: ~/.bun/install/cache
           key: bun-install-${{ runner.os }}-${{ hashFiles('bun.lock') }}
           restore-keys: |
             bun-install-${{ runner.os }}-
-
       - name: Install dependencies
-        run: bun install --frozen-lockfile --verbose
-        timeout-minutes: 15
-
+        run: bun install --frozen-lockfile
+        timeout-minutes: 5
       - name: Configure AWS credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: arn:aws:iam::${{ vars.AWS_ACCOUNT_ID }}:role/GitHubActionsRole
           aws-region: ${{ vars.AWS_REGION }}
-
-      - name: Remove
-        run: bun sst remove --stage $STAGE --print-logs
+      - name: Remove modules (reverse order of deploy)
+        run: |
+          # Reverse of deploy: modules → s-authz → platform. Each sst
+          # remove is best-effort; if one fails (e.g. the stage was
+          # already partially torn down), continue so we still get to
+          # the next one.
+          for m in s-authn s-user s-group; do
+            (cd modules/$m && bun sst remove --stage $STAGE --print-logs) || true
+          done
+          (cd modules/s-authz && bun sst remove --stage $STAGE --print-logs) || true
+          (cd platform && bun sst remove --stage $STAGE --print-logs) || true

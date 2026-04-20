@@ -1,5 +1,16 @@
 name: Deploy
 
+# Deploys platform/ (Tier 1) + modules/s-{authz,authn,user,group}/ (Tier 2)
+# to the stage matching the pushed branch. Bootstrap order is enforced
+# by job dependencies: platform → s-authz → s-{authn,user,group} (parallel).
+#
+# Deploy order rationale:
+#   - platform/ publishes /s-platform/{stage}/* SSM outputs (gateway id,
+#     event bus, KMS, alarms topic).
+#   - s-authz depends on platform's SSM and publishes
+#     /s-platform/{stage}/authz-view-table-{name,arn}.
+#   - The remaining three modules depend on platform + s-authz SSM keys.
+
 on:
   push:
     branches:
@@ -15,53 +26,146 @@ permissions:
   id-token: write
   contents: read
 
+env:
+  STAGE: ${{
+    github.ref_name == 'stage/prod' && 'prod'
+    || github.ref_name == 'stage/test' && 'test'
+    || 'dev'
+    }}
+  ENVIRONMENT: ${{
+    github.ref_name == 'stage/prod' && 'prod'
+    || github.ref_name == 'stage/test' && 'test'
+    || 'dev'
+    }}
+
 jobs:
-  deploy:
-    name: Deploy ${{ github.ref_name }}
+  platform:
+    name: Deploy platform/ (${{ github.ref_name }})
     runs-on: ubuntu-latest
     environment: ${{
       github.ref_name == 'stage/prod' && 'prod'
       || github.ref_name == 'stage/test' && 'test'
       || 'dev'
       }}
-    env:
-      STAGE: ${{
-        github.ref_name == 'stage/prod' && 'prod'
-        || github.ref_name == 'stage/test' && 'test'
-        || 'dev'
-        }}
-    timeout-minutes: 30
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
-
-      - name: Install Bun
-        uses: oven-sh/setup-bun@v2
+      - uses: oven-sh/setup-bun@v2
         with:
           bun-version: "1.3.6"
-
-      - name: Cache Bun install dir
-        uses: actions/cache@v4
+      - uses: actions/cache@v4
         with:
           path: ~/.bun/install/cache
           key: bun-install-${{ runner.os }}-${{ hashFiles('bun.lock') }}
           restore-keys: |
             bun-install-${{ runner.os }}-
-
-      # See docs/plan.md — cold install is ~6-8 min due to @pulumi/aws.
-      # Tighten back to 5 min once Pulumi moves out of root workspace.
       - name: Install dependencies
-        run: bun install --frozen-lockfile --verbose
-        timeout-minutes: 15
-
+        run: bun install --frozen-lockfile
+        timeout-minutes: 5
       - name: Configure AWS credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: arn:aws:iam::${{ vars.AWS_ACCOUNT_ID }}:role/GitHubActionsRole
           aws-region: ${{ vars.AWS_REGION }}
-
-      - name: Deploy
+      - name: Deploy platform
+        working-directory: platform
         run: bun sst deploy --stage $STAGE --print-logs
 
+  authz:
+    name: Deploy modules/s-authz (${{ github.ref_name }})
+    needs: platform
+    runs-on: ubuntu-latest
+    environment: ${{
+      github.ref_name == 'stage/prod' && 'prod'
+      || github.ref_name == 'stage/test' && 'test'
+      || 'dev'
+      }}
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.3.6"
+      - uses: actions/cache@v4
+        with:
+          path: ~/.bun/install/cache
+          key: bun-install-${{ runner.os }}-${{ hashFiles('bun.lock') }}
+          restore-keys: |
+            bun-install-${{ runner.os }}-
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+        timeout-minutes: 5
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ vars.AWS_ACCOUNT_ID }}:role/GitHubActionsRole
+          aws-region: ${{ vars.AWS_REGION }}
+      - name: Deploy s-authz
+        working-directory: modules/s-authz
+        run: bun sst deploy --stage $STAGE --print-logs
+
+  modules:
+    name: Deploy modules/s-${{ matrix.module }} (${{ github.ref_name }})
+    needs: authz
+    runs-on: ubuntu-latest
+    environment: ${{
+      github.ref_name == 'stage/prod' && 'prod'
+      || github.ref_name == 'stage/test' && 'test'
+      || 'dev'
+      }}
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        module: [authn, user, group]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.3.6"
+      - uses: actions/cache@v4
+        with:
+          path: ~/.bun/install/cache
+          key: bun-install-${{ runner.os }}-${{ hashFiles('bun.lock') }}
+          restore-keys: |
+            bun-install-${{ runner.os }}-
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+        timeout-minutes: 5
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ vars.AWS_ACCOUNT_ID }}:role/GitHubActionsRole
+          aws-region: ${{ vars.AWS_REGION }}
+      - name: Deploy s-${{ matrix.module }}
+        working-directory: modules/s-${{ matrix.module }}
+        run: bun sst deploy --stage $STAGE --print-logs
+
+  smoke:
+    name: Smoke tests (${{ github.ref_name }})
+    needs: modules
+    runs-on: ubuntu-latest
+    environment: ${{
+      github.ref_name == 'stage/prod' && 'prod'
+      || github.ref_name == 'stage/test' && 'test'
+      || 'dev'
+      }}
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.3.6"
+      - uses: actions/cache@v4
+        with:
+          path: ~/.bun/install/cache
+          key: bun-install-${{ runner.os }}-${{ hashFiles('bun.lock') }}
+          restore-keys: |
+            bun-install-${{ runner.os }}-
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+        timeout-minutes: 5
       - name: Smoke tests
-        run: STAGE=$STAGE bun run test:e2e -- --filter=smoke || true
-        # Non-blocking for now; tighten once s-tests journeys are in place.
+        run: STAGE=$STAGE bun run test:e2e || true
+        # Non-blocking until the journey is tuned for cold-start latency
+        # on fresh stages (see docs/runbooks/fresh-stage-bootstrap.md).

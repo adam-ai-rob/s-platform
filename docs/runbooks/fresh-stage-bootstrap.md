@@ -1,16 +1,15 @@
 # Runbook: Fresh-Stage Bootstrap
 
-How to stand up a new `s-platform` stage (dev, test, prod, or a scratch
-`phase3-{name}` stage) from zero, using the Phase-3 split where the
-platform tier and each module deploy independently.
+How to stand up a new `s-platform` stage (dev, test, prod, personal,
+or a `pr-{N}` ephemeral) from zero. Every stage boots the same five
+SST apps in order: `platform/` first, then the 4 modules.
 
-> **Status (2026-04):** All four modules (`s-authz`, `s-authn`,
-> `s-user`, `s-group`) are now independently deployable from
-> `modules/s-{name}/`. Validated end-to-end on the `phase3-dev` scratch
-> stage — 12/12 journey tests pass. The root `sst.config.ts` + `infra/`
-> still own the existing `dev` / `test` / `prod` stages until the final
-> cut-over PR lands; fresh stages should use the per-module apps
-> described below.
+> The commands below use `phase3-dev` as a concrete example stage name;
+> substitute your own (`$USER`, `alex-feature-x`, whatever). For
+> `dev`/`test`/`prod` the GitHub Actions `Deploy` workflow runs these
+> steps automatically when `stage/{dev,test,prod}` is fast-forwarded;
+> follow this runbook when bootstrapping a brand-new stage name
+> locally.
 
 ## Bootstrap order
 

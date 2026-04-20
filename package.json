@@ -6,9 +6,6 @@
   "description": "Monorepo for the s-platform — serverless, event-driven, DDD-based microservice platform on AWS.",
   "workspaces": ["packages/*", "platform", "modules/*"],
   "scripts": {
-    "dev": "sst dev",
-    "deploy": "sst deploy",
-    "remove": "sst remove",
     "deploy:platform": "cd platform && bun sst deploy",
     "remove:platform": "cd platform && bun sst remove",
     "deploy:authz": "cd modules/s-authz && bun sst deploy",
@@ -32,10 +29,7 @@
   },
   "devDependencies": {
     "@biomejs/biome": "^1.8.0",
-    "@pulumi/aws": "^7.0.0",
-    "@pulumi/pulumi": "^3.200.0",
     "@types/node": "^22.0.0",
-    "sst": "^3.0.0",
     "turbo": "^2.0.0",
     "typescript": "^5.5.0",
     "zod-to-json-schema": "^3.23.0"
