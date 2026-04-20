@@ -4,5 +4,5 @@
     "types": ["node", "bun", "sst"]
   },
   "include": ["sst.config.ts", "infra/**/*.ts", "packages/**/*.ts", "scripts/**/*.ts"],
-  "exclude": ["node_modules", ".sst", "dist", ".turbo"]
+  "exclude": ["node_modules", ".sst", "dist", ".turbo", "platform"]
 }

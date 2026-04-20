@@ -12,6 +12,14 @@ This file is read by every AI agent working on any module. Per-module agents als
 
 A module-scoped agent needs only these five reading points — it does not need to read other modules' `CLAUDE.md` files. Cross-module coupling goes through events or HTTP APIs, not shared code.
 
+**Infra-only agents** (deploy-time helpers, SST app config, gateway/bus/KMS/SNS wiring) additionally read:
+
+- [`platform/`](./platform/) — Tier-1 SST app owning API Gateway v2, EventBridge bus, KMS, SNS. Deploys first on any fresh stage.
+- [`packages/infra-shared/CLAUDE.md`](./packages/infra-shared/CLAUDE.md) — shared DLQ + SSM helpers used by the platform app and every module SST app.
+- [`docs/runbooks/fresh-stage-bootstrap.md`](./docs/runbooks/fresh-stage-bootstrap.md) — deploy order + SSM contract between platform and modules.
+
+Phase 3 migration is in progress (Issue #46). The root `sst.config.ts` + `infra/` still owns the existing `dev`/`test`/`prod` stages; the new `platform/` tier is additive until module SST apps land in follow-up PRs.
+
 ## Non-Negotiable Rules
 
 ### Layer boundaries (docs/03, docs/07, docs/08)
