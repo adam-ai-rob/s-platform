@@ -34,17 +34,9 @@ jobs:
           restore-keys: |
             bun-install-${{ runner.os }}-
 
-      # Cold install can be ~6-8 min because @pulumi/aws (61 MB, 2578 .d.ts
-      # files) is extracted and hardlinked on every fresh runner. --verbose
-      # is kept on so a future regression shows up in logs as a stuck line
-      # rather than silent-hang-then-timeout.
-      # TODO: when the platform/module SST split lands (docs/plan.md Phase 3),
-      # move @pulumi/aws + @pulumi/pulumi out of root into the platform/
-      # workspace so the test lane doesn't install them — then tighten back
-      # to 5 min and drop --verbose.
       - name: Install dependencies
-        run: bun install --frozen-lockfile --verbose
-        timeout-minutes: 15
+        run: bun install --frozen-lockfile
+        timeout-minutes: 5
 
       - name: Typecheck
         run: bun run typecheck
