@@ -1,4 +1,5 @@
 import { unmarshall } from "@aws-sdk/util-dynamodb";
+import { authnEventCatalog } from "@s-authn/core/events";
 import type { AuthnUser } from "@s-authn/core/users/users.entity";
 import { publishEvent } from "@s/shared/events";
 import { logger } from "@s/shared/logger";
@@ -62,6 +63,7 @@ async function processRecord(record: DynamoDBRecord): Promise<void> {
     await publishEvent({
       source: "s-authn",
       eventName: "user.registered",
+      schema: authnEventCatalog["user.registered"].schema,
       payload: {
         userId: newImage.id,
         email: newImage.email,
@@ -76,6 +78,7 @@ async function processRecord(record: DynamoDBRecord): Promise<void> {
       await publishEvent({
         source: "s-authn",
         eventName: "user.enabled",
+        schema: authnEventCatalog["user.enabled"].schema,
         payload: { userId: newImage.id },
       });
     }
@@ -83,6 +86,7 @@ async function processRecord(record: DynamoDBRecord): Promise<void> {
       await publishEvent({
         source: "s-authn",
         eventName: "user.disabled",
+        schema: authnEventCatalog["user.disabled"].schema,
         payload: { userId: newImage.id },
       });
     }
@@ -90,6 +94,7 @@ async function processRecord(record: DynamoDBRecord): Promise<void> {
       await publishEvent({
         source: "s-authn",
         eventName: "user.password.changed",
+        schema: authnEventCatalog["user.password.changed"].schema,
         payload: { userId: newImage.id },
       });
     }

@@ -1,0 +1,220 @@
+{
+  "asyncapi": "3.0.0",
+  "info": {
+    "title": "s-authn event contract",
+    "version": "1.0.0",
+    "description": "Events published by s-authn onto the platform EventBridge bus. Payloads are wrapped in the PlatformEvent envelope (see packages/shared/src/events/envelope.ts); each payload below matches PlatformEvent.payload."
+  },
+  "defaultContentType": "application/json",
+  "channels": {
+    "user.registered": {
+      "address": "user.registered",
+      "description": "A new user identity was created (INSERT on AuthnUsers).",
+      "messages": {
+        "user_registered": {
+          "$ref": "#/components/messages/user_registered"
+        }
+      }
+    },
+    "user.enabled": {
+      "address": "user.enabled",
+      "description": "An existing user was re-enabled (enabled: false → true).",
+      "messages": {
+        "user_enabled": {
+          "$ref": "#/components/messages/user_enabled"
+        }
+      }
+    },
+    "user.disabled": {
+      "address": "user.disabled",
+      "description": "An existing user was disabled (enabled: true → false).",
+      "messages": {
+        "user_disabled": {
+          "$ref": "#/components/messages/user_disabled"
+        }
+      }
+    },
+    "user.password.changed": {
+      "address": "user.password.changed",
+      "description": "A user changed their password (passwordHash mutated).",
+      "messages": {
+        "user_password_changed": {
+          "$ref": "#/components/messages/user_password_changed"
+        }
+      }
+    }
+  },
+  "operations": {
+    "send_user_registered": {
+      "action": "send",
+      "channel": {
+        "$ref": "#/channels/user.registered"
+      },
+      "messages": [
+        {
+          "$ref": "#/channels/user.registered/messages/user_registered"
+        }
+      ]
+    },
+    "send_user_enabled": {
+      "action": "send",
+      "channel": {
+        "$ref": "#/channels/user.enabled"
+      },
+      "messages": [
+        {
+          "$ref": "#/channels/user.enabled/messages/user_enabled"
+        }
+      ]
+    },
+    "send_user_disabled": {
+      "action": "send",
+      "channel": {
+        "$ref": "#/channels/user.disabled"
+      },
+      "messages": [
+        {
+          "$ref": "#/channels/user.disabled/messages/user_disabled"
+        }
+      ]
+    },
+    "send_user_password_changed": {
+      "action": "send",
+      "channel": {
+        "$ref": "#/channels/user.password.changed"
+      },
+      "messages": [
+        {
+          "$ref": "#/channels/user.password.changed/messages/user_password_changed"
+        }
+      ]
+    }
+  },
+  "components": {
+    "messages": {
+      "user_registered": {
+        "name": "user.registered",
+        "title": "user.registered",
+        "summary": "A new user identity was created (INSERT on AuthnUsers).",
+        "contentType": "application/json",
+        "payload": {
+          "$ref": "#/components/schemas/user_registered"
+        },
+        "examples": [
+          {
+            "name": "default",
+            "payload": {
+              "userId": "01HXYUSER000000000000000000",
+              "email": "alice@example.com",
+              "occurredAt": "2026-04-20T00:00:00.000Z"
+            }
+          }
+        ]
+      },
+      "user_enabled": {
+        "name": "user.enabled",
+        "title": "user.enabled",
+        "summary": "An existing user was re-enabled (enabled: false → true).",
+        "contentType": "application/json",
+        "payload": {
+          "$ref": "#/components/schemas/user_enabled"
+        },
+        "examples": [
+          {
+            "name": "default",
+            "payload": {
+              "userId": "01HXYUSER000000000000000000"
+            }
+          }
+        ]
+      },
+      "user_disabled": {
+        "name": "user.disabled",
+        "title": "user.disabled",
+        "summary": "An existing user was disabled (enabled: true → false).",
+        "contentType": "application/json",
+        "payload": {
+          "$ref": "#/components/schemas/user_disabled"
+        },
+        "examples": [
+          {
+            "name": "default",
+            "payload": {
+              "userId": "01HXYUSER000000000000000000"
+            }
+          }
+        ]
+      },
+      "user_password_changed": {
+        "name": "user.password.changed",
+        "title": "user.password.changed",
+        "summary": "A user changed their password (passwordHash mutated).",
+        "contentType": "application/json",
+        "payload": {
+          "$ref": "#/components/schemas/user_password_changed"
+        },
+        "examples": [
+          {
+            "name": "default",
+            "payload": {
+              "userId": "01HXYUSER000000000000000000"
+            }
+          }
+        ]
+      }
+    },
+    "schemas": {
+      "user_registered": {
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "occurredAt": {
+            "type": "string"
+          }
+        },
+        "required": ["userId", "email", "occurredAt"],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      },
+      "user_enabled": {
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string"
+          }
+        },
+        "required": ["userId"],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      },
+      "user_disabled": {
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string"
+          }
+        },
+        "required": ["userId"],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      },
+      "user_password_changed": {
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string"
+          }
+        },
+        "required": ["userId"],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    }
+  }
+}

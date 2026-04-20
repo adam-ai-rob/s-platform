@@ -12,6 +12,7 @@
     "typecheck": "tsc --noEmit",
     "test": "bun test tests/*.test.ts",
     "test:integration": "bun test tests/integration --timeout 60000",
+    "test:contract": "bun test tests/contract --timeout 60000",
     "lint": "biome check --write ."
   },
   "dependencies": {

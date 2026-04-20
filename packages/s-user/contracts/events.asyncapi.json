@@ -1,0 +1,131 @@
+{
+  "asyncapi": "3.0.0",
+  "info": {
+    "title": "s-user event contract",
+    "version": "1.0.0",
+    "description": "Events published by s-user onto the platform EventBridge bus. Payloads are wrapped in the PlatformEvent envelope (see packages/shared/src/events/envelope.ts); each payload below matches PlatformEvent.payload."
+  },
+  "defaultContentType": "application/json",
+  "channels": {
+    "user.profile.created": {
+      "address": "user.profile.created",
+      "description": "A new user profile row was inserted (from user.registered).",
+      "messages": {
+        "user_profile_created": {
+          "$ref": "#/components/messages/user_profile_created"
+        }
+      }
+    },
+    "user.profile.updated": {
+      "address": "user.profile.updated",
+      "description": "A user profile was updated (names or metadata).",
+      "messages": {
+        "user_profile_updated": {
+          "$ref": "#/components/messages/user_profile_updated"
+        }
+      }
+    }
+  },
+  "operations": {
+    "send_user_profile_created": {
+      "action": "send",
+      "channel": {
+        "$ref": "#/channels/user.profile.created"
+      },
+      "messages": [
+        {
+          "$ref": "#/channels/user.profile.created/messages/user_profile_created"
+        }
+      ]
+    },
+    "send_user_profile_updated": {
+      "action": "send",
+      "channel": {
+        "$ref": "#/channels/user.profile.updated"
+      },
+      "messages": [
+        {
+          "$ref": "#/channels/user.profile.updated/messages/user_profile_updated"
+        }
+      ]
+    }
+  },
+  "components": {
+    "messages": {
+      "user_profile_created": {
+        "name": "user.profile.created",
+        "title": "user.profile.created",
+        "summary": "A new user profile row was inserted (from user.registered).",
+        "contentType": "application/json",
+        "payload": {
+          "$ref": "#/components/schemas/user_profile_created"
+        },
+        "examples": [
+          {
+            "name": "default",
+            "payload": {
+              "userId": "01HXYUSER000000000000000000",
+              "firstName": "",
+              "lastName": ""
+            }
+          }
+        ]
+      },
+      "user_profile_updated": {
+        "name": "user.profile.updated",
+        "title": "user.profile.updated",
+        "summary": "A user profile was updated (names or metadata).",
+        "contentType": "application/json",
+        "payload": {
+          "$ref": "#/components/schemas/user_profile_updated"
+        },
+        "examples": [
+          {
+            "name": "default",
+            "payload": {
+              "userId": "01HXYUSER000000000000000000",
+              "firstName": "Ada",
+              "lastName": "Lovelace"
+            }
+          }
+        ]
+      }
+    },
+    "schemas": {
+      "user_profile_created": {
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string"
+          },
+          "firstName": {
+            "type": "string"
+          },
+          "lastName": {
+            "type": "string"
+          }
+        },
+        "required": ["userId", "firstName", "lastName"],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      },
+      "user_profile_updated": {
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string"
+          },
+          "firstName": {
+            "type": "string"
+          },
+          "lastName": {
+            "type": "string"
+          }
+        },
+        "required": ["userId", "firstName", "lastName"],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    }
+  }
+}

@@ -1,0 +1,228 @@
+{
+  "asyncapi": "3.0.0",
+  "info": {
+    "title": "s-authz event contract",
+    "version": "1.0.0",
+    "description": "Events published by s-authz onto the platform EventBridge bus. Payloads are wrapped in the PlatformEvent envelope (see packages/shared/src/events/envelope.ts); each payload below matches PlatformEvent.payload."
+  },
+  "defaultContentType": "application/json",
+  "channels": {
+    "authz.role.created": {
+      "address": "authz.role.created",
+      "description": "A role was created.",
+      "messages": {
+        "authz_role_created": {
+          "$ref": "#/components/messages/authz_role_created"
+        }
+      }
+    },
+    "authz.role.updated": {
+      "address": "authz.role.updated",
+      "description": "A role was updated.",
+      "messages": {
+        "authz_role_updated": {
+          "$ref": "#/components/messages/authz_role_updated"
+        }
+      }
+    },
+    "authz.role.deleted": {
+      "address": "authz.role.deleted",
+      "description": "A role was deleted.",
+      "messages": {
+        "authz_role_deleted": {
+          "$ref": "#/components/messages/authz_role_deleted"
+        }
+      }
+    },
+    "authz.view.rebuilt": {
+      "address": "authz.view.rebuilt",
+      "description": "A user's materialized permissions view was rebuilt.",
+      "messages": {
+        "authz_view_rebuilt": {
+          "$ref": "#/components/messages/authz_view_rebuilt"
+        }
+      }
+    }
+  },
+  "operations": {
+    "send_authz_role_created": {
+      "action": "send",
+      "channel": {
+        "$ref": "#/channels/authz.role.created"
+      },
+      "messages": [
+        {
+          "$ref": "#/channels/authz.role.created/messages/authz_role_created"
+        }
+      ]
+    },
+    "send_authz_role_updated": {
+      "action": "send",
+      "channel": {
+        "$ref": "#/channels/authz.role.updated"
+      },
+      "messages": [
+        {
+          "$ref": "#/channels/authz.role.updated/messages/authz_role_updated"
+        }
+      ]
+    },
+    "send_authz_role_deleted": {
+      "action": "send",
+      "channel": {
+        "$ref": "#/channels/authz.role.deleted"
+      },
+      "messages": [
+        {
+          "$ref": "#/channels/authz.role.deleted/messages/authz_role_deleted"
+        }
+      ]
+    },
+    "send_authz_view_rebuilt": {
+      "action": "send",
+      "channel": {
+        "$ref": "#/channels/authz.view.rebuilt"
+      },
+      "messages": [
+        {
+          "$ref": "#/channels/authz.view.rebuilt/messages/authz_view_rebuilt"
+        }
+      ]
+    }
+  },
+  "components": {
+    "messages": {
+      "authz_role_created": {
+        "name": "authz.role.created",
+        "title": "authz.role.created",
+        "summary": "A role was created.",
+        "contentType": "application/json",
+        "payload": {
+          "$ref": "#/components/schemas/authz_role_created"
+        },
+        "examples": [
+          {
+            "name": "default",
+            "payload": {
+              "roleId": "01HXYROLE000000000000000000",
+              "name": "editor"
+            }
+          }
+        ]
+      },
+      "authz_role_updated": {
+        "name": "authz.role.updated",
+        "title": "authz.role.updated",
+        "summary": "A role was updated.",
+        "contentType": "application/json",
+        "payload": {
+          "$ref": "#/components/schemas/authz_role_updated"
+        },
+        "examples": [
+          {
+            "name": "default",
+            "payload": {
+              "roleId": "01HXYROLE000000000000000000",
+              "name": "editor"
+            }
+          }
+        ]
+      },
+      "authz_role_deleted": {
+        "name": "authz.role.deleted",
+        "title": "authz.role.deleted",
+        "summary": "A role was deleted.",
+        "contentType": "application/json",
+        "payload": {
+          "$ref": "#/components/schemas/authz_role_deleted"
+        },
+        "examples": [
+          {
+            "name": "default",
+            "payload": {
+              "roleId": "01HXYROLE000000000000000000",
+              "name": "editor"
+            }
+          }
+        ]
+      },
+      "authz_view_rebuilt": {
+        "name": "authz.view.rebuilt",
+        "title": "authz.view.rebuilt",
+        "summary": "A user's materialized permissions view was rebuilt.",
+        "contentType": "application/json",
+        "payload": {
+          "$ref": "#/components/schemas/authz_view_rebuilt"
+        },
+        "examples": [
+          {
+            "name": "default",
+            "payload": {
+              "userId": "01HXYUSER000000000000000000",
+              "permissionCount": 3
+            }
+          }
+        ]
+      }
+    },
+    "schemas": {
+      "authz_role_created": {
+        "type": "object",
+        "properties": {
+          "roleId": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": ["roleId", "name"],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      },
+      "authz_role_updated": {
+        "type": "object",
+        "properties": {
+          "roleId": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": ["roleId", "name"],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      },
+      "authz_role_deleted": {
+        "type": "object",
+        "properties": {
+          "roleId": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": ["roleId", "name"],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      },
+      "authz_view_rebuilt": {
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string"
+          },
+          "permissionCount": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": ["userId", "permissionCount"],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    }
+  }
+}

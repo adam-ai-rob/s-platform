@@ -1,4 +1,5 @@
 import { unmarshall } from "@aws-sdk/util-dynamodb";
+import { groupEventCatalog } from "@s-group/core/events";
 import type { Group } from "@s-group/core/groups/groups.entity";
 import type { GroupUser } from "@s-group/core/memberships/memberships.entity";
 import { publishEvent } from "@s/shared/events";
@@ -54,6 +55,7 @@ async function processGroupRecord(record: DynamoDBRecord): Promise<void> {
   await publishEvent({
     source: "s-group",
     eventName,
+    schema: groupEventCatalog[eventName].schema,
     payload: { groupId: group.id, name: group.name },
   });
 }
@@ -72,6 +74,7 @@ async function processGroupUserRecord(record: DynamoDBRecord): Promise<void> {
     await publishEvent({
       source: "s-group",
       eventName: "group.user.activated",
+      schema: groupEventCatalog["group.user.activated"].schema,
       payload: {
         userId: newImage.userId,
         groupId: newImage.groupId,
@@ -85,6 +88,7 @@ async function processGroupUserRecord(record: DynamoDBRecord): Promise<void> {
     await publishEvent({
       source: "s-group",
       eventName: "group.user.deactivated",
+      schema: groupEventCatalog["group.user.deactivated"].schema,
       payload: {
         userId: oldImage.userId,
         groupId: oldImage.groupId,

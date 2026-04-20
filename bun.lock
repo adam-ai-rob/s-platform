@@ -12,6 +12,7 @@
         "sst": "^3.0.0",
         "turbo": "^2.0.0",
         "typescript": "^5.5.0",
+        "zod-to-json-schema": "^3.23.0",
       },
     },
     "packages/s-authn": {
@@ -126,6 +127,7 @@
         "@types/aws-lambda": "^8.10.143",
         "@types/node": "^22.0.0",
         "dynamodb-local": "^0.0.34",
+        "zod-to-json-schema": "^3.23.0",
       },
     },
   },

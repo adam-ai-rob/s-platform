@@ -1,4 +1,5 @@
 import { unmarshall } from "@aws-sdk/util-dynamodb";
+import { authzEventCatalog } from "@s-authz/core/events";
 import type { AuthzRole } from "@s-authz/core/roles/roles.entity";
 import type { AuthzViewEntry } from "@s-authz/core/view/view.entity";
 import { publishEvent } from "@s/shared/events";
@@ -51,6 +52,7 @@ async function processRecord(record: DynamoDBRecord): Promise<void> {
     await publishEvent({
       source: "s-authz",
       eventName,
+      schema: authzEventCatalog[eventName].schema,
       payload: { roleId: role.id, name: role.name },
     });
     return;
@@ -61,6 +63,7 @@ async function processRecord(record: DynamoDBRecord): Promise<void> {
     await publishEvent({
       source: "s-authz",
       eventName: "authz.view.rebuilt",
+      schema: authzEventCatalog["authz.view.rebuilt"].schema,
       payload: {
         userId: view.userId,
         permissionCount: view.permissions.length,

@@ -1,0 +1,289 @@
+{
+  "asyncapi": "3.0.0",
+  "info": {
+    "title": "s-group event contract",
+    "version": "1.0.0",
+    "description": "Events published by s-group onto the platform EventBridge bus. Payloads are wrapped in the PlatformEvent envelope (see packages/shared/src/events/envelope.ts); each payload below matches PlatformEvent.payload."
+  },
+  "defaultContentType": "application/json",
+  "channels": {
+    "group.created": {
+      "address": "group.created",
+      "description": "A group was created.",
+      "messages": {
+        "group_created": {
+          "$ref": "#/components/messages/group_created"
+        }
+      }
+    },
+    "group.updated": {
+      "address": "group.updated",
+      "description": "A group was updated.",
+      "messages": {
+        "group_updated": {
+          "$ref": "#/components/messages/group_updated"
+        }
+      }
+    },
+    "group.deleted": {
+      "address": "group.deleted",
+      "description": "A group was deleted.",
+      "messages": {
+        "group_deleted": {
+          "$ref": "#/components/messages/group_deleted"
+        }
+      }
+    },
+    "group.user.activated": {
+      "address": "group.user.activated",
+      "description": "A user became an active member of a group.",
+      "messages": {
+        "group_user_activated": {
+          "$ref": "#/components/messages/group_user_activated"
+        }
+      }
+    },
+    "group.user.deactivated": {
+      "address": "group.user.deactivated",
+      "description": "A user was removed from a group.",
+      "messages": {
+        "group_user_deactivated": {
+          "$ref": "#/components/messages/group_user_deactivated"
+        }
+      }
+    }
+  },
+  "operations": {
+    "send_group_created": {
+      "action": "send",
+      "channel": {
+        "$ref": "#/channels/group.created"
+      },
+      "messages": [
+        {
+          "$ref": "#/channels/group.created/messages/group_created"
+        }
+      ]
+    },
+    "send_group_updated": {
+      "action": "send",
+      "channel": {
+        "$ref": "#/channels/group.updated"
+      },
+      "messages": [
+        {
+          "$ref": "#/channels/group.updated/messages/group_updated"
+        }
+      ]
+    },
+    "send_group_deleted": {
+      "action": "send",
+      "channel": {
+        "$ref": "#/channels/group.deleted"
+      },
+      "messages": [
+        {
+          "$ref": "#/channels/group.deleted/messages/group_deleted"
+        }
+      ]
+    },
+    "send_group_user_activated": {
+      "action": "send",
+      "channel": {
+        "$ref": "#/channels/group.user.activated"
+      },
+      "messages": [
+        {
+          "$ref": "#/channels/group.user.activated/messages/group_user_activated"
+        }
+      ]
+    },
+    "send_group_user_deactivated": {
+      "action": "send",
+      "channel": {
+        "$ref": "#/channels/group.user.deactivated"
+      },
+      "messages": [
+        {
+          "$ref": "#/channels/group.user.deactivated/messages/group_user_deactivated"
+        }
+      ]
+    }
+  },
+  "components": {
+    "messages": {
+      "group_created": {
+        "name": "group.created",
+        "title": "group.created",
+        "summary": "A group was created.",
+        "contentType": "application/json",
+        "payload": {
+          "$ref": "#/components/schemas/group_created"
+        },
+        "examples": [
+          {
+            "name": "default",
+            "payload": {
+              "groupId": "01HXYGROUP00000000000000000",
+              "name": "platform-team"
+            }
+          }
+        ]
+      },
+      "group_updated": {
+        "name": "group.updated",
+        "title": "group.updated",
+        "summary": "A group was updated.",
+        "contentType": "application/json",
+        "payload": {
+          "$ref": "#/components/schemas/group_updated"
+        },
+        "examples": [
+          {
+            "name": "default",
+            "payload": {
+              "groupId": "01HXYGROUP00000000000000000",
+              "name": "platform-team"
+            }
+          }
+        ]
+      },
+      "group_deleted": {
+        "name": "group.deleted",
+        "title": "group.deleted",
+        "summary": "A group was deleted.",
+        "contentType": "application/json",
+        "payload": {
+          "$ref": "#/components/schemas/group_deleted"
+        },
+        "examples": [
+          {
+            "name": "default",
+            "payload": {
+              "groupId": "01HXYGROUP00000000000000000",
+              "name": "platform-team"
+            }
+          }
+        ]
+      },
+      "group_user_activated": {
+        "name": "group.user.activated",
+        "title": "group.user.activated",
+        "summary": "A user became an active member of a group.",
+        "contentType": "application/json",
+        "payload": {
+          "$ref": "#/components/schemas/group_user_activated"
+        },
+        "examples": [
+          {
+            "name": "default",
+            "payload": {
+              "userId": "01HXYUSER000000000000000000",
+              "groupId": "01HXYGROUP00000000000000000",
+              "rel": "manual"
+            }
+          }
+        ]
+      },
+      "group_user_deactivated": {
+        "name": "group.user.deactivated",
+        "title": "group.user.deactivated",
+        "summary": "A user was removed from a group.",
+        "contentType": "application/json",
+        "payload": {
+          "$ref": "#/components/schemas/group_user_deactivated"
+        },
+        "examples": [
+          {
+            "name": "default",
+            "payload": {
+              "userId": "01HXYUSER000000000000000000",
+              "groupId": "01HXYGROUP00000000000000000",
+              "rel": "manual"
+            }
+          }
+        ]
+      }
+    },
+    "schemas": {
+      "group_created": {
+        "type": "object",
+        "properties": {
+          "groupId": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": ["groupId", "name"],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      },
+      "group_updated": {
+        "type": "object",
+        "properties": {
+          "groupId": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": ["groupId", "name"],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      },
+      "group_deleted": {
+        "type": "object",
+        "properties": {
+          "groupId": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": ["groupId", "name"],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      },
+      "group_user_activated": {
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string"
+          },
+          "groupId": {
+            "type": "string"
+          },
+          "rel": {
+            "type": "string",
+            "enum": ["owner", "manual", "domain", "group"]
+          }
+        },
+        "required": ["userId", "groupId", "rel"],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      },
+      "group_user_deactivated": {
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string"
+          },
+          "groupId": {
+            "type": "string"
+          },
+          "rel": {
+            "type": "string",
+            "enum": ["owner", "manual", "domain", "group"]
+          }
+        },
+        "required": ["userId", "groupId", "rel"],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    }
+  }
+}

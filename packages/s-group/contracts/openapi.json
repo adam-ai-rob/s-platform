@@ -1,0 +1,342 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "s-group HTTP API",
+    "version": "1.0.0"
+  },
+  "components": {
+    "securitySchemes": {
+      "Bearer": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    },
+    "schemas": {
+      "Membership": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "groupId": {
+            "type": "string"
+          },
+          "userId": {
+            "type": "string"
+          },
+          "rel": {
+            "type": "string",
+            "enum": ["owner", "manual", "domain", "group"]
+          },
+          "status": {
+            "type": "string",
+            "enum": ["active", "pending", "rejected"]
+          },
+          "addedBy": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "type": "string"
+          }
+        },
+        "required": ["id", "groupId", "userId", "rel", "status", "createdAt", "updatedAt"]
+      },
+      "MembershipListResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Membership"
+            }
+          }
+        },
+        "required": ["data"]
+      },
+      "Group": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["company", "team", "building"]
+          },
+          "emailDomainNames": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "automaticUserAssignment": {
+            "type": "boolean"
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "emailDomainNames",
+          "automaticUserAssignment",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "GroupResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/Group"
+          }
+        },
+        "required": ["data"]
+      },
+      "CreateGroupBody": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 1000
+          },
+          "type": {
+            "type": "string",
+            "enum": ["company", "team", "building"]
+          },
+          "emailDomainNames": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "default": []
+          },
+          "automaticUserAssignment": {
+            "type": "boolean",
+            "default": true
+          }
+        },
+        "required": ["name"]
+      }
+    },
+    "parameters": {}
+  },
+  "paths": {
+    "/group/user/me/groups": {
+      "get": {
+        "tags": ["Group"],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "summary": "List caller's group memberships",
+        "responses": {
+          "200": {
+            "description": "Memberships",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MembershipListResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/group/admin/groups": {
+      "post": {
+        "tags": ["Group Admin"],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "summary": "Create a group",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateGroupBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GroupResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Name exists"
+          }
+        }
+      }
+    },
+    "/group/admin/groups/{id}": {
+      "get": {
+        "tags": ["Group Admin"],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "summary": "Get a group",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Group",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GroupResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found"
+          }
+        }
+      },
+      "delete": {
+        "tags": ["Group Admin"],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "summary": "Delete a group",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Deleted"
+          },
+          "404": {
+            "description": "Not found"
+          }
+        }
+      }
+    },
+    "/group/admin/groups/{id}/users/{userId}": {
+      "post": {
+        "tags": ["Group Admin"],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "summary": "Add a user to a group (rel: manual)",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "userId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Added"
+          },
+          "404": {
+            "description": "Group not found"
+          },
+          "409": {
+            "description": "Already a member"
+          }
+        }
+      },
+      "delete": {
+        "tags": ["Group Admin"],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "summary": "Remove a user from a group (rel: manual)",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "userId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Removed"
+          },
+          "404": {
+            "description": "Membership not found"
+          }
+        }
+      }
+    }
+  }
+}
