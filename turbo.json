@@ -40,6 +40,11 @@
       "inputs": ["src/**/*.ts", "package.json"],
       "outputs": ["coverage/**"]
     },
+    "test:coverage:html": {
+      "dependsOn": ["^typecheck"],
+      "inputs": ["src/**/*.ts", "package.json"],
+      "outputs": ["coverage/**"]
+    },
     "build": {
       "dependsOn": ["^build"],
       "inputs": ["src/**/*.ts", "tsconfig.json", "package.json"],
