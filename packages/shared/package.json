@@ -18,7 +18,10 @@
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "test": "bun test"
+    "test": "bun test",
+    "test:coverage": "bun test --coverage",
+    "test:coverage:html": "bun test --coverage --coverage-report=html",
+    "lint": "biome check --write ."
   },
   "dependencies": {
     "@aws-sdk/client-dynamodb": "^3.650.0",
