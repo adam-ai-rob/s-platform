@@ -35,6 +35,11 @@
       ],
       "outputs": []
     },
+    "test:coverage": {
+      "dependsOn": ["^typecheck"],
+      "inputs": ["src/**/*.ts", "package.json"],
+      "outputs": ["coverage/**"]
+    },
     "build": {
       "dependsOn": ["^build"],
       "inputs": ["src/**/*.ts", "tsconfig.json", "package.json"],
