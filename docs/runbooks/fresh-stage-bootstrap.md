@@ -207,5 +207,13 @@ each app's teardown.
   its own `bunfig.toml` to pin the registry to public npm, but if a
   user-level `~/.npmrc` has an expired token AWS CodeArtifact /
   JFrog / GitHub Packages still wins. Prefix the deploy command with
-  `NPM_CONFIG_REGISTRY=https://registry.npmjs.org/` to override for that
-  invocation, or refresh the mirror token.
+  the registry override:
+  
+  ```bash
+  BUN_CONFIG_REGISTRY=https://registry.npmjs.org/ \
+  npm_config_registry=https://registry.npmjs.org/ \
+  bun sst deploy --stage <stage>
+  ```
+  
+  See `docs/architecture/11-local-development.md` → "Registry Configuration"
+  for more background.

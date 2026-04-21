@@ -102,6 +102,53 @@ export default $config({
 
 In CI, AWS creds come from OIDC role assumption. Locally, SST uses `AWS_PROFILE=itinn-bot`.
 
+## Registry Configuration
+
+SST spawns its own `bun install` inside `.sst/platform/` during deployment. If you have a **global** `~/.npmrc` that pins to a private registry (e.g., AWS CodeArtifact, GitHub Packages, JFrog), SST's internal install may use that instead of the project-local registry, causing 401 errors on public npm packages.
+
+### Verification
+
+Check if SST's nested install is affected:
+
+```bash
+bun sst deploy --stage dev
+# If you see 401 errors on public packages (e.g., @pulumi/*, aws-sdk), the registry override is needed.
+```
+
+### Workaround
+
+Prefix your `bun sst deploy` command with registry environment variables:
+
+```bash
+BUN_CONFIG_REGISTRY=https://registry.npmjs.org/ \
+npm_config_registry=https://registry.npmjs.org/ \
+bun sst deploy --stage dev
+```
+
+This forces all registry lookups to public npm, bypassing any global `~/.npmrc` settings.
+
+### Why this works
+
+- `BUN_CONFIG_REGISTRY` overrides Bun's registry config
+- `npm_config_registry` overrides npm's registry config (SST may invoke npm internally)
+- The project-level `bunfig.toml` and `.npmrc` in repo root are respected for normal `bun install`, but SST's nested install directory doesn't inherit these when a global `~/.npmrc` exists.
+
+### Alternative: Remove global registry pin
+
+If you don't need the private registry globally, consider removing or renaming `~/.npmrc`:
+
+```bash
+mv ~/.npmrc ~/.npmrc.backup
+```
+
+Or configure it to only apply to specific scopes:
+
+```ini
+# ~/.npmrc
+//registry.npmjs.org/:_authToken=${NPM_TOKEN}
+@mycompany:registry=https://mycompany.jfrog.io/
+```
+
 ## Running Locally: `sst dev`
 
 SST v3 has a `dev` mode that connects your local Lambda code to deployed AWS resources (DDB tables, EventBridge bus, etc.) for your personal stage.
