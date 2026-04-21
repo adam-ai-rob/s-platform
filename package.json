@@ -23,6 +23,8 @@
     "test": "turbo run test",
     "test:integration": "turbo run test:integration",
     "test:contract": "turbo run test:contract",
+    "test:coverage": "turbo run test:coverage",
+    "test:coverage:html": "turbo run test:coverage:html",
     "contracts:build": "bun run scripts/build-contracts.ts",
     "test:e2e": "cd packages/s-tests && STAGE=${STAGE:-dev} bun run test:e2e",
     "new-module": "./scripts/new-module.sh"

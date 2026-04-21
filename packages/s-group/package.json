@@ -12,6 +12,8 @@
     "typecheck": "tsc --noEmit",
     "test": "bun test tests/*.test.ts",
     "test:integration": "bun test tests/integration --timeout 60000",
+    "test:coverage": "bun test tests/*.test.ts --coverage",
+    "test:coverage:html": "bun test tests/*.test.ts --coverage --coverage-report=html",
     "lint": "biome check --write ."
   },
   "dependencies": {
