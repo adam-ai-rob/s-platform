@@ -29,6 +29,10 @@ export function usersCollectionSchema(collectionName: string): CollectionCreateS
   return {
     name: collectionName,
     fields: [
+      // Note: Typesense does NOT permit declaring `id` in the schema —
+      // it's reserved as the implicit primary key. We therefore cannot
+      // use `id` as a `sort_by` tiebreaker; the cursor codec handles
+      // duplicate-sort-value disambiguation via `filter_by id:!=…`.
       { name: "firstName", type: "string", sort: true },
       { name: "lastName", type: "string", sort: true },
       { name: "displayName", type: "string", sort: true },

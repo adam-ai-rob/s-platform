@@ -12,9 +12,14 @@ the shared-cluster / stage-prefix design.
 
 For stage `{stage}` it creates, on the shared Typesense cluster:
 
-- An **admin scoped API key** restricted to `collections: {stage}_*`
-- A **search scoped API key** restricted to `collections: {stage}_*` +
+- An **admin scoped API key** restricted to `collections: {stage}_.*`
+- A **search scoped API key** restricted to `collections: {stage}_.*` +
   `actions: documents:search`
+
+> Typesense matches the `collections` field as a **regex**, not a glob.
+> `{stage}_.*` (or equivalently `^{stage}_`) limits the key to every
+> collection starting with `{stage}_`; the glob-looking `{stage}_*` will
+> fail to match and every authenticated call 401s.
 
 …and writes them to SSM under `/s-platform/{stage}/typesense/...`
 alongside the cluster hostname.
@@ -50,7 +55,7 @@ ADMIN_KEY=$(curl -sS "https://$TYPESENSE_HOST/keys" \
 {
   "description": "s-platform admin $STAGE",
   "actions": ["*"],
-  "collections": ["${STAGE}_*"]
+  "collections": ["${STAGE}_.*"]
 }
 JSON
 )
@@ -62,7 +67,7 @@ SEARCH_KEY=$(curl -sS "https://$TYPESENSE_HOST/keys" \
 {
   "description": "s-platform search $STAGE",
   "actions": ["documents:search"],
-  "collections": ["${STAGE}_*"]
+  "collections": ["${STAGE}_.*"]
 }
 JSON
 )

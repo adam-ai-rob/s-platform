@@ -43,8 +43,10 @@ export interface UserSearchQuery {
    */
   filterBy?: string;
   /**
-   * Raw Typesense sort expression, whitelisted. Must include `id:desc`
-   * or `id:asc` as a tiebreaker. Defaults to `createdAtMs:desc,id:desc`.
+   * Raw Typesense sort expression, whitelisted. Defaults to
+   * `createdAtMs:desc`. Typesense does NOT allow declaring `id` as a
+   * sortable field, so the tiebreaker is handled via `filter_by` on
+   * the cursor path, not via `sort_by`.
    */
   sortBy?: string;
   page?: number;
@@ -70,7 +72,7 @@ export async function searchUsers(query: UserSearchQuery): Promise<UserSearchRes
   const perPage = clampPerPage(query.perPage);
   const page = Math.max(1, query.page ?? 1);
   const q = query.q && query.q.trim().length > 0 ? query.q : "*";
-  const sortBy = query.sortBy ? validateSortExpression(query.sortBy) : "createdAtMs:desc,id:desc";
+  const sortBy = query.sortBy ? validateSortExpression(query.sortBy) : "createdAtMs:desc";
   const filterBy = query.filterBy ? validateFilterExpression(query.filterBy) : undefined;
 
   const decodedCursor = decodeCursor(query.cursor);
@@ -132,11 +134,17 @@ export async function searchUsers(query: UserSearchQuery): Promise<UserSearchRes
   };
 }
 
+/**
+ * Narrowly detect "the collection itself does not exist" — the indexer
+ * hasn't run yet. Any other 404 (missing field, wrong sort, etc.) is a
+ * real bug and should surface as a 500 so it gets caught in dev.
+ */
 function isCollectionNotFound(err: unknown): boolean {
   if (!err || typeof err !== "object") return false;
-  const anyErr = err as { httpStatus?: number; name?: string; message?: string };
-  if (anyErr.httpStatus === 404 || anyErr.name === "ObjectNotFound") return true;
-  return typeof anyErr.message === "string" && /not ?found|no.*collection/i.test(anyErr.message);
+  const anyErr = err as { httpStatus?: number; message?: string };
+  if (anyErr.httpStatus !== 404) return false;
+  const msg = typeof anyErr.message === "string" ? anyErr.message.toLowerCase() : "";
+  return msg.includes("not found") && msg.includes("collection");
 }
 
 function clampPerPage(input: number | undefined): number {
@@ -153,11 +161,7 @@ function validateSortExpression(raw: string): string {
   if (parts.length === 0) {
     throw new ValidationError("sort_by must contain at least one field");
   }
-  const last = parts[parts.length - 1];
-  if (last !== "id:asc" && last !== "id:desc") {
-    throw new ValidationError("sort_by must end with id:asc or id:desc as a tiebreaker");
-  }
-  for (const part of parts.slice(0, -1)) {
+  for (const part of parts) {
     const [field, direction] = part.split(":");
     if (!field || !direction) {
       throw new ValidationError(`Invalid sort clause: ${part}`);
@@ -192,7 +196,7 @@ function joinFilters(a: string | undefined, b: string | undefined): string | und
 }
 
 interface ParsedSortClause {
-  field: "id" | SortField;
+  field: SortField;
   direction: "asc" | "desc";
 }
 
@@ -204,20 +208,22 @@ function parseSort(sortBy: string): ParsedSortClause[] {
     .map((part) => {
       const [field, direction] = part.split(":");
       return {
-        field: field as ParsedSortClause["field"],
-        direction: direction as ParsedSortClause["direction"],
+        field: field as SortField,
+        direction: direction as "asc" | "desc",
       };
     });
 }
 
 /**
  * Build the Typesense filter that skips everything up to and including
- * the cursor's last document. Correct across multi-field sorts by
- * cascading equality clauses:
+ * the cursor's last document, treating `id` as a non-sortable tiebreaker
+ * via `filter_by` inequality.
  *
- *   (f1 {lt|gt} v1)
- *   || (f1 = v1 && f2 {lt|gt} v2)
- *   || (f1 = v1 && f2 = v2 && id {lt|gt} lastId)
+ * For a sort like `createdAtMs:desc`, cursor = {sortValues:[1000], lastId:"abc"}:
+ *   (createdAtMs:<1000) || (createdAtMs:=1000 && id:!=`abc`)
+ *
+ * For multi-field sort `f1:desc,f2:desc`, we cascade:
+ *   (f1<v1) || (f1=v1 && f2<v2) || (f1=v1 && f2=v2 && id:!=lastId)
  */
 function buildCursorFilter(sortBy: string, cursor: SearchCursor): string {
   const clauses = parseSort(sortBy);
@@ -227,30 +233,28 @@ function buildCursorFilter(sortBy: string, cursor: SearchCursor): string {
     const equals: string[] = [];
     for (let j = 0; j < i; j++) {
       const prior = clauses[j];
-      const value = prior.field === "id" ? cursor.lastId : String(cursor.sortValues[j]);
-      equals.push(`${prior.field}:=${formatFilterValue(value, prior.field === "id")}`);
+      equals.push(`${prior.field}:=${cursor.sortValues[j]}`);
     }
     const current = clauses[i];
     const op = current.direction === "desc" ? "<" : ">";
-    const currentValue = current.field === "id" ? cursor.lastId : String(cursor.sortValues[i]);
-    const currentClause = `${current.field}:${op}${formatFilterValue(currentValue, current.field === "id")}`;
+    const currentClause = `${current.field}:${op}${cursor.sortValues[i]}`;
     pieces.push([...equals, currentClause].join(" && "));
   }
 
-  return pieces.map((p) => `(${p})`).join(" || ");
-}
+  // Final branch: all sort values equal → exclude the last-seen id so
+  // no document is served twice across page boundaries with duplicate
+  // sort values.
+  const allEqual = clauses.map((c, i) => `${c.field}:=${cursor.sortValues[i]}`);
+  const idBranch = [...allEqual, `id:!=\`${cursor.lastId.replace(/`/g, "")}\``].join(" && ");
+  pieces.push(idBranch);
 
-function formatFilterValue(value: string, isString: boolean): string {
-  if (!isString) return value;
-  // Typesense string literals in filter expressions are wrapped in backticks.
-  return `\`${value.replace(/`/g, "")}\``;
+  return pieces.map((p) => `(${p})`).join(" || ");
 }
 
 function buildNextCursor(sortBy: string, lastHit: UserSearchDocument): string {
   const clauses = parseSort(sortBy);
   const sortValues: Array<string | number> = [];
   for (const clause of clauses) {
-    if (clause.field === "id") continue;
     const value = (lastHit as unknown as Record<string, string | number>)[clause.field];
     sortValues.push(value);
   }

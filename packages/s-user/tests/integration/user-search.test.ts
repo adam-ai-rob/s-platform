@@ -186,14 +186,14 @@ describe("GET /user/search (integration, fake Typesense)", () => {
 
   test("400 when sort_by references a non-whitelisted field", async () => {
     const token = await jwt.sign({ sub: TEST_USER_ID });
-    const res = await invoke(app, "/user/search?sort_by=ssn:desc,id:desc", { token });
+    const res = await invoke(app, "/user/search?sort_by=ssn:desc", { token });
     expect(res.status).toBe(400);
   });
 
-  test("400 when sort_by omits the id tiebreaker", async () => {
+  test("accepts sort_by without id tiebreaker", async () => {
     const token = await jwt.sign({ sub: TEST_USER_ID });
     const res = await invoke(app, "/user/search?sort_by=createdAtMs:desc", { token });
-    expect(res.status).toBe(400);
+    expect(res.status).toBe(200);
   });
 
   test("400 when filter_by references a non-whitelisted field", async () => {

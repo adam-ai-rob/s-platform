@@ -44,12 +44,17 @@ Engines evaluated (summarised — full write-up lives in issue #59):
 
 3. **Enforcement via scoped API keys.** Each stage gets two keys,
    stored as SSM `SecureString` parameters:
-   - `api-key-admin` — `collections: {stage}_*`, full write + schema
-   - `api-key-search` — `collections: {stage}_*`, `documents:search` only
+   - `api-key-admin` — `collections: {stage}_.*`, full write + schema
+   - `api-key-search` — `collections: {stage}_.*`, `documents:search` only
 
-   Typesense enforces the collection prefix on every request, so a
-   leaked `dev` key cannot touch `prod_*` collections even though the
-   cluster is shared.
+   Typesense treats the `collections` field on scoped keys as a **regex**,
+   not a glob — `{stage}_.*` (not `{stage}_*`) is what actually matches
+   every collection starting with `{stage}_`. A glob-style `*` value
+   silently produces a key that 401s every authenticated call.
+
+   Typesense enforces the collection pattern on every request, so a
+   leaked `dev` key cannot touch `prod_users` / `prod_groups` / … even
+   though the cluster is shared.
 
 4. **Per-stage SSM paths, never shared at the platform level.** All
    three parameters live under

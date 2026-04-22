@@ -23,19 +23,11 @@ afterEach(() => {
 
 describe("searchUsers input validation", () => {
   test("rejects sort field not on the whitelist", async () => {
-    await expect(searchUsers({ sortBy: "ssn:desc,id:desc" })).rejects.toBeInstanceOf(
-      ValidationError,
-    );
-  });
-
-  test("requires id as the final tiebreaker", async () => {
-    await expect(searchUsers({ sortBy: "createdAtMs:desc" })).rejects.toBeInstanceOf(
-      ValidationError,
-    );
+    await expect(searchUsers({ sortBy: "ssn:desc" })).rejects.toBeInstanceOf(ValidationError);
   });
 
   test("rejects non asc/desc direction", async () => {
-    await expect(searchUsers({ sortBy: "createdAtMs:sideways,id:desc" })).rejects.toBeInstanceOf(
+    await expect(searchUsers({ sortBy: "createdAtMs:sideways" })).rejects.toBeInstanceOf(
       ValidationError,
     );
   });

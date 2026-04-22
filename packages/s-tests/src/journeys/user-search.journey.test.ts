@@ -116,7 +116,7 @@ describe("user search journey", () => {
 
   test("[6] bad sort field is rejected with 400", async () => {
     try {
-      await client.request("GET", "/user/search?sort_by=ssn:desc,id:desc");
+      await client.request("GET", "/user/search?sort_by=ssn:desc");
       throw new Error("Expected 400");
     } catch (err) {
       if (err instanceof TestHttpError) {
