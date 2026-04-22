@@ -95,6 +95,77 @@
             }
           }
         }
+      },
+      "UserSearchHit": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "firstName": {
+            "type": "string"
+          },
+          "lastName": {
+            "type": "string"
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "avatarUrl": {
+            "type": "string"
+          },
+          "createdAtMs": {
+            "type": "number"
+          },
+          "updatedAtMs": {
+            "type": "number"
+          },
+          "highlights": {
+            "type": "object",
+            "additionalProperties": {
+              "nullable": true
+            }
+          }
+        },
+        "required": [
+          "id",
+          "firstName",
+          "lastName",
+          "displayName",
+          "avatarUrl",
+          "createdAtMs",
+          "updatedAtMs"
+        ]
+      },
+      "UserSearchResponse": {
+        "type": "object",
+        "properties": {
+          "hits": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/UserSearchHit"
+            }
+          },
+          "page": {
+            "type": "integer"
+          },
+          "per_page": {
+            "type": "integer"
+          },
+          "found": {
+            "type": "integer"
+          },
+          "out_of": {
+            "type": "integer"
+          },
+          "search_time_ms": {
+            "type": "integer"
+          },
+          "next_cursor": {
+            "type": "string"
+          }
+        },
+        "required": ["hits", "page", "per_page", "found", "out_of", "search_time_ms"]
       }
     },
     "parameters": {}
@@ -192,6 +263,84 @@
           },
           "404": {
             "description": "Profile not found"
+          }
+        }
+      }
+    },
+    "/user/search": {
+      "get": {
+        "tags": ["User"],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "summary": "Search user profiles",
+        "description": "Linear-style list over the users collection: full-text search + whitelisted filter/sort, page-based pagination with an opt-in opaque keyset cursor for deep scroll.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": false,
+            "name": "q",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": false,
+            "name": "filter_by",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": false,
+            "name": "sort_by",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "exclusiveMinimum": true
+            },
+            "required": false,
+            "name": "page",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "exclusiveMinimum": true
+            },
+            "required": false,
+            "name": "per_page",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": false,
+            "name": "cursor",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Search results",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserSearchResponse"
+                }
+              }
+            }
           }
         }
       }

@@ -1,4 +1,8 @@
-export { verifyAccessToken, type AccessTokenPayload } from "./verify";
+export {
+  verifyAccessToken,
+  __resetJwksForTests,
+  type AccessTokenPayload,
+} from "./verify";
 export { hashToken, getCached, setCached } from "./cache";
 export {
   authMiddleware,

@@ -9,6 +9,16 @@
  * Only cross-module read is the AuthzView — `AUTHZ_VIEW_TABLE_NAME`
  * env var + `dynamodb:GetItem` permission on its ARN, both resolved
  * from SSM keys published by s-authz.
+ *
+ * Typesense integration (issue #59):
+ *   - UserApi gets read access to `/s-platform/{stage}/typesense/*`
+ *     SSM params so the health probe + future search routes can
+ *     resolve the search-only API key at runtime.
+ *   - A separate `UserSearchIndexer` Lambda subscribes to
+ *     `user.profile.{created,updated,deleted}` on the platform bus and
+ *     keeps the Typesense `{stage}_users` collection in sync.
+ *   - A `UserBackfill` Lambda is stood up for one-shot seeding; not
+ *     wired to any trigger — invoked manually per the bootstrap runbook.
  */
 
 import * as aws from "@pulumi/aws";
@@ -40,6 +50,19 @@ export async function buildStack() {
   const accountId = caller.accountId;
   const region = regionResult.name;
 
+  // SSM ARN patterns for Typesense secrets, resolved at runtime by every
+  // Lambda in this module. The parameters themselves are operator-managed
+  // (see docs/runbooks/typesense-stage-bootstrap.md) — not declared here.
+  const typesenseParamArn = `arn:aws:ssm:${region}:${accountId}:parameter/s-platform/${stage}/typesense/*`;
+  const typesenseSsmPermissions = [
+    { actions: ["ssm:GetParameter", "ssm:GetParameters"], resources: [typesenseParamArn] },
+    // SecureString parameters decrypt with the default aws/ssm CMK.
+    {
+      actions: ["kms:Decrypt"],
+      resources: [`arn:aws:kms:${region}:${accountId}:alias/aws/ssm`],
+    },
+  ];
+
   // ─── Tables ────────────────────────────────────────────────────────────────
 
   const userProfilesTable = new sst.aws.Dynamo("UserProfiles", {
@@ -65,6 +88,7 @@ export async function buildStack() {
     permissions: [
       { actions: ["events:PutEvents"], resources: [eventBusArn] },
       { actions: ["dynamodb:GetItem"], resources: [authzViewTableArn] },
+      ...typesenseSsmPermissions,
     ],
     handler: "../../packages/s-user/functions/src/handler.handler",
   });
@@ -170,8 +194,62 @@ export async function buildStack() {
     sourceArn: userRegisteredRule.arn,
   });
 
+  // ─── Search indexer (user.profile.* → Typesense) ──────────────────────────
+
+  const userIndexerDlq = createDlqWithAlarm("UserSearchIndexer", { alarmsTopicArn, stage });
+  allowEventBridgeToDlq("UserSearchIndexer", userIndexerDlq);
+
+  const userSearchIndexer = new sst.aws.Function("UserSearchIndexer", {
+    link: [userProfilesTable],
+    environment: {
+      STAGE: stage,
+      SERVICE_NAME: "s-user-search-indexer",
+      USER_PROFILES_TABLE_NAME: userProfilesTable.name,
+    },
+    permissions: [...typesenseSsmPermissions],
+    handler: "../../packages/s-user/functions/src/search-indexer.handler",
+  });
+
+  const userProfileEventsRule = new aws.cloudwatch.EventRule("UserOnUserProfileEvents", {
+    eventBusName,
+    eventPattern: JSON.stringify({
+      source: ["s-user"],
+      "detail-type": ["user.profile.created", "user.profile.updated", "user.profile.deleted"],
+    }),
+  });
+
+  new aws.cloudwatch.EventTarget("UserOnUserProfileEventsTarget", {
+    rule: userProfileEventsRule.name,
+    eventBusName,
+    arn: userSearchIndexer.nodes.function.arn,
+    deadLetterConfig: { arn: userIndexerDlq.arn },
+  });
+
+  new aws.lambda.Permission("UserSearchIndexerInvoke", {
+    action: "lambda:InvokeFunction",
+    function: userSearchIndexer.nodes.function.name,
+    principal: "events.amazonaws.com",
+    sourceArn: userProfileEventsRule.arn,
+  });
+
+  // ─── Backfill Lambda (invoked manually — seeds Typesense from DDB) ────────
+
+  const userBackfill = new sst.aws.Function("UserBackfill", {
+    link: [userProfilesTable],
+    environment: {
+      STAGE: stage,
+      SERVICE_NAME: "s-user-backfill",
+      USER_PROFILES_TABLE_NAME: userProfilesTable.name,
+    },
+    permissions: [...typesenseSsmPermissions],
+    timeout: "5 minutes",
+    handler: "../../packages/s-user/functions/src/backfill.handler",
+  });
+
   return {
     userProfilesTable: userProfilesTable.name,
     userApiArn: userApi.arn,
+    userSearchIndexerArn: userSearchIndexer.arn,
+    userBackfillArn: userBackfill.arn,
   };
 }

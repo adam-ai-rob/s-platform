@@ -37,6 +37,15 @@ export interface AccessTokenPayload extends JWTPayload {
  *
  * Returns the decoded payload on success.
  */
+/**
+ * Test helper — drop the cached JWKS set. The integration harness spins
+ * up a fresh JWT stub on a new port per test file; without this reset,
+ * later files keep the first file's JWKS URL and every request 401s.
+ */
+export function __resetJwksForTests(): void {
+  jwks = null;
+}
+
 export async function verifyAccessToken(token: string): Promise<AccessTokenPayload> {
   try {
     const { payload } = await jwtVerify(token, getJwks(), {

@@ -6,7 +6,8 @@ import { logger } from "@s/shared/logger";
 import type { DynamoDBRecord, DynamoDBStreamEvent } from "aws-lambda";
 
 /**
- * Emits `user.profile.created` / `user.profile.updated` from DDB Streams.
+ * Emits `user.profile.created` / `user.profile.updated` / `user.profile.deleted`
+ * from DDB Streams on the UserProfiles table.
  */
 export async function handler(event: DynamoDBStreamEvent): Promise<void> {
   for (const record of event.Records) {
@@ -24,27 +25,47 @@ export async function handler(event: DynamoDBStreamEvent): Promise<void> {
 }
 
 async function processRecord(record: DynamoDBRecord): Promise<void> {
-  if (record.eventName !== "INSERT" && record.eventName !== "MODIFY") return;
+  if (record.eventName === "INSERT" || record.eventName === "MODIFY") {
+    const newImage = record.dynamodb?.NewImage
+      ? (unmarshall(
+          // biome-ignore lint/suspicious/noExplicitAny: DDB Record type mismatch with unmarshall
+          record.dynamodb.NewImage as any,
+        ) as UserProfile)
+      : undefined;
 
-  const newImage = record.dynamodb?.NewImage
-    ? (unmarshall(
-        // biome-ignore lint/suspicious/noExplicitAny: DDB Record type mismatch with unmarshall
-        record.dynamodb.NewImage as any,
-      ) as UserProfile)
-    : undefined;
+    if (!newImage) return;
 
-  if (!newImage) return;
+    const eventName =
+      record.eventName === "INSERT" ? "user.profile.created" : "user.profile.updated";
 
-  const eventName = record.eventName === "INSERT" ? "user.profile.created" : "user.profile.updated";
+    await publishEvent({
+      source: "s-user",
+      eventName,
+      schema: userEventCatalog[eventName].schema,
+      payload: {
+        userId: newImage.userId,
+        firstName: newImage.firstName,
+        lastName: newImage.lastName,
+      },
+    });
+    return;
+  }
 
-  await publishEvent({
-    source: "s-user",
-    eventName,
-    schema: userEventCatalog[eventName].schema,
-    payload: {
-      userId: newImage.userId,
-      firstName: newImage.firstName,
-      lastName: newImage.lastName,
-    },
-  });
+  if (record.eventName === "REMOVE") {
+    const oldImage = record.dynamodb?.OldImage
+      ? (unmarshall(
+          // biome-ignore lint/suspicious/noExplicitAny: DDB Record type mismatch with unmarshall
+          record.dynamodb.OldImage as any,
+        ) as UserProfile)
+      : undefined;
+
+    if (!oldImage) return;
+
+    await publishEvent({
+      source: "s-user",
+      eventName: "user.profile.deleted",
+      schema: userEventCatalog["user.profile.deleted"].schema,
+      payload: { userId: oldImage.userId },
+    });
+  }
 }

@@ -10,7 +10,7 @@
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "test": "bun test tests/*.test.ts",
+    "test": "bun test tests/*.test.ts tests/search/*.test.ts",
     "test:integration": "bun test tests/integration --timeout 60000",
     "test:contract": "bun test tests/contract --timeout 60000",
     "test:coverage": "bun test tests/*.test.ts --coverage",
@@ -25,6 +25,7 @@
     "@hono/zod-openapi": "^0.16.0",
     "@s/shared": "workspace:*",
     "hono": "^4.6.0",
+    "typesense": "^3.0.6",
     "ulid": "^2.3.0",
     "zod": "^3.23.0"
   },
