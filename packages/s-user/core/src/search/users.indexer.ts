@@ -17,7 +17,7 @@ import {
  *
  * Both paths use the admin client (scoped `<stage>_*`). Collection is
  * ensured lazily on first write — the bootstrap runbook handles it
- * up-front but this keeps `pr-*` and personal stages self-healing.
+ * up-front but this keeps personal stages self-healing on first use.
  */
 
 function usersCollection(): string {

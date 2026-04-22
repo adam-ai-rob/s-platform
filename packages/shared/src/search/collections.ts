@@ -1,7 +1,7 @@
 /**
  * Stage-prefixed collection naming.
  *
- * Every stage (dev, test, pr-*, personal, prod) shares a single Typesense
+ * Every stage (dev, test, personal, prod) shares a single Typesense
  * cluster today. Logical isolation is enforced by:
  *   1. Collection names are always `<stage>_<entity>` — dev_users, prod_users, …
  *   2. Scoped API keys restrict each stage's keys to `<stage>_*` collections.
@@ -22,8 +22,8 @@ const ENTITY_PATTERN = /^[a-z][a-z0-9_]*$/;
  *   process.env.STAGE = "dev"
  *   resolveCollectionName("users") // → "dev_users"
  *
- *   process.env.STAGE = "pr-42"
- *   resolveCollectionName("users") // → "pr-42_users"
+ *   process.env.STAGE = "robert"
+ *   resolveCollectionName("users") // → "robert_users"
  *
  * @throws if STAGE env var is missing or either input looks malformed.
  */

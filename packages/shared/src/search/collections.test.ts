@@ -18,9 +18,9 @@ describe("resolveCollectionName", () => {
     expect(resolveCollectionName("users")).toBe("dev_users");
   });
 
-  test("supports pr- and personal stage names", () => {
-    expect(resolveCollectionName("users", "pr-42")).toBe("pr-42_users");
+  test("supports personal stage names with hyphens", () => {
     expect(resolveCollectionName("users", "robert")).toBe("robert_users");
+    expect(resolveCollectionName("users", "alex-feature-x")).toBe("alex-feature-x_users");
   });
 
   test("throws when STAGE is missing and none supplied", () => {

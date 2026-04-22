@@ -23,7 +23,7 @@ alongside the cluster hostname.
 
 | Variable | Source |
 |---|---|
-| `STAGE` | Stage name (`dev`, `test`, `prod`, `robert`, `pr-42`, …) |
+| `STAGE` | Stage name (`dev`, `test`, `prod`, or a personal stage like `robert`) |
 | `TYPESENSE_HOST` | Cluster's public host — e.g. `<cluster-id>.a1.typesense.net` |
 | `TYPESENSE_MASTER_KEY` | The cluster's **master** API key (one-time use to mint scoped keys). Never written to SSM. |
 
@@ -147,8 +147,8 @@ employee offboarding.
 
 ## Tearing down a stage
 
-`pr-*` and personal stages should drop their collections when the stage
-is destroyed — prevents cluster clutter:
+Personal stages should drop their collections when the stage is
+destroyed — prevents cluster clutter:
 
 ```bash
 curl -sS -X DELETE "https://$TYPESENSE_HOST/collections/${STAGE}_users" \

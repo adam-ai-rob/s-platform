@@ -28,12 +28,15 @@ Engines evaluated (summarised — full write-up lives in issue #59):
 ## Decision
 
 1. **Single Typesense Cloud cluster serves every stage** — `dev`,
-   `test`, every `pr-*`, personal stages, and `prod`. Early-stage cost
-   optimization; isolation guarantees are logical, not physical.
+   `test`, personal stages, and `prod`. Early-stage cost optimization;
+   isolation guarantees are logical, not physical. (Per-PR `pr-{N}`
+   stages were retired in #55 — PR verification now happens via the
+   `deployed-test` label which deploys to the shared `dev` stage, not
+   to an ephemeral stage; search inherits that model.)
 
 2. **Logical isolation via stage-prefixed collection names.** Every
    collection is `{stage}_{entity}` — `dev_users`, `prod_users`,
-   `pr-42_users`. Module code derives the prefix exclusively from
+   `robert_users`. Module code derives the prefix exclusively from
    `process.env.STAGE` via
    [`resolveCollectionName()`](../../../packages/shared/src/search/collections.ts).
    There is no supported path for code to construct a collection name
