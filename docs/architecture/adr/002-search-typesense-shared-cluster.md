@@ -128,6 +128,32 @@ event-driven denormalization before they can be trusted in an index.
 v2 will layer in facets once the cross-module events exist. Not scoped
 in this ADR.
 
+## Expected query performance
+
+Ballpark figures for capacity planning against the single shared
+Typesense Cloud cluster (0.5 GB RAM baseline, Typesense Cloud's minimum
+tier):
+
+- **p50 query latency**: <20 ms for `/user/search` on a dataset up to
+  ~50k documents. Dominated by network RTT from Lambda → cluster, not
+  engine time.
+- **p99 query latency**: <100 ms with warm Lambda; cold start adds
+  250–500 ms for the SSM fetch + Typesense client init.
+- **Indexing visibility**: <1 s from DDB `INSERT` → searchable
+  document, end-to-end (DDB Stream → EventBridge → indexer Lambda →
+  Typesense upsert → refresh). No human-visible lag.
+- **Result window**: hard-coded to Typesense's default 10k
+  (`page * per_page ≤ 10_000`). Beyond that, use the keyset cursor —
+  O(1) per page regardless of depth.
+- **Scaling trigger**: cluster RAM exceeds ~50 % sustained, or p99
+  latency regresses past 200 ms. Either means it's time to bump the
+  cluster tier OR split prod onto its own cluster per the exit
+  criteria above.
+
+Rate limiting is currently `per_page ≤ 100` server-side. Per-user
+request throttling is deferred to API Gateway usage plans; not scoped
+in this ADR.
+
 ## What this doesn't cover
 
 - Multi-region SDN. Deferred. Single-region today (eu-west-1).

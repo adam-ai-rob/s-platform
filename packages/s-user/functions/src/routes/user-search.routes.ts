@@ -14,7 +14,7 @@ const UserHit = z
     firstName: z.string(),
     lastName: z.string(),
     displayName: z.string(),
-    avatarUrl: z.string(),
+    avatarUrl: z.string().optional(),
     createdAtMs: z.number(),
     updatedAtMs: z.number(),
     highlights: z.record(z.unknown()).optional(),

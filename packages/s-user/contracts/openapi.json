@@ -44,15 +44,7 @@
             }
           }
         },
-        "required": [
-          "id",
-          "firstName",
-          "lastName",
-          "displayName",
-          "avatarUrl",
-          "createdAtMs",
-          "updatedAtMs"
-        ]
+        "required": ["id", "firstName", "lastName", "displayName", "createdAtMs", "updatedAtMs"]
       },
       "UserSearchResponse": {
         "type": "object",

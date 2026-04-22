@@ -15,8 +15,19 @@ import type { EventBridgeEvent } from "aws-lambda";
  *
  * Events only carry the identity + names; the full profile (avatarUrl,
  * createdAt, updatedAt) is fetched from DDB because it's the source of
- * truth. That costs one GetItem per event but guarantees the index
- * reflects the latest persisted state.
+ * truth. That costs one GetItem per event but gives us two free
+ * correctness properties:
+ *
+ *   1. **Out-of-order events are safe.** If EventBridge redelivers a
+ *      stale `updated` event after a newer `updated` has already been
+ *      processed, we still re-read from DDB and re-upsert the CURRENT
+ *      state — the index can't regress below what's persisted. No
+ *      `updatedAtMs` compare-and-set needed.
+ *
+ *   2. **Race against concurrent delete is safe.** If a `delete` lands
+ *      between the event being published and the upsert running, the
+ *      DDB read returns `undefined` and we skip silently; the delete
+ *      tombstone event will arrive shortly after and clean the index.
  *
  * Throws on failure — Lambda retries, then DLQ (wired in infra).
  */

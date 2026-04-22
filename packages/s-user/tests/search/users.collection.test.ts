@@ -20,17 +20,17 @@ function makeProfile(overrides: Partial<UserProfile> = {}): UserProfile {
 }
 
 describe("profileToSearchDocument", () => {
-  test("maps a complete profile", () => {
+  test("maps a complete profile, omitting avatarUrl when the profile has none", () => {
     const doc = profileToSearchDocument(makeProfile());
     expect(doc).toEqual({
       id: "01HXYZ000000000000000000AB",
       firstName: "Ada",
       lastName: "Lovelace",
       displayName: "Ada Lovelace",
-      avatarUrl: "",
       createdAtMs: Date.parse("2026-04-22T08:00:00.000Z"),
       updatedAtMs: Date.parse("2026-04-22T08:30:00.000Z"),
     });
+    expect("avatarUrl" in doc).toBe(false);
   });
 
   test("falls back to userId when both names are empty", () => {
@@ -48,6 +48,11 @@ describe("profileToSearchDocument", () => {
   test("copies avatarUrl when present", () => {
     const doc = profileToSearchDocument(makeProfile({ avatarUrl: "https://cdn.example/a.png" }));
     expect(doc.avatarUrl).toBe("https://cdn.example/a.png");
+  });
+
+  test("drops avatarUrl when the profile stores an empty string", () => {
+    const doc = profileToSearchDocument(makeProfile({ avatarUrl: "" }));
+    expect("avatarUrl" in doc).toBe(false);
   });
 });
 

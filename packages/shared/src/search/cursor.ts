@@ -28,6 +28,14 @@ export interface SearchCursor {
   v: 1;
 }
 
+/**
+ * Current codec version. BUMP this when the cursor payload shape
+ * changes in any backwards-incompatible way (new required field,
+ * renamed field, changed encoding). Older cursors will then fall
+ * through `decodeCursor`'s version check and return `undefined`,
+ * which the route treats as "no cursor, serve page 1" — a safe
+ * degradation during rolling deploys. Never reuse a previous number.
+ */
 const CURRENT_VERSION = 1 as const;
 
 export function encodeCursor(cursor: Omit<SearchCursor, "v">): string {

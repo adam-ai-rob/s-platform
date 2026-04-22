@@ -138,8 +138,20 @@ export async function searchUsers(query: UserSearchQuery): Promise<UserSearchRes
  * Narrowly detect "the collection itself does not exist" — the indexer
  * hasn't run yet. Any other 404 (missing field, wrong sort, etc.) is a
  * real bug and should surface as a 500 so it gets caught in dev.
+ *
+ * Typesense's error messages we observe for each case:
+ *   - missing collection: "No collection with name `X` found." (httpStatus 404)
+ *   - missing sort field: "Could not find a field named `id` in the
+ *     schema for sorting." (httpStatus 404, same `ObjectNotFound` name)
+ *
+ * The `name` field alone can't distinguish them — both surface as
+ * `ObjectNotFound`. We match on the message requiring both "not found"
+ * and "collection" (note: "could not find" contains "not find", NOT
+ * "not found", so the sort-field message correctly fails this check).
+ *
+ * Exported for unit testing; not part of the module's public API.
  */
-function isCollectionNotFound(err: unknown): boolean {
+export function isCollectionNotFound(err: unknown): boolean {
   if (!err || typeof err !== "object") return false;
   const anyErr = err as { httpStatus?: number; message?: string };
   if (anyErr.httpStatus !== 404) return false;
