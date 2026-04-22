@@ -34,6 +34,7 @@ describe("user search journey", () => {
   const password = "Initial1234!";
 
   let accessToken: string;
+  let callerId: string;
 
   beforeAll(() => {
     console.log(`  journey email: ${email}`);
@@ -47,6 +48,14 @@ describe("user search journey", () => {
     });
     expect(res.data.accessToken).toBeDefined();
     accessToken = res.data.accessToken;
+    // Extract the userId from the JWT's `sub` claim so [2] can assert
+    // the caller's specific profile appears in the index (rather than
+    // passing trivially on any pre-existing user in the stage).
+    const payloadB64 = accessToken.split(".")[1];
+    const payload = JSON.parse(Buffer.from(payloadB64, "base64url").toString("utf8")) as {
+      sub: string;
+    };
+    callerId = payload.sub;
     client.setToken(accessToken);
   });
 
@@ -57,13 +66,18 @@ describe("user search journey", () => {
     expect(info.data.probes?.typesense?.status).toBe("up");
   });
 
-  test("[2] profile eventually indexed in search", async () => {
+  test("[2] caller's profile eventually indexed in search", async () => {
     // Freshly-registered profile has empty names, so displayName falls
-    // back to userId. Confirm the index grew by listing all docs.
+    // back to userId. Assert specifically on the caller's userId in the
+    // index, not just `found > 0` — otherwise a stage with other users
+    // passes trivially and doesn't prove our user's chain worked.
     await eventually(
       async () => {
-        const res = await client.request<{ found: number }>("GET", "/user/search?per_page=1");
-        expect(res.found).toBeGreaterThan(0);
+        const res = await client.request<{
+          hits: Array<{ id: string }>;
+          found: number;
+        }>("GET", "/user/search?per_page=100");
+        expect(res.hits.some((h) => h.id === callerId)).toBe(true);
       },
       { timeout: 45_000, interval: 1_000 },
     );
@@ -71,9 +85,17 @@ describe("user search journey", () => {
 
   test("[3] PATCH /user/me → search reflects new first name", async () => {
     const firstName = `Searchable${suffix.slice(0, 6)}`;
-    await client.request("PATCH", "/user/me", {
-      body: { firstName, lastName: "Journey" },
-    });
+    // Even with [2] green, the PATCH can race a re-indexer retry. Retry
+    // the PATCH itself briefly if the profile row hasn't been provisioned
+    // yet (rare once [2] passed, but not impossible in cold-chain deploys).
+    await eventually(
+      async () => {
+        await client.request("PATCH", "/user/me", {
+          body: { firstName, lastName: "Journey" },
+        });
+      },
+      { timeout: 15_000, interval: 1_000 },
+    );
 
     await eventually(
       async () => {
