@@ -24,6 +24,15 @@
           "$ref": "#/components/messages/user_profile_updated"
         }
       }
+    },
+    "user.profile.deleted": {
+      "address": "user.profile.deleted",
+      "description": "A user profile row was removed (DDB REMOVE). Search indexes should drop the document.",
+      "messages": {
+        "user_profile_deleted": {
+          "$ref": "#/components/messages/user_profile_deleted"
+        }
+      }
     }
   },
   "operations": {
@@ -46,6 +55,17 @@
       "messages": [
         {
           "$ref": "#/channels/user.profile.updated/messages/user_profile_updated"
+        }
+      ]
+    },
+    "send_user_profile_deleted": {
+      "action": "send",
+      "channel": {
+        "$ref": "#/channels/user.profile.deleted"
+      },
+      "messages": [
+        {
+          "$ref": "#/channels/user.profile.deleted/messages/user_profile_deleted"
         }
       ]
     }
@@ -89,6 +109,23 @@
             }
           }
         ]
+      },
+      "user_profile_deleted": {
+        "name": "user.profile.deleted",
+        "title": "user.profile.deleted",
+        "summary": "A user profile row was removed (DDB REMOVE). Search indexes should drop the document.",
+        "contentType": "application/json",
+        "payload": {
+          "$ref": "#/components/schemas/user_profile_deleted"
+        },
+        "examples": [
+          {
+            "name": "default",
+            "payload": {
+              "userId": "01HXYUSER000000000000000000"
+            }
+          }
+        ]
       }
     },
     "schemas": {
@@ -123,6 +160,17 @@
           }
         },
         "required": ["userId", "firstName", "lastName"],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      },
+      "user_profile_deleted": {
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string"
+          }
+        },
+        "required": ["userId"],
         "additionalProperties": false,
         "$schema": "http://json-schema.org/draft-07/schema#"
       }

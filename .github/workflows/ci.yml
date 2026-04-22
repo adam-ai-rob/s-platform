@@ -38,6 +38,56 @@ jobs:
         run: bun install --frozen-lockfile
         timeout-minutes: 5
 
+      # Pre-download + verify DynamoDB Local JAR before integration tests.
+      # The `dynamodb-local` npm package pulls from the AWS "latest"
+      # tarball on first use and occasionally caches a corrupt / partial
+      # JAR (observed: `zip END header not found`,
+      # `NoClassDefFoundError: DynamoDbExpressionParser`,
+      # `NoClassDefFoundError: org/eclipse/jetty/.../LifeCycle`).
+      # Retrying the tarball + validating the JAR class table up-front
+      # gives us a clean failure at install time instead of a mid-test
+      # flake, and falls back to a known-good release URL when `latest`
+      # is broken.
+      - name: Pre-download DynamoDB Local JAR (guards against flaky upstream)
+        run: |
+          set -euo pipefail
+          DEST="${TMPDIR:-/tmp}/dynamodb-local"
+          mkdir -p "$DEST"
+          LATEST_URL="https://s3-us-west-2.amazonaws.com/dynamodb-local/dynamodb_local_latest.tar.gz"
+          FALLBACK_URL="https://s3.us-west-2.amazonaws.com/dynamodb-local/dynamodb_local_2024-04-24.tar.gz"
+
+          download_and_verify() {
+            local url="$1"
+            local tmp
+            tmp=$(mktemp -d)
+            echo "Downloading $url"
+            for attempt in 1 2 3; do
+              if curl -fsSL --retry 3 --retry-delay 2 -o "$tmp/ddb.tgz" "$url" \
+                  && tar -tzf "$tmp/ddb.tgz" >/dev/null 2>&1; then
+                echo "Tarball OK (attempt $attempt)"
+                tar -xzf "$tmp/ddb.tgz" -C "$DEST"
+                if [ -f "$DEST/DynamoDBLocal.jar" ] \
+                    && unzip -l "$DEST/DynamoDBLocal.jar" >/dev/null 2>&1; then
+                  echo "JAR structure OK"
+                  return 0
+                fi
+                echo "JAR failed integrity check"
+              else
+                echo "Tarball download/validation failed (attempt $attempt)"
+              fi
+              sleep $((attempt * 2))
+            done
+            return 1
+          }
+
+          if ! download_and_verify "$LATEST_URL"; then
+            echo "::warning::Falling back to pinned DynamoDB Local release"
+            rm -rf "$DEST"
+            mkdir -p "$DEST"
+            download_and_verify "$FALLBACK_URL"
+          fi
+        timeout-minutes: 3
+
       - name: Typecheck
         run: bun run typecheck
 

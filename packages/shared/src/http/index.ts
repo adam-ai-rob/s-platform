@@ -1,1 +1,1 @@
-export { createApi, type ApiMetadata } from "./create-api";
+export { createApi, type ApiMetadata, type ApiProbe, type ApiProbeResult } from "./create-api";

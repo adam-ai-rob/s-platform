@@ -25,6 +25,14 @@ beforeAll(async () => {
   dynamo = await startLocalDynamo();
   jwt = await startJwtStub();
 
+  // Drop cross-file singleton caches (DDB client + JWKS set) so this
+  // file's fresh dynamo + fresh JWT stub take effect regardless of
+  // which integration test ran immediately before.
+  const ddb = await import("@s/shared/ddb");
+  ddb.__resetDdbClientForTests();
+  const auth = await import("@s/shared/auth");
+  auth.__resetJwksForTests();
+
   process.env.DDB_ENDPOINT = dynamo.endpoint;
   process.env.AWS_REGION = "local";
   process.env.USER_PROFILES_TABLE_NAME = USER_PROFILES_TABLE;

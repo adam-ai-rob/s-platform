@@ -4,6 +4,26 @@ import { authMiddleware } from "../auth/middleware";
 import { globalErrorHandler } from "../errors/handler";
 import { traceMiddleware } from "../trace/middleware";
 
+export interface ApiProbeResult {
+  status: "up" | "down";
+  detail?: string;
+}
+
+/**
+ * Optional liveness probes surfaced through `/info`.
+ *
+ * Modules register probes for external dependencies that belong in the
+ * platform contract (search cluster, cache, third-party APIs) so the
+ * /info endpoint can report their health without every module
+ * hand-rolling its own health route.
+ *
+ * Probes run in parallel on every /info call, must not throw, and
+ * should return within a second or two. Timeouts are the caller's
+ * responsibility — this wrapper will swallow errors and downgrade to
+ * `{ status: "down", detail }` rather than bringing /info down.
+ */
+export type ApiProbe = () => Promise<ApiProbeResult>;
+
 /**
  * Metadata declared by each module's /info endpoint.
  *
@@ -12,6 +32,7 @@ import { traceMiddleware } from "../trace/middleware";
  * - `events.subscribes`: event names this module listens for
  * - `topics`: logical groupings of events (human-readable)
  * - `errorCodes`: map of error codes → human-readable meaning
+ * - `probes`: optional liveness probes for external dependencies
  */
 export interface ApiMetadata {
   service: string;
@@ -35,6 +56,7 @@ export interface ApiMetadata {
   events: { publishes: string[]; subscribes: string[] };
   topics: Record<string, string>;
   errorCodes?: Record<string, string>;
+  probes?: Record<string, ApiProbe>;
 }
 
 /**
@@ -74,8 +96,9 @@ export function createApi<TEnv extends { Variables: Record<string, unknown> }>(
 
   // /info requires authentication so only platform users can introspect
   // biome-ignore lint/suspicious/noExplicitAny: generic Hono middleware adapter
-  app.get("/info", authMiddleware() as any, (c) =>
-    c.json({
+  app.get("/info", authMiddleware() as any, async (c) => {
+    const probes = await runProbes(metadata.probes);
+    return c.json({
       data: {
         service: metadata.service,
         stage: process.env.STAGE ?? "dev",
@@ -84,9 +107,10 @@ export function createApi<TEnv extends { Variables: Record<string, unknown> }>(
         events: metadata.events,
         topics: metadata.topics,
         errorCodes: metadata.errorCodes ?? {},
+        ...(probes ? { probes } : {}),
       },
-    }),
-  );
+    });
+  });
 
   // app.doc registers at the current basePath — e.g. /authn/openapi.json
   app.doc("/openapi.json", {
@@ -117,4 +141,23 @@ export function createApi<TEnv extends { Variables: Record<string, unknown> }>(
   app.onError(globalErrorHandler as any);
 
   return app;
+}
+
+async function runProbes(
+  probes: Record<string, ApiProbe> | undefined,
+): Promise<Record<string, ApiProbeResult> | undefined> {
+  if (!probes) return undefined;
+  const entries = Object.entries(probes);
+  if (entries.length === 0) return undefined;
+
+  const results = await Promise.all(
+    entries.map(async ([name, probe]): Promise<[string, ApiProbeResult]> => {
+      try {
+        return [name, await probe()];
+      } catch (err) {
+        return [name, { status: "down", detail: (err as Error).message }];
+      }
+    }),
+  );
+  return Object.fromEntries(results);
 }
