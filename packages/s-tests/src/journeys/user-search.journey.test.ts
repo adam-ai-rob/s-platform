@@ -65,7 +65,7 @@ describe("user search journey", () => {
         const res = await client.request<{ found: number }>("GET", "/user/search?per_page=1");
         expect(res.found).toBeGreaterThan(0);
       },
-      { timeout: 15_000, interval: 500 },
+      { timeout: 45_000, interval: 1_000 },
     );
   });
 
@@ -84,7 +84,7 @@ describe("user search journey", () => {
         expect(res.found).toBeGreaterThan(0);
         expect(res.hits.some((h) => h.firstName === firstName)).toBe(true);
       },
-      { timeout: 15_000, interval: 500 },
+      { timeout: 45_000, interval: 1_000 },
     );
   });
 

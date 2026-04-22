@@ -6,6 +6,7 @@ import {
   resolveCollectionName,
   searchClient,
 } from "@s/shared/search";
+import type { SearchResponse } from "typesense/lib/Typesense/Documents";
 import { USERS_ENTITY, type UserSearchDocument } from "./users.collection";
 
 /**
@@ -79,19 +80,38 @@ export async function searchUsers(query: UserSearchQuery): Promise<UserSearchRes
   const client = await searchClient();
   const collection = resolveCollectionName(USERS_ENTITY);
 
-  const response = await client
-    .collections<UserSearchDocument>(collection)
-    .documents()
-    .search({
-      q,
-      query_by: "displayName,firstName,lastName",
-      sort_by: sortBy,
-      ...(combinedFilter ? { filter_by: combinedFilter } : {}),
-      // When a cursor is present we always serve "page 1" relative to
-      // the filtered slice — the cursor itself carries the offset state.
-      page: decodedCursor ? 1 : page,
-      per_page: perPage,
-    });
+  let response: SearchResponse<UserSearchDocument>;
+  try {
+    response = await client
+      .collections<UserSearchDocument>(collection)
+      .documents()
+      .search({
+        q,
+        query_by: "displayName,firstName,lastName",
+        sort_by: sortBy,
+        ...(combinedFilter ? { filter_by: combinedFilter } : {}),
+        // When a cursor is present we always serve "page 1" relative to
+        // the filtered slice — the cursor itself carries the offset state.
+        page: decodedCursor ? 1 : page,
+        per_page: perPage,
+      });
+  } catch (err) {
+    // A freshly-bootstrapped stage has no collection yet — the indexer
+    // lazily creates it on first event. Treat "collection not found"
+    // as "no users match" rather than 500, so the UI can render an
+    // empty list while the first events propagate.
+    if (isCollectionNotFound(err)) {
+      return {
+        hits: [],
+        page: decodedCursor ? 1 : page,
+        perPage,
+        found: 0,
+        outOf: 0,
+        searchTimeMs: 0,
+      };
+    }
+    throw err;
+  }
 
   const hits: UserSearchHit[] = (response.hits ?? []).map((hit) => ({
     ...(hit.document as UserSearchDocument),
@@ -110,6 +130,13 @@ export async function searchUsers(query: UserSearchQuery): Promise<UserSearchRes
     searchTimeMs: response.search_time_ms ?? 0,
     nextCursor,
   };
+}
+
+function isCollectionNotFound(err: unknown): boolean {
+  if (!err || typeof err !== "object") return false;
+  const anyErr = err as { httpStatus?: number; name?: string; message?: string };
+  if (anyErr.httpStatus === 404 || anyErr.name === "ObjectNotFound") return true;
+  return typeof anyErr.message === "string" && /not ?found|no.*collection/i.test(anyErr.message);
 }
 
 function clampPerPage(input: number | undefined): number {
