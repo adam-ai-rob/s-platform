@@ -20,7 +20,13 @@ The platform is designed to grow to 20+ modules while keeping per-module cogniti
 | **s-user** | User profiles: profile CRUD, search, profile sync from auth events |
 | **s-group** | Groups: group CRUD, membership management, domain-based auto-assignment |
 
-Business modules (20+ planned) build on this foundation.
+## Current Services (business modules)
+
+| Service | Purpose |
+|---|---|
+| **s-building** | Buildings: first resource-scoped module. Building CRUD with scoped permissions (superadmin / admin / manager / user), Typesense-backed admin + user lists, DDB-stream lifecycle events |
+
+Business modules (20+ planned) build on the foundation layer.
 
 ## Support Packages
 
