@@ -1,6 +1,6 @@
 name: Deploy
 
-# Deploys platform/ (Tier 1) + modules/s-{authz,authn,user,group}/ (Tier 2)
+# Deploys platform/ (Tier 1) + modules/s-{authz,authn,user,group,building}/ (Tier 2)
 # to the stage matching the pushed branch. Bootstrap order is enforced
 # by job dependencies: platform → s-authz → s-{authn,user,group} (parallel).
 #
@@ -121,7 +121,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        module: [authn, user, group]
+        module: [authn, user, group, building]
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2

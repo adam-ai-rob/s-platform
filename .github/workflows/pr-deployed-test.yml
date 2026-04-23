@@ -101,7 +101,7 @@ jobs:
                'package.json' 'bun.lock' | grep -q . ; then
             DIFF_ALL=1
           fi
-          for m in authz authn user group; do
+          for m in authz authn user group building; do
             if [ "$DIFF_ALL" = "1" ] || git diff --name-only origin/main -- \
                  "modules/s-$m/**" "packages/s-$m/**" | grep -q . ; then
               CHANGED="$CHANGED $m"

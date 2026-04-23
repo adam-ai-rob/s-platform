@@ -16,6 +16,8 @@
     "remove:user": "cd modules/s-user && bun sst remove",
     "deploy:group": "cd modules/s-group && bun sst deploy",
     "remove:group": "cd modules/s-group && bun sst remove",
+    "deploy:building": "cd modules/s-building && bun sst deploy",
+    "remove:building": "cd modules/s-building && bun sst remove",
     "typecheck": "turbo run typecheck",
     "lint": "biome check --write .",
     "lint:check": "biome check .",
