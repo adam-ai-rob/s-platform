@@ -203,6 +203,34 @@ type AuthzView = {
 
 **Value-scoped permissions:** `{ id: "manage_locations", value: ["nyc", "sf"] }` — user has the permission for listed values only.
 
+### How scope-required permissions get populated (role template + assignment value)
+
+The `Permission.value` on `AuthzView` is materialised from two inputs — the role's `permissions` template and the per-user-role assignment — merged at view-rebuild time:
+
+1. **Role template** (`AuthzRole.permissions`) — a permission entry may or may not carry a `value` field:
+   - `{ id: "X" }` — **global** permission. Assignment scope is ignored.
+   - `{ id: "X", value: [] }` — **scope-required**. The `[]` is a marker that says "this permission needs a scope to be meaningful; the assignment supplies it". A non-empty template value is also allowed (`{ id: "X", value: ["preset-A"] }`) and contributes a fixed scope set that every assignment inherits.
+2. **Assignment** (`AuthzUserRole`) — each assignment carries an optional `value: unknown[]` field, set via `POST /authz/admin/users/{userId}/roles/{roleId}` with body `{ value?: unknown[] }`. Re-assigning the same role to the same user **unions** the incoming value with whatever's already stored — no 409. Unassigning removes the whole row.
+3. **View rebuild** — `rebuildViewForUser` walks every assignment for the user, pulls the role's template, and for each template permission:
+   - If the template has no `value` field → emit `{ id }` (global).
+   - If the template has `value` → emit `{ id, value: unique([...template.value, ...assignment.value]) }`.
+   - When two assignments contribute the same permission id, values are unioned. If either side is global (no `value`), the merged entry drops `value` — **most-permissive wins**.
+
+Example — Alice is assigned `building-admin` (template `[{ id: "building_admin", value: [] }]`) twice:
+
+| Event | `AuthzUserRole` row (value) | `AuthzView` permission |
+|---|---|---|
+| `POST /…/users/alice/roles/building-admin` body `{"value": ["A", "B"]}` | `["A", "B"]` | `{ id: "building_admin", value: ["A", "B"] }` |
+| `POST /…/users/alice/roles/building-admin` body `{"value": ["C"]}` | `["A", "B", "C"]` | `{ id: "building_admin", value: ["A", "B", "C"] }` |
+| `DELETE /…/users/alice/roles/building-admin` | (row deleted) | (permission removed) |
+
+### System roles
+
+System roles (`AuthzRole.system: true`) can't be deleted via API. Seeded by `modules/s-authz`'s `AuthzSeeds` Lambda — idempotent, invoked once per fresh stage. See [`docs/runbooks/fresh-stage-bootstrap.md`](../runbooks/fresh-stage-bootstrap.md). Today's set (extend in `packages/s-authz/core/src/seeds/system-roles.ts`):
+
+- `building-superadmin` (global)
+- `building-admin`, `building-manager`, `building-user` (all scope-required)
+
 ## Permission Middleware
 
 Three middleware functions in `@s/shared/auth`:

@@ -250,6 +250,19 @@ export async function buildStack() {
     sourceArn: authzSubscriptionsRule.arn,
   });
 
+  // ─── Seed Lambda (invoked manually — idempotent system-role seeding) ──────
+
+  const authzSeeds = new sst.aws.Function("AuthzSeeds", {
+    link: [authzRolesTable],
+    environment: {
+      STAGE: stage,
+      SERVICE_NAME: "s-authz-seeds",
+      AUTHZ_ROLES_TABLE_NAME: authzRolesTable.name,
+    },
+    timeout: "1 minute",
+    handler: "../../packages/s-authz/functions/src/seed.handler",
+  });
+
   // ─── Publish module outputs to SSM ─────────────────────────────────────────
 
   writeSsmOutput("SsmAuthzViewTableName", "authz-view-table-name", stage, {
@@ -268,5 +281,6 @@ export async function buildStack() {
     authzViewTable: authzViewTable.name,
     authzViewTableArn: authzViewTable.arn,
     authzApiArn: authzApi.arn,
+    authzSeedsArn: authzSeeds.arn,
   };
 }

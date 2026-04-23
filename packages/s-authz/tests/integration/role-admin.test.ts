@@ -137,6 +137,85 @@ describe("s-authz admin flow (integration)", () => {
     expect(permsAfter.some((p) => p.id === "widget_edit")).toBe(false);
   });
 
+  test("scoped assignment unions values across two POST calls", async () => {
+    const adminToken = await jwt.sign({ sub: ADMIN_USER_ID });
+    const USER_ID = "01HXSCOPED0000000000000SCOP";
+
+    // 1. Create a scoped role (empty-array value marker on the permission
+    //    template → `resolvePermissionsForAssignments` treats it as
+    //    scope-required and folds in the assignment value).
+    const createRes = await invoke<{ data: { id: string } }>(app, "/authz/admin/roles", {
+      method: "POST",
+      token: adminToken,
+      body: {
+        name: "building-admin-scoped-test",
+        description: "test-only",
+        permissions: [{ id: "building_admin", value: [] }],
+      },
+    });
+    expect(createRes.status).toBe(201);
+    const roleId = createRes.body.data.id;
+
+    // 2. First assignment: scope [A, B]
+    const assign1 = await invoke(app, `/authz/admin/users/${USER_ID}/roles/${roleId}`, {
+      method: "POST",
+      token: adminToken,
+      body: { value: ["bld-A", "bld-B"] },
+    });
+    expect(assign1.status).toBe(204);
+
+    // 3. Second assignment (same user + role): scope [C] — should union
+    const assign2 = await invoke(app, `/authz/admin/users/${USER_ID}/roles/${roleId}`, {
+      method: "POST",
+      token: adminToken,
+      body: { value: ["bld-C"] },
+    });
+    expect(assign2.status).toBe(204);
+
+    // 4. AuthzView should have exactly one `building_admin` entry with
+    //    value [A, B, C] (order-insensitive).
+    const viewRow = await getDdbClient().send(
+      new GetCommand({ TableName: AUTHZ_VIEW_TABLE, Key: { userId: USER_ID } }),
+    );
+    const perms = (viewRow.Item?.permissions ?? []) as { id: string; value?: unknown[] }[];
+    const buildingAdmin = perms.filter((p) => p.id === "building_admin");
+    expect(buildingAdmin).toHaveLength(1);
+    expect(new Set(buildingAdmin[0]?.value)).toEqual(new Set(["bld-A", "bld-B", "bld-C"]));
+  });
+
+  test("scope-free assignment still works — no body, no value field on the resulting permission", async () => {
+    const adminToken = await jwt.sign({ sub: ADMIN_USER_ID });
+    const USER_ID = "01HXSUPERADMN00000000000SUP";
+
+    // Role whose template has NO `value` field — global permission.
+    const createRes = await invoke<{ data: { id: string } }>(app, "/authz/admin/roles", {
+      method: "POST",
+      token: adminToken,
+      body: {
+        name: "building-superadmin-test",
+        description: "test-only",
+        permissions: [{ id: "building_superadmin" }],
+      },
+    });
+    expect(createRes.status).toBe(201);
+    const roleId = createRes.body.data.id;
+
+    // Assign without body — should work.
+    const assignRes = await invoke(app, `/authz/admin/users/${USER_ID}/roles/${roleId}`, {
+      method: "POST",
+      token: adminToken,
+    });
+    expect(assignRes.status).toBe(204);
+
+    const viewRow = await getDdbClient().send(
+      new GetCommand({ TableName: AUTHZ_VIEW_TABLE, Key: { userId: USER_ID } }),
+    );
+    const perms = (viewRow.Item?.permissions ?? []) as { id: string; value?: unknown[] }[];
+    const superadmin = perms.find((p) => p.id === "building_superadmin");
+    expect(superadmin).toBeDefined();
+    expect(superadmin?.value).toBeUndefined();
+  });
+
   test("GET /user/me/permissions reflects seeded view", async () => {
     const token = await jwt.sign({ sub: ADMIN_USER_ID });
     const res = await invoke<{ data: { userId: string; permissions: { id: string }[] } }>(

@@ -130,6 +130,17 @@
           }
         },
         "required": ["name"]
+      },
+      "AssignRoleBody": {
+        "type": "object",
+        "properties": {
+          "value": {
+            "type": "array",
+            "items": {
+              "nullable": true
+            }
+          }
+        }
       }
     },
     "parameters": {}
@@ -268,7 +279,8 @@
             "Bearer": []
           }
         ],
-        "summary": "Assign a role to a user",
+        "summary": "Assign a role to a user (optionally with a scope value)",
+        "description": "Assigns `roleId` to `userId`. The optional `value` array is the per-assignment scope for scope-requiring permissions (e.g. building UUIDs for the `building-admin` role). Idempotent: re-assigning the same role unions the incoming `value` with any existing scope on the row — no 409.",
         "parameters": [
           {
             "schema": {
@@ -287,15 +299,22 @@
             "in": "path"
           }
         ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AssignRoleBody"
+              }
+            }
+          }
+        },
         "responses": {
           "204": {
-            "description": "Assigned"
+            "description": "Assigned (or scope extended)"
           },
           "404": {
             "description": "Role not found"
-          },
-          "409": {
-            "description": "Already assigned"
           }
         }
       },
