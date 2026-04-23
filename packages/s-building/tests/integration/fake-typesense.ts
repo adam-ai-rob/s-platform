@@ -97,8 +97,9 @@ export function createFakeTypesenseClient(seed?: {
         );
       }
 
-      // Very narrow filter_by support — just enough to exercise the
-      // scoped id:=[...] path. Full Typesense grammar isn't in scope.
+      // Narrow filter_by support — enough to exercise the scoped
+      // id:=[...] AND status:=value paths our routes emit. Full
+      // Typesense grammar isn't in scope.
       const filter = params.filter_by as string | undefined;
       if (filter) {
         const idMatch = filter.match(/id:=\[([^\]]+)\]/);
@@ -110,6 +111,11 @@ export function createFakeTypesenseClient(seed?: {
               .filter(Boolean),
           );
           hits = hits.filter((d) => allowed.has(String(d.id)));
+        }
+        const statusMatch = filter.match(/status:=([a-zA-Z_]+)/);
+        if (statusMatch) {
+          const wanted = statusMatch[1];
+          hits = hits.filter((d) => String(d.status) === wanted);
         }
       }
 
