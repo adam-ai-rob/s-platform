@@ -1,517 +1,436 @@
 # API Conventions
 
-All modules follow the same API design patterns. This document is mandatory reading for any agent building a new module or an endpoint.
+Platform-wide REST conventions v1. Every module follows this document. Any endpoint that does not conform is a bug to be tracked as a retrofit.
 
-## Framework: OpenAPIHono
+**Mandatory reading** for any agent building a new module, an endpoint, or reviewing a PR that touches HTTP.
 
-All HTTP handling uses `@hono/zod-openapi` (OpenAPIHono). It provides Hono routing with automatic OpenAPI 3.1 spec generation from Zod schemas.
+Companion ADR: [`adr/003-rest-api-conventions-v1.md`](./adr/003-rest-api-conventions-v1.md) — rationale and rejected alternatives.
 
-```typescript
-// packages/s-{module}/functions/src/api.ts
-import { OpenAPIHono } from "@hono/zod-openapi";
-import type { AppEnv } from "./types.js";
+## At a glance — the rules, in one page
 
-const app = new OpenAPIHono<AppEnv>();
+1. **URL shape:** `/{module}/{audience}/{resources}[/{id}][:{action}]`
+   - `module` singular (`building`, `user`, `authz`) — bounded context
+   - `audience` is `admin` or `user` — platform reserves the caller-less root (`/health`, `/info`, `/openapi.json`, `/docs`)
+   - `resources` **plural** (`buildings`, `roles`, `profiles`) — no singular item paths
+   - `{id}` is opaque (we use UUIDs)
+   - `:{action}` for custom verbs that don't fit CRUD (Google AIP-136): `POST /buildings/{id}:archive`
+2. **Methods:** `GET` read, `POST` create or action, `PATCH` partial update, `DELETE` remove. **Never `PUT`.**
+3. **Status codes:** 200 read/update, 201 create (with `Location:`), 202 async action, 204 delete / no-content action. Errors: 400/401/403/404/409/422/429/500/503.
+4. **Lists:** `q`, `filter_by`, `sort_by`, `facet_by`, `page`, `per_page` (≤100), optional `cursor`. Fields **whitelisted server-side**. Syntax passes through to Typesense.
+5. **Response envelope:**
+   - single → `{ "data": {...} }`
+   - list → `{ "data": [...], "meta": { "page", "perPage", "found", "outOf", "searchTimeMs", "nextCursor?", "facets?" } }`
+   - error → `{ "error": { "code", "message", "details?" } }` in the 4xx/5xx body — **errors never travel with data**
+   - 204 → empty body
+6. **Headers:** `Authorization: Bearer` required; `Idempotency-Key` on POST create + `:action`; `If-Match`/`ETag` optional optimistic concurrency; `X-Request-Id`/`traceparent` propagated by platform.
+7. **JSON:** camelCase field names; timestamps ISO 8601 UTC + paired `*Ms` int64 (`createdAt` + `createdAtMs`).
+8. **No URL versioning.** Contracts are gated by `scripts/contract-diff.ts`; breaking changes require the `breaking-api-change` label + migration plan (see [root `CLAUDE.md`](../../CLAUDE.md)).
+
+Everything below elaborates on these rules and shows the code patterns.
+
+## 1. URL path shape
+
+```
+/{module}/{audience}/{resources}[/{id}][:{action}]
 ```
 
-## Mandatory Endpoints
-
-**Every deployed module MUST expose these four endpoints.** Non-negotiable. The AI agent for the module is responsible for maintaining them.
-
-### `GET /health` — Public
-
-Uptime check. No authentication. No downstream dependencies. Returns in < 10ms.
-
-```typescript
-app.get("/health", (c) => c.json({ status: "ok" }));
-```
-
-Used by:
-
-- CloudWatch Synthetics canaries (every minute)
-- API Gateway health probes
-- Load-balancer-free routing (returns 200 as long as Lambda is running)
-
-**Never log successful health checks.** Thousands per day per module would drown signal.
-
-### `GET /info` — Authenticated
-
-Service metadata for runtime discovery. Returns what the module does, what permissions it consumes, what events it publishes/subscribes, and what topics it uses.
-
-```typescript
-app.get("/info", authMiddleware(), (c) => {
-  return c.json({
-    data: {
-      service: "s-authn",
-      stage: process.env.STAGE ?? "dev",
-      version: process.env.VERSION ?? "unknown",
-      permissions: {
-        authn_admin: "Full CRUD on authentication users, view audit logs",
-        authn_read: "Read-only access to authentication user data",
-      },
-      events: {
-        publishes: [
-          "user.registered",
-          "user.email.verified",
-          "user.disabled",
-          "user.enabled",
-          "user.password.changed",
-          "user.magic-link.requested",
-          "user.password.reset-requested",
-          "user.email.verify-requested",
-        ],
-        subscribes: [],
-      },
-      topics: {
-        "user-events": "User lifecycle events (registration, enable/disable, verification)",
-      },
-      errorCodes: {
-        INVALID_CREDENTIALS: "Email or password incorrect",
-        USER_DISABLED: "Account disabled by admin",
-        EMAIL_ALREADY_EXISTS: "Registration with duplicate email",
-      },
-    },
-  });
-});
-```
-
-Purpose:
-
-- Admin dashboards render this to explain what each module does
-- AI agents discover the current contract without reading source
-- Integration tests assert the contract hasn't silently drifted
-- Reviewers verify `events.publishes` matches what the code actually publishes
-
-**Agents must keep this up to date.** Any change to permissions, events, or topics requires a matching `/info` update in the same PR.
-
-### `GET /openapi.json` — Public
-
-Auto-generated OpenAPI 3.1 spec from route definitions. No manual maintenance.
-
-```typescript
-// packages/s-{module}/functions/src/api.ts
-app.doc("/openapi.json", {
-  openapi: "3.1.0",
-  info: {
-    title: "s-authn — Authentication Service",
-    version: "1.0.0",
-    description: "Identity, credentials, JWT issuance, JWKS endpoint.",
-  },
-  servers: [
-    { url: "https://s-api.smartiqi.com", description: "Prod" },
-    { url: "https://test.s-api.smartiqi.com", description: "Test" },
-    { url: "https://dev.s-api.smartiqi.com", description: "Dev" },
-    { url: "http://localhost:3000", description: "Local" },
-  ],
-  security: [{ Bearer: [] }],
-});
-
-app.openAPIRegistry.registerComponent("securitySchemes", "Bearer", {
-  type: "http",
-  scheme: "bearer",
-  bearerFormat: "JWT",
-});
-```
-
-### `GET /docs` — Public
-
-Swagger UI pointing at `/openapi.json`:
-
-```typescript
-import { swaggerUI } from "@hono/swagger-ui";
-
-app.get("/docs", swaggerUI({ url: "/openapi.json" }));
-```
-
-The typed HTTP clients in `s-tests` consume `/openapi.json` for contract testing.
-
-## Mandatory Endpoint Registration (Factory)
-
-To eliminate boilerplate and enforce consistency, `@s/shared/http` exports a factory:
-
-```typescript
-// packages/shared/src/http/create-api.ts
-import { OpenAPIHono } from "@hono/zod-openapi";
-import { swaggerUI } from "@hono/swagger-ui";
-import { traceMiddleware } from "../trace/middleware.js";
-import { authMiddleware } from "../auth/middleware.js";
-import { globalErrorHandler } from "../errors/handler.js";
-
-export interface ApiMetadata {
-  service: string;
-  title: string;
-  description: string;
-  version: string;
-  permissions: Record<string, string>;
-  events: { publishes: string[]; subscribes: string[] };
-  topics: Record<string, string>;
-  errorCodes?: Record<string, string>;
-}
-
-export function createApi<TEnv extends object>(metadata: ApiMetadata) {
-  const app = new OpenAPIHono<TEnv>();
-
-  app.use("*", traceMiddleware());
-
-  app.get("/health", (c) => c.json({ status: "ok" }));
-
-  app.get("/info", authMiddleware(), (c) =>
-    c.json({
-      data: {
-        service: metadata.service,
-        stage: process.env.STAGE ?? "dev",
-        version: process.env.VERSION ?? metadata.version,
-        permissions: metadata.permissions,
-        events: metadata.events,
-        topics: metadata.topics,
-        errorCodes: metadata.errorCodes ?? {},
-      },
-    }),
-  );
-
-  app.doc("/openapi.json", {
-    openapi: "3.1.0",
-    info: {
-      title: metadata.title,
-      version: metadata.version,
-      description: metadata.description,
-    },
-    servers: [
-      { url: `https://s-api.smartiqi.com`, description: "Prod" },
-      { url: `https://test.s-api.smartiqi.com`, description: "Test" },
-      { url: `https://dev.s-api.smartiqi.com`, description: "Dev" },
-    ],
-    security: [{ Bearer: [] }],
-  });
-
-  app.openAPIRegistry.registerComponent("securitySchemes", "Bearer", {
-    type: "http",
-    scheme: "bearer",
-    bearerFormat: "JWT",
-  });
-
-  app.get("/docs", swaggerUI({ url: "/openapi.json" }));
-
-  app.onError(globalErrorHandler);
-
-  return app;
-}
-```
-
-Module usage:
-
-```typescript
-// packages/s-authn/functions/src/api.ts
-import { createApi } from "@s/shared/http";
-import type { AppEnv } from "./types.js";
-import authRoutes from "./routes/auth.routes.js";
-import adminRoutes from "./routes/admin.routes.js";
-
-const app = createApi<AppEnv>({
-  service: "s-authn",
-  title: "s-authn — Authentication Service",
-  description: "Identity, credentials, JWT issuance, JWKS endpoint.",
-  version: "1.0.0",
-  permissions: {
-    authn_admin: "Full CRUD on authentication users",
-    authn_read: "Read-only access to auth user data",
-  },
-  events: {
-    publishes: ["user.registered", "user.disabled", "user.enabled", /* ... */],
-    subscribes: [],
-  },
-  topics: {
-    "user-events": "User lifecycle events",
-  },
-});
-
-app.route("/auth", authRoutes);
-app.route("/admin", adminRoutes);
-
-export default app;
-```
-
-## Lambda Handler Export
-
-Wrap the app for AWS Lambda:
-
-```typescript
-// packages/s-{module}/functions/src/handler.ts
-import { handle } from "@hono/aws-lambda";
-import app from "./api.js";
-
-export const handler = handle(app);
-```
-
-## Route Grouping
-
-Organize routes by access level:
-
-| Prefix | Access | Purpose |
-|---|---|---|
-| `/health`, `/info`, `/openapi.json`, `/docs` | Mixed (see above) | Infrastructure endpoints |
-| `/auth/*` | Public | Authentication flows (login, register, refresh) — s-authn only |
-| `/user/*` | Authenticated (self) | Self-service (own profile, own groups) |
-| `/admin/*` | Permission-gated | Administrative operations |
-| `/_events` | System (IAM-gated) | Not API Gateway — separate Lambda for EventBridge/SQS |
-
-### Route prefix by module
-
-The shared API Gateway routes by path prefix:
-
-- `/authn/*` → s-authn Lambda
-- `/authz/*` → s-authz Lambda
-- `/user/*` → s-user Lambda
-- `/group/*` → s-group Lambda
-- `/{module}/*` → module Lambda
-
-Inside each module's Lambda, the Hono app mounts sub-routers:
-
-```typescript
-// Inside s-authn Lambda, paths relative to /authn
-app.route("/auth", authRoutes);       // final path: /authn/auth/*
-app.route("/admin", adminRoutes);     // final path: /authn/admin/*
-```
-
-## Route Definition Pattern (OpenAPIHono)
-
-Use `createRoute` for typed route definitions:
-
-```typescript
-// packages/s-authn/functions/src/routes/auth.routes.ts
-import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
-import { login } from "@s-authn/core/auth/auth.service.js";
-import type { AppEnv } from "../types.js";
-
-const LoginBody = z.object({
-  email: z.string().email(),
-  password: z.string().min(8).max(128),
-});
-
-const LoginResponse = z.object({
-  data: z.object({
-    accessToken: z.string(),
-    refreshToken: z.string(),
-    expiresAt: z.number(),
-  }),
-});
-
-const loginRoute = createRoute({
-  method: "post",
-  path: "/login",
-  tags: ["auth"],
-  request: {
-    body: {
-      content: { "application/json": { schema: LoginBody } },
-    },
-  },
-  responses: {
-    200: {
-      description: "Tokens issued",
-      content: { "application/json": { schema: LoginResponse } },
-    },
-    401: { description: "Invalid credentials" },
-    429: { description: "Rate limited" },
-  },
-});
-
-const auth = new OpenAPIHono<AppEnv>();
-
-auth.openapi(loginRoute, async (c) => {
-  const { email, password } = c.req.valid("json");
-  const tokens = await login(email, password);
-  return c.json({ data: tokens }, 200);
-});
-
-export default auth;
-```
-
-The route is now in the OpenAPI spec with full schema, and `c.req.valid("json")` returns a typed `{ email: string; password: string }`.
-
-## Request Validation
-
-Validation is automatic via Zod schemas in `createRoute`. No `zValidator` middleware needed.
-
-### Body validation
-
-```typescript
-const CreateUserRoute = createRoute({
-  method: "post",
-  path: "/users",
-  request: {
-    body: {
-      content: { "application/json": { schema: CreateUserSchema } },
-    },
-  },
-  // ...
-});
+### Segments
+
+| Segment | Rule |
+|---|---|
+| `module` | **Singular** noun of the bounded context. Current modules: `authn`, `authz`, `user`, `group`. New: `building`. Set via `basePath` in `createApi()`. |
+| `audience` | One of `admin` \| `user`. Exactly one for every authenticated route. The caller-less root (`/health`, `/info`, `/openapi.json`, `/docs`) is platform-reserved — do not put business routes there. |
+| `resources` | **Plural** noun. Always. `buildings`, not `building`. Even when the module name is the resource (e.g. `user`): `/user/user/users/{id}`, not `/user/user/{id}`. |
+| `{id}` | Opaque string (UUIDs today). Path-id is the source of truth; if body carries an `id`, the path wins. |
+| `:{action}` | Google AIP-136 custom action. Colon (not slash) so routers can distinguish a sub-resource from a verb. Reserved for things that don't fit CRUD — rare but legitimate (archive, activate, sendTestEmail). |
+
+### Worked example for s-building
+
+| Purpose | Method + path |
+|---|---|
+| Create | `POST   /building/admin/buildings` |
+| List (admin) | `GET    /building/admin/buildings?q=…&filter_by=…&sort_by=…&page=…&per_page=…` |
+| Get | `GET    /building/admin/buildings/{id}` |
+| Update | `PATCH  /building/admin/buildings/{id}` |
+| Archive | `POST   /building/admin/buildings/{id}:archive` |
+| Activate | `POST   /building/admin/buildings/{id}:activate` |
+| Delete | `DELETE /building/admin/buildings/{id}` |
+| List mine | `GET    /building/user/buildings` |
+| Get mine | `GET    /building/user/buildings/{id}` |
+
+### Caller-centric `/me` alias
+
+`/me` is allowed as a stand-in for `{id}` in the `user` audience only. `GET /user/user/users/me` is equivalent to `GET /user/user/users/{callerId}` — helpful on consumer clients that don't want to thread a user id through every call.
+
+### Sub-resources
+
+When a resource has children, nest by plural name: `GET /building/admin/buildings/{id}/floors`. Recursively applies the same rules to each level.
+
+### Inherited inconsistencies (tracked for retrofit)
+
+Modules built before this convention may not yet conform. They remain valid but are **flagged for retrofit** in [#73](https://github.com/adam-ai-rob/s-platform/issues/73):
+
+- **s-user path shape** — `GET /user/me`, `PATCH /user/me`, `GET /user/{id}` are singular. v1 requires `/user/user/users/me` and `/user/admin/users/{id}`.
+- **s-user search envelope + casing** — `GET /user/search` returns a flat `{ hits, page, per_page, found, out_of, search_time_ms, next_cursor }` with **snake_case** keys and **no `data` wrapper**. v1 requires `{ data, meta: { page, perPage, found, outOf, searchTimeMs, nextCursor? } }` with camelCase.
+- **s-authn user routes** — `POST /authn/user/me/logout`, `PATCH /authn/user/me/password` are singular. Retrofit to the v1 shape (`POST /authn/user/sessions:revoke` and `PATCH /authn/user/users/me/password`, or similar — exact form decided in the retrofit PR).
+- **List envelope** — existing list endpoints (and the shared `ListResponse` schema helper in [`packages/shared/src/types/index.ts`](../../packages/shared/src/types/index.ts)) return `{ data, metadata: { nextToken } }`. v1 mandates `{ data, meta: { page, perPage, found, outOf, searchTimeMs, nextCursor?, facets? } }`. The shared helper + every consumer must rename in lockstep.
+
+New code MUST use the v1 shape. Existing non-conforming endpoints stay until the retrofit PR — which will keep the old paths/envelope for one release behind `Deprecation:` + `Sunset:` headers.
+
+> **Why `/user/user/users/{id}` looks triple-redundant and still correct:** the first segment is the **module** (`s-user` → basePath `/user`), the second is the **audience** (`user` vs `admin`), the third is the **resource** (`users`, plural). Each segment earns its place; modules where the bounded context name happens to match the primary resource pay a small cosmetic cost in exchange for a uniform URL grammar platform-wide.
+
+## 2. HTTP methods + status codes
+
+| Method | Use | Success | Body on success |
+|---|---|---|---|
+| `GET` | Read | `200 OK` | single resource or list envelope |
+| `POST` (create) | Create resource in a collection | `201 Created` + `Location: /.../{id}` header | the created resource (`{ data }`) |
+| `POST` (action) | Custom action `:verb` | `200 OK`, or `202 Accepted` for async | resource, or `{ data: { jobId } }` for async |
+| `PATCH` | Partial update. RFC 7396 merge-patch semantics — `BaseRepository` maps `null`/`""`/`[]` → DynamoDB REMOVE. | `200 OK` | the updated resource |
+| `PUT` | **Forbidden.** The platform does not use full-replace updates. |   |   |
+| `DELETE` | Remove | `204 No Content` | empty |
+
+Status codes for errors: `400` validation (zod-openapi auto-emits), `401` missing/bad token, `403` authenticated but not authorised, `404` not found **or deliberately hidden**, `409` state conflict (e.g. `draft → archived` rejected), `412` precondition failed (If-Match mismatch), `422` semantic validation (rare), `429` rate-limited, `500` server, `503` downstream unavailable.
+
+**Hiding vs forbidding.** When a resource exists but the caller isn't supposed to know, return `404` instead of `403` (consumer `/user` audience hides non-active and non-scoped buildings this way). Do not leak existence.
+
+## 3. Request conventions
+
+### Path parameters — `{id}` syntax
+
+Per OpenAPI, use `{id}` not `:id`:
+
+```ts
+path: "/buildings/{id}",     // ✅
+path: "/buildings/:id",      // ❌
 ```
 
 ### Query parameters
 
-```typescript
-const ListUsersQuery = z.object({
-  limit: z.coerce.number().min(1).max(100).default(20),
-  nextToken: z.string().optional(),
-  query: z.string().optional(),
-  enabled: z.enum(["true", "false"]).optional(),
-});
+Coerced + validated via zod-openapi in `createRoute.request.query`:
 
-const ListUsersRoute = createRoute({
-  method: "get",
-  path: "/users",
-  request: {
-    query: ListUsersQuery,
-  },
-  // ...
+```ts
+const ListQuery = z.object({
+  q: z.string().optional(),
+  filter_by: z.string().optional(),
+  sort_by: z.string().optional(),
+  facet_by: z.string().optional(),
+  page: z.coerce.number().int().positive().default(1),
+  per_page: z.coerce.number().int().positive().max(100).default(20),
+  cursor: z.string().optional(),
 });
 ```
 
-### Path parameters
+Rejects unknown query keys that aren't in the schema — strict.
 
-```typescript
-const GetUserRoute = createRoute({
-  method: "get",
-  path: "/users/{id}",
-  request: {
-    params: z.object({ id: z.string() }),
-  },
-  // ...
-});
+### Body validation
+
+Request body is JSON only. Content-Type must be `application/json`. zod-openapi rejects anything else.
+
+### Request size
+
+- Request body ≤ 10 MB (API Gateway hard limit)
+- Response body ≤ 10 MB
+- For larger payloads use S3 presigned URLs (not implemented yet; add per-module on demand).
+
+## 4. List querying + filter DSL
+
+Any list endpoint backed by Typesense MUST accept this exact query envelope:
+
+| Param | Purpose | Default | Cap |
+|---|---|---|---|
+| `q` | Full-text query (Typesense `q`). `*` means match-all. | `*` | — |
+| `filter_by` | Typesense filter expression. **Only fields in the module's `FILTER_FIELDS` whitelist.** Server returns `400` on unknown fields. | — | — |
+| `sort_by` | `field:asc|desc[,field:asc|desc]`. Only fields in `SORT_FIELDS`. Must include a unique tiebreaker (`id`) when `cursor` is used. | `createdAtMs:desc` | — |
+| `facet_by` | Facet fields (whitelisted). Module-specific default. | module default | — |
+| `page` | Page number (1-based). | `1` | — |
+| `per_page` | Page size. | `20` | `100` |
+| `cursor` | Opaque keyset cursor. When set, overrides `page`. | — | — |
+
+### Why pass Typesense syntax through
+
+- Builds on [#59](https://github.com/adam-ai-rob/s-platform/issues/59), which shipped `q`, `filter_by`, `sort_by`, `page`, `per_page`, `cursor` on `GET /user/search`. v1 standardises those across every list endpoint and **adds `facet_by`** (not shipped in #59) as part of the canonical envelope. The `SORT_FIELDS` / `FILTER_FIELDS` whitelist pattern also originates from #59.
+- Covers boolean, range, `IN`, negation — enough for every list endpoint we have.
+- Field whitelist neutralises the injection risk; same approach Algolia + Typesense recommend.
+
+See [ADR 003](./adr/003-rest-api-conventions-v1.md) for alternatives considered (JSON:API `filter[x]=y`, RSQL/FIQL, Django `foo__gte=`) and why each was rejected.
+
+### Pagination — page vs cursor
+
+- **page + per_page** is the default (UI-friendly, REST-conventional, round-trippable).
+- **cursor** is opt-in for deep pagination, exports, and background jobs. Encodes `(lastSortValues, lastId)` in opaque base64. Resume-safe under concurrent writes.
+- Both can be implemented from the same underlying search — see `packages/s-user/core/src/search/users.search.ts`.
+
+### Example
+
+```
+GET /building/admin/buildings
+  ?q=*
+  &filter_by=status:=active && countryCode:=CZ
+  &sort_by=population:desc,id:desc
+  &facet_by=status,countryCode
+  &page=1
+  &per_page=20
 ```
 
-**Note:** OpenAPIHono uses `{id}` syntax in `path`, not `:id` (OpenAPI convention).
+## 5. Response envelope
 
-### Headers
-
-```typescript
-request: {
-  headers: z.object({
-    "x-location": z.string().optional(),
-  }),
-},
-```
-
-## Response Format
-
-### Single resource (200 or 201)
+### Single resource (200 / 201)
 
 ```json
 {
   "data": {
     "id": "01HXYZ...",
-    "email": "user@example.com",
-    "firstName": "Alice",
-    "lastName": "Smith",
+    "name": "Karlín Tower",
     "createdAt": "2026-04-17T10:30:00.000Z"
   }
 }
 ```
 
-201 for creation, 200 for retrieval or update.
-
-### List of resources (200)
+### List (200)
 
 ```json
 {
   "data": [
-    { "id": "01HABC...", "email": "alice@example.com" },
-    { "id": "01HDEF...", "email": "bob@example.com" }
+    { "id": "01HABC...", "name": "A" },
+    { "id": "01HDEF...", "name": "B" }
   ],
-  "metadata": {
-    "nextToken": "eyJpZCI6IjAxSERFRiJ9"
+  "meta": {
+    "page": 1,
+    "perPage": 20,
+    "found": 847,
+    "outOf": 1203,
+    "searchTimeMs": 3,
+    "nextCursor": "eyJsYXN0Ijp7ImNy…",
+    "facets": [
+      { "field": "status", "counts": [ { "value": "active", "count": 128 } ] }
+    ]
   }
 }
 ```
 
-When `metadata.nextToken` is absent or null, there are no more pages.
+- `found` — total matching documents
+- `outOf` — total indexable documents (pre-filter)
+- `nextCursor` — present only if more results exist
+- `facets` — present only when `facet_by` was requested
 
-### No content (204)
+### 204 No Content
 
-Empty response body. Use for deletes and some updates.
+Empty body. Used by `DELETE` and action endpoints that don't return data.
 
-### Accepted (202)
+### 202 Accepted (async)
 
-Empty response body. Use for async operations (e.g., triggering an authz-view rebuild).
+```json
+{ "data": { "jobId": "..." } }
+```
+
+Used only for actions that can't complete synchronously (e.g. triggering a large rebuild).
 
 ### Error (4xx / 5xx)
+
+Produced by the global error handler in `@s/shared/errors`:
 
 ```json
 {
   "error": {
-    "code": "NOT_FOUND",
-    "message": "User not found",
-    "details": null
+    "code": "BuildingNotFound",
+    "message": "Building 01HXYZ... not found",
+    "details": { "buildingId": "01HXYZ..." }
   }
 }
 ```
 
-See [07-error-handling.md](07-error-handling.md).
+**Rules:**
 
-## Pagination
+- `code` — a stable string (PascalCase) that clients can match against
+- `message` — human-readable; safe to display
+- `details` — optional object; never a string, never sensitive data
+- **Errors never travel with data.** `{ data, errors: [...] }` in a 200 response (JSON:API style) is rejected — it forces clients to inspect two things for failure and muddies HTTP status. Platform uses `DomainError` → handler → 4xx.
 
-All list endpoints use cursor pagination:
+### Batch endpoints
 
-**Request:**
-```
-GET /admin/users?limit=20&nextToken=eyJpZCI...
-```
-
-**Query params:**
-
-| Param | Type | Default | Max | Description |
-|---|---|---|---|---|
-| `limit` | number | 20 | 100 | Page size |
-| `nextToken` | string | — | — | Opaque cursor from previous response |
-
-**Response:**
+Per-item failures only appear on true batch endpoints (none shipped today):
 
 ```json
 {
-  "data": [...],
-  "metadata": {
-    "nextToken": "eyJpZCI6..."
-  }
+  "data": [ { "id": "A", "ok": true }, { "id": "B", "ok": true } ],
+  "meta": { "processed": 3 },
+  "errors": [ { "index": 2, "code": "Forbidden", "message": "…" } ]
 }
 ```
 
-- First page: omit `nextToken`
-- Last page: `metadata.nextToken` is absent or null
-- Clients should treat `nextToken` as opaque — don't parse or modify
+Document per batch endpoint.
 
-## Search
+### Field conventions
 
-Prefix/text search uses `query`:
+- **camelCase** for all JSON field names (no snake_case, no kebab-case).
+- **Timestamps** — ISO 8601 UTC (`createdAt: "2026-04-17T10:30:00.000Z"`) **paired with** an int64 `*Ms` epoch (`createdAtMs: 1745052600000`) when the field is sortable/filterable in Typesense. Clients read ISO; search reads `*Ms`.
+- **IDs** — opaque strings. UUIDs today.
+- **Enums** — lowercase kebab-case or single-word (`active`, `draft`, `archived`). Never mixed with free text.
+- **Money** — `{ amount: number, currency: "USD" }`. `amount` is in minor units (cents). Never floats.
 
+## 6. Cross-cutting headers
+
+| Header | Direction | Use |
+|---|---|---|
+| `Authorization: Bearer <jwt>` | Request | Required on every `admin`/`user` route. |
+| `Idempotency-Key: <uuid>` | Request | Required on `POST` create + `:action` endpoints. Server stores key → response hash for N minutes. Deferred implementation — document the hook; current endpoints SHOULD accept the header but may ignore it. |
+| `If-Match: <etag>` | Request | Optional on `PATCH` / `DELETE` for optimistic concurrency. Server returns `412 Precondition Failed` on mismatch. Deferred. |
+| `ETag: <etag>` | Response | Returned on single-item `GET` once `If-Match` is implemented. Deferred. |
+| `Location: /...` | Response | Required on `201 Created`. Points at the newly created resource. |
+| `X-Request-Id` | Both | Correlation id — gateway generates if absent; modules propagate via `@s/shared/trace`. |
+| `traceparent` | Both | W3C trace context — propagated by `@s/shared/trace`. |
+| `Sunset`, `Deprecation` | Response | Used during deprecation windows. See §10. |
+
+## 7. No URL versioning
+
+The platform does **not** use `/v1/...` / `/v2/...`. Reasoning:
+
+- Contracts are gated by `scripts/contract-diff.ts` on every PR. Breaking changes require the `breaking-api-change` label + migration plan.
+- CalVer releases (`vYYYY.MM.N`) track the whole platform — per-endpoint versioning duplicates that.
+- Major redesigns ship behind feature flags or under a new resource path; the caller opts in.
+
+This matches Microsoft's position that URL versioning is a last resort. See ADR 003.
+
+## 8. OpenAPIHono patterns
+
+### Factory — do not hand-roll the mandatory endpoints
+
+Every module uses `createApi()` from `@s/shared/http`. It provisions `/health`, `/info`, `/openapi.json`, `/docs`, CORS, trace middleware, and the global error handler:
+
+```ts
+// packages/s-building/functions/src/api.ts
+import { createApi } from "@s/shared/http";
+import adminRoutes from "./routes/admin.routes";
+import userRoutes from "./routes/user.routes";
+
+const app = createApi<AppEnv>({
+  service: "s-building",
+  title: "s-building — Buildings Service",
+  description: "Buildings: CRUD + scoped-permission lists.",
+  version: "1.0.0",
+  basePath: "/building",
+  permissions: {
+    building_superadmin: "Full access to all buildings",
+    building_admin: "Admin on buildings in value scope",
+    building_manager: "Manager on buildings in value scope (no delete)",
+    building_user: "Read active buildings in value scope",
+  },
+  events: {
+    publishes: [
+      "building.created", "building.updated",
+      "building.activated", "building.archived", "building.deleted",
+    ],
+    subscribes: [],
+  },
+  topics: { "building-events": "Building lifecycle" },
+});
+
+app.route("/admin", adminRoutes);
+app.route("/user", userRoutes);
+
+export default app;
 ```
-GET /admin/users?query=alice@
+
+### `createRoute` with Zod schemas
+
+Typed route definitions emit OpenAPI automatically. Validation is built in — no `zValidator` middleware.
+
+```ts
+import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
+
+const CreateBuildingBody = z.object({
+  name: z.string().min(1).max(200),
+  /* … */
+});
+
+const BuildingResponse = z.object({
+  data: z.object({ /* … */ }),
+});
+
+const createBuildingRoute = createRoute({
+  method: "post",
+  path: "/buildings",
+  tags: ["Building Admin"],
+  security: [{ Bearer: [] }],
+  request: {
+    headers: z.object({ "idempotency-key": z.string().uuid().optional() }),
+    body: { content: { "application/json": { schema: CreateBuildingBody } }, required: true },
+  },
+  responses: {
+    201: { description: "Created", content: { "application/json": { schema: BuildingResponse } } },
+    400: { description: "Validation" },
+    403: { description: "Forbidden" },
+  },
+});
+
+admin.openapi(createBuildingRoute, async (c) => {
+  const body = c.req.valid("json");
+  const created = await createBuilding(body);
+  c.header("Location", `/building/admin/buildings/${created.id}`);
+  return c.json({ data: created }, 201);
+});
 ```
 
-Backed by DynamoDB GSI `begins_with` or Algolia (if the module needs it). Results limited to 20 by default.
+### Route split
 
-## Filtering
+Each module mounts exactly two audience sub-routers:
 
-Explicit query params:
-
-```
-GET /admin/users?enabled=true
-GET /admin/groups?type=company
-GET /admin/groups?status=active
+```ts
+app.route("/admin", adminRoutes);
+app.route("/user",  userRoutes);
 ```
 
-Combinable with search and pagination:
+Inside each, use plural resource paths (`/buildings/{id}` etc.).
 
+### Lambda handler
+
+```ts
+// packages/s-{module}/functions/src/handler.ts
+import { handle } from "@hono/aws-lambda";
+import app from "./api";
+export const handler = handle(app);
 ```
-GET /admin/users?query=alice&enabled=true&limit=10
+
+## 9. CORS — do not change
+
+API Gateway CORS is configured platform-wide. Current policy in [`platform/infra/gateway.ts`](../../platform/infra/gateway.ts):
+
+```ts
+cors: {
+  allowOrigins: ["*"],
+  allowMethods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+  allowHeaders: ["Content-Type", "Authorization", "Traceparent", "X-Location"],
+}
 ```
 
-## Rate Limiting
+(`credentials: false` is implicit — SST defaults to false, which is required for wildcard origin.)
 
-Rate limiting on auth mutation endpoints (login, register, refresh, password reset).
+Why wildcard:
 
-**Implementation:** DynamoDB-backed sliding-window counters in a shared `RateLimits` table (in `@s/shared`). Lambda checks the counter, increments, and compares against the limit.
+- Auth is JWT bearer tokens in `Authorization` header — not cookies.
+- `credentials: false` is required for wildcard `allowOrigins: ["*"]`.
+- No security risk — bearer token must be present for protected routes.
 
-**Response on limit exceeded:**
+### Header allowlist — current vs v1
+
+| Header | In gateway today | Required by v1 | Notes |
+|---|---|---|---|
+| `Content-Type` | ✅ | ✅ | |
+| `Authorization` | ✅ | ✅ | |
+| `Traceparent` | ✅ | ✅ | W3C trace context |
+| `X-Location` | ✅ | (keep) | Legacy, still in use — leave in place |
+| `Idempotency-Key` | ❌ | when implemented | Gateway update required **in the same PR that turns on idempotency** (see §6). Until then the header is accepted by permissive browsers on same-origin calls but will be stripped cross-origin. |
+| `If-Match` | ❌ | when implemented | Same — ship optimistic concurrency and the gateway update together. |
+| `X-Request-Id` | ❌ | when implemented | Gateway generates if absent; the issue is only whether cross-origin clients can *send* one. Opt-in. |
+
+**Do not change CORS without coordinating** — every deployed stage inherits from the platform app. Reviewers: do not flag wildcard.
+
+## 10. Rate limiting
+
+DynamoDB-backed sliding-window counters in a shared `RateLimits` table (in `@s/shared`). Lambda checks the counter, increments, and compares against the limit.
+
+Response on limit exceeded:
 
 ```
 HTTP/1.1 429 Too Many Requests
@@ -521,14 +440,13 @@ X-RateLimit-Reset: 1700000060
 
 {
   "error": {
-    "code": "RATE_LIMIT_EXCEEDED",
-    "message": "Too many requests. Please try again later.",
-    "details": null
+    "code": "RateLimitExceeded",
+    "message": "Too many requests. Please try again later."
   }
 }
 ```
 
-**Default limits (per IP):**
+Default limits (per IP):
 
 | Endpoint | Window | Max |
 |---|---|---|
@@ -539,83 +457,43 @@ X-RateLimit-Reset: 1700000060
 
 IP from the `x-forwarded-for` header (API Gateway sets this). Rate limiter available as middleware from `@s/shared`.
 
-## CORS
+## 11. Deprecation + contract changes
 
-API Gateway CORS is configured at the gateway level with wildcard origin:
+### Additive changes (safe)
 
-```typescript
-// infra/shared.ts
-export const gateway = new sst.aws.ApiGatewayV2("PlatformGateway", {
-  cors: {
-    allowOrigins: ["*"],
-    allowMethods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allowHeaders: ["Content-Type", "Authorization", "Traceparent"],
-    allowCredentials: false,
-  },
-});
-```
+- New endpoint
+- New optional request field
+- New response field
+- Widened enum
+- New query param with a default
 
-**Why wildcard:**
+These pass `scripts/contract-diff.ts` without a label. Note them in the PR description.
 
-- Auth is JWT bearer tokens in `Authorization` header — not cookies
-- `credentials: false` is required for wildcard `allowOrigins: ["*"]`
-- No security risk — bearer token must be present for protected routes
+### Breaking changes (label required)
 
-**Do not change CORS without consulting the team.** Clients in multiple domains depend on the wildcard.
+- Removed endpoint
+- Renamed or removed response field
+- Narrowed type
+- Made a required field optional (or vice versa)
+- Removed enum value
 
-## Request Size Limits
+Attach the `breaking-api-change` label to the PR. **Include a migration plan in the PR description** (e.g. "both `email` and `emailAddress` emitted for two releases; `email` removed in v2026.08"). Reviewers MUST flag any response schema change.
 
-- Request body: max 10 MB (API Gateway hard limit is 10 MB)
-- Response body: max 10 MB
-- For larger payloads: use S3 presigned URLs (not implemented yet; add per-module when needed)
+### Deprecation window
 
-## HTTP Method Conventions
+When removing an endpoint or field:
 
-Follow REST:
+1. Emit both old + new for one release cycle.
+2. Set `Sunset: <http-date>` and `Deprecation: true` on the old endpoint's responses.
+3. Remove in the next release. Update `RELEASE_NOTES.md` under `## Unreleased` with a `**Breaking**` line.
 
-- **GET** — retrieve resource (200)
-- **POST** — create resource (201)
-- **PATCH** — partial update (200 or 204) — **preferred for updates**
-- **PUT** — full replace (200 or 204) — only when complete replacement is required
-- **DELETE** — remove resource (204)
+## 12. Postman collection
 
-**PATCH preference rationale:**
+Each module maintains `packages/s-{module}/docs/postman/{Module}.postman_collection.json`. Updated in the **same PR** as any endpoint change. Reviewers verify Postman is current.
 
-- More flexible than PUT (don't need full payload)
-- Supports field removal via `null`, `""`, `[]` in body → BaseRepository converts to DynamoDB REMOVE
-- Smaller payloads, fewer accidental overwrites
+Generated from `/openapi.json` via `openapi-to-postman` (scripted in `packages/s-{module}/scripts/update-postman.sh`).
 
-## Path Parameters: `{}` Syntax
-
-Per OpenAPI convention, use `{id}` not `:id`:
-
-```typescript
-path: "/users/{id}",     // ✅
-path: "/users/:id",      // ❌
-```
-
-**Path ID is source of truth:** If body contains `id` and path contains `{id}`, the path wins. Validate/override body ID in the service layer.
-
-## Postman Collection
-
-Each module maintains a Postman collection at `packages/s-{module}/docs/postman/{Module}.postman_collection.json`. Updated in the same PR as any endpoint change. Reviewers verify Postman is up to date.
-
-The collection is generated from `/openapi.json` via `openapi-to-postman` (scripted in `packages/s-{module}/scripts/update-postman.sh`).
-
-## Response Schema Changes (Breaking Changes)
-
-**Changes to response Zod schemas require explicit user/product-owner approval before merge.** This includes:
-
-- Removing or renaming response fields
-- Changing field types
-- Changing the response envelope structure
-- Making required fields optional (or vice versa)
-
-Adding new optional fields is generally safe but should be noted in the PR description.
-
-Reviewers MUST flag response schema changes and block merge until approval.
-
-## Release Notes
+## 13. Release notes
 
 Every PR updates `RELEASE_NOTES.md` under `## Unreleased`:
 
@@ -623,9 +501,22 @@ Every PR updates `RELEASE_NOTES.md` under `## Unreleased`:
 ## Unreleased
 
 ### Changes
-- **Feature**: Add magic-link authentication flow to s-authn (PR #12)
-- **Fix**: Correct CORS headers for OPTIONS preflight on /admin routes (PR #13)
-- **Breaking**: Remove deprecated `/auth/old-login` endpoint (PR #14)
+- **Feature**: Add archive action to s-building admin API (PR #…)
+- **Fix**: Correct 404-vs-403 leak on user audience (PR #…)
+- **Breaking**: Rename list envelope `metadata` → `meta` (PR #…)
 ```
 
 On release cut (merge to `stage/prod`): rename to `## v2026.MM.N — YYYY-MM-DD`, add fresh `## Unreleased`, tag.
+
+## 14. Quick reference — checklist when adding an endpoint
+
+- [ ] Path follows `/{module}/{audience}/{resources}[/{id}][:{action}]` with plural resources
+- [ ] Correct method + status code (no PUT, 201 on create with `Location:`, 204 on delete)
+- [ ] Permission gate via `requirePermission(…)` or a controller-layer value-scoped check
+- [ ] `zod-openapi` schema for request body, params, query (with sensible defaults + caps)
+- [ ] Response envelope: `{ data }` or `{ data, meta }`; errors via `DomainError` subclasses
+- [ ] New Zod schemas registered; `/openapi.json` regenerated; `contract-diff` passes
+- [ ] Postman collection updated in the same PR
+- [ ] `RELEASE_NOTES.md` under `## Unreleased` updated
+- [ ] If breaking: `breaking-api-change` label + migration plan in PR description
+- [ ] Tests: unit (schema + service), integration (status codes + permission), and journey where flow spans modules

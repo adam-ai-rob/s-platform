@@ -4,6 +4,8 @@ User profile data: names, avatar, preferences, metadata. Profile records share t
 
 Read [monorepo CLAUDE.md](../../CLAUDE.md) and [architecture docs](../../docs/architecture/README.md) first.
 
+**REST conventions:** see [`docs/architecture/09-api-conventions.md`](../../docs/architecture/09-api-conventions.md). This module's current `GET /user/me`, `PATCH /user/me`, `GET /user/{id}` are non-conforming and tracked for retrofit in [#73](https://github.com/adam-ai-rob/s-platform/issues/73). **Do not add new endpoints in the old shape** — any new s-user endpoint must follow the v1 convention (plural `/users`, explicit `admin`/`user` audience).
+
 ## Bounded Context
 
 **What s-user owns:**

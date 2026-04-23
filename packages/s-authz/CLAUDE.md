@@ -4,6 +4,8 @@ Authorization: roles, user-role and group-role assignments, materialized `AuthzV
 
 Read [monorepo CLAUDE.md](../../CLAUDE.md) and [architecture docs](../../docs/architecture/README.md) first.
 
+**REST conventions:** see [`docs/architecture/09-api-conventions.md`](../../docs/architecture/09-api-conventions.md). New endpoints MUST conform; non-conforming legacy paths are tracked for retrofit and MUST NOT be copied into new code.
+
 ## Bounded Context
 
 **Owns:** roles, role→permission mappings, role hierarchy, user↔role and group↔role assignments, the materialized `AuthzView`.

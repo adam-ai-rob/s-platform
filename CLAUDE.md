@@ -50,6 +50,18 @@ Every deployed module exposes:
 
 Use the `createApi()` factory from `@s/shared/http`. **Do not write these endpoints manually.**
 
+### REST conventions (docs/09, ADR 003)
+
+Every new endpoint MUST follow [`docs/architecture/09-api-conventions.md`](./docs/architecture/09-api-conventions.md). Rules in one line each:
+
+- **Path:** `/{module}/{audience}/{resources}[/{id}][:{action}]` — singular module, `admin`/`user` audience, **plural** resources, Google AIP-136 `:verb` for custom actions.
+- **Methods:** `GET/POST/PATCH/DELETE` only. **Never `PUT`.** `201` on create with `Location:` header; `204` on delete; `404` (not `403`) when hiding existence.
+- **Lists:** Typesense passthrough — `q`, `filter_by`, `sort_by`, `facet_by`, `page`, `per_page` (≤100), optional `cursor`. Fields whitelisted server-side.
+- **Envelope:** single → `{ data }`; list → `{ data, meta: { page, perPage, found, outOf, searchTimeMs, nextCursor?, facets? } }`; errors → `{ error: { code, message, details? } }` in 4xx/5xx only. **Errors never travel with `data`.**
+- **JSON:** camelCase, ISO 8601 UTC timestamps paired with `*Ms` int64 epochs for Typesense sort. No URL versioning (`/v1/…` forbidden).
+
+Existing non-conforming endpoints (s-user singular paths, list `metadata` envelope) are tracked for retrofit in [#73](https://github.com/adam-ai-rob/s-platform/issues/73). New code MUST NOT copy them.
+
 ### CORS — DO NOT CHANGE
 
 - `Access-Control-Allow-Origin: *` (wildcard). This is a platform requirement.

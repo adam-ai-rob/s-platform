@@ -4,6 +4,8 @@ Groups (company / team / building) and user memberships.
 
 Read [monorepo CLAUDE.md](../../CLAUDE.md) and [architecture docs](../../docs/architecture/README.md) first.
 
+**REST conventions:** see [`docs/architecture/09-api-conventions.md`](../../docs/architecture/09-api-conventions.md). New endpoints MUST conform; non-conforming legacy paths are tracked for retrofit and MUST NOT be copied into new code.
+
 ## Bounded Context
 
 **Owns:** groups, memberships, domain-based auto-assignment, invitation/approval state.
