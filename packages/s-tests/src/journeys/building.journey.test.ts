@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, describe, expect, test } from "bun:test";
+import { afterAll, describe, expect, test } from "bun:test";
 import { TestHttpError, createTestClient } from "../client";
 import { clearAuthzPermissions, seedAuthzPermissions } from "../helpers/authz-seed";
 import { eventually } from "../helpers/eventually";
@@ -48,10 +48,6 @@ describe("building journey", () => {
 
   let buildingA: string | undefined;
   let buildingB: string | undefined;
-
-  beforeAll(() => {
-    console.log(`  journey suffix: ${suffix}`);
-  });
 
   // ─── Setup ─────────────────────────────────────────────────────────────────
 
@@ -216,6 +212,19 @@ describe("building journey", () => {
         value: [required(buildingA, "buildingA"), required(buildingB, "buildingB")],
       },
     ]);
+
+    // Fresh login for member — their existing tokens.member was minted
+    // in [2] with empty scope, and any Lambda container that has
+    // since cached it still has the stale (old or missing A) scope.
+    // Caching is per-token, so a new token guarantees the next call
+    // re-reads AuthzView. Without this the 45s indexer-wait in [10]
+    // can silently absorb a cache-miss retry and miss the window.
+    const loginRes = await client.request<{
+      data: { accessToken: string };
+    }>("POST", "/authn/auth/login", {
+      body: { email: emails.member, password: passwords.member },
+    });
+    tokens.member = loginRes.data.accessToken;
   });
 
   // ─── Member-user flow ──────────────────────────────────────────────────────
