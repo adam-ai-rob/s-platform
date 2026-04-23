@@ -38,8 +38,14 @@ const ALLOWED_TRANSITIONS: Record<BuildingStatus, readonly BuildingStatus[]> = {
   archived: ["active"],
 } as const;
 
+/**
+ * Throws `BuildingStatusConflictError` when `from → to` is not in
+ * `ALLOWED_TRANSITIONS`. Does NOT short-circuit same-status calls —
+ * callers check `from === to` first so idempotency is explicit at the
+ * call site and this function remains the single authoritative source
+ * of transition legality.
+ */
 function assertTransition(from: BuildingStatus, to: BuildingStatus): void {
-  if (from === to) return;
   if (!ALLOWED_TRANSITIONS[from].includes(to)) {
     throw new BuildingStatusConflictError(from, to);
   }
@@ -146,8 +152,11 @@ export async function activateBuilding(buildingId: string): Promise<Building> {
 async function transitionStatus(buildingId: string, next: BuildingStatus): Promise<Building> {
   const existing = await buildingsRepository.findById(buildingId);
   if (!existing) throw new BuildingNotFoundError(buildingId);
-  assertTransition(existing.status, next);
+  // Idempotent no-op: same-status calls return the existing row without
+  // rewriting timestamps. Must run before `assertTransition` because
+  // `from === to` is not in `ALLOWED_TRANSITIONS[from]` for any status.
   if (existing.status === next) return existing;
+  assertTransition(existing.status, next);
 
   const { iso, ms } = now();
   await buildingsRepository.update(buildingId, {

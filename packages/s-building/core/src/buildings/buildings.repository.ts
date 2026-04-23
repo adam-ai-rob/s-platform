@@ -1,6 +1,7 @@
 import { ScanCommand } from "@aws-sdk/lib-dynamodb";
 import { BaseRepository, type PaginatedResult, getDdbClient } from "@s/shared/ddb";
-import type { Building, BuildingKeys, BuildingStatus } from "./buildings.entity";
+import { logger } from "@s/shared/logger";
+import { Building, type BuildingKeys, type BuildingStatus } from "./buildings.entity";
 
 function tableName(): string {
   const name = process.env.BUILDINGS_TABLE_NAME;
@@ -74,10 +75,23 @@ class BuildingsRepository extends BaseRepository<Building, BuildingKeys> {
         ExclusiveStartKey: startKey,
       }),
     );
-    return {
-      items: (response.Items ?? []) as Building[],
-      lastKey: response.LastEvaluatedKey,
-    };
+    // Parse each row through Zod at the DDB boundary. Any malformed row
+    // is dropped + logged rather than thrown so a single corrupt entry
+    // doesn't poison a whole backfill batch.
+    const raw = response.Items ?? [];
+    const items: Building[] = [];
+    for (const row of raw) {
+      const parsed = Building.safeParse(row);
+      if (parsed.success) {
+        items.push(parsed.data);
+      } else {
+        logger.warn("⚠️ Skipping malformed Buildings row during scan", {
+          buildingId: typeof row?.buildingId === "string" ? row.buildingId : undefined,
+          issues: parsed.error.issues,
+        });
+      }
+    }
+    return { items, lastKey: response.LastEvaluatedKey };
   }
 }
 

@@ -20,9 +20,12 @@ export class BuildingNotFoundError extends NotFoundError {
   }
 }
 
-// Thin alias of the shared ValidationError so callers can catch the
-// module-specific class. ValidationError already maps to HTTP 400.
-export { ValidationError as BuildingValidationError };
+/**
+ * Module-specific 400 — extends the shared `ValidationError` so
+ * callers can discriminate with `instanceof BuildingValidationError`
+ * while still getting the shared 400 HTTP mapping automatically.
+ */
+export class BuildingValidationError extends ValidationError {}
 
 /**
  * Raised when an attempt to transition between lifecycle states is
