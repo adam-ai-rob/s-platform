@@ -8,13 +8,12 @@
  * Scope so far:
  *   - #65: API Lambda + DDB table + gateway wiring + Typesense SSM
  *   - #67: stream-handler Lambda + DLQ/alarm + EventSourceMapping
- *
- * Still to come: search-indexer + backfill Lambdas (#68).
+ *   - #68: search-indexer + backfill Lambdas
  */
 
 import * as aws from "@pulumi/aws";
 import * as pulumi from "@pulumi/pulumi";
-import { createDlqWithAlarm, readSsmOutput } from "@s/infra-shared";
+import { allowEventBridgeToDlq, createDlqWithAlarm, readSsmOutput } from "@s/infra-shared";
 
 export async function buildStack() {
   const stage = $app.stage;
@@ -156,9 +155,72 @@ export async function buildStack() {
     },
   });
 
+  // ─── Search indexer (building.* → Typesense) ──────────────────────────────
+
+  const buildingIndexerDlq = createDlqWithAlarm("BuildingSearchIndexer", {
+    alarmsTopicArn,
+    stage,
+  });
+  allowEventBridgeToDlq("BuildingSearchIndexer", buildingIndexerDlq);
+
+  const buildingSearchIndexer = new sst.aws.Function("BuildingSearchIndexer", {
+    link: [buildingsTable],
+    environment: {
+      STAGE: stage,
+      SERVICE_NAME: "s-building-search-indexer",
+      BUILDINGS_TABLE_NAME: buildingsTable.name,
+    },
+    permissions: [...typesenseSsmPermissions],
+    handler: "../../packages/s-building/functions/src/search-indexer.handler",
+  });
+
+  const buildingEventsRule = new aws.cloudwatch.EventRule("BuildingOnBuildingEvents", {
+    eventBusName,
+    eventPattern: JSON.stringify({
+      source: ["s-building"],
+      "detail-type": [
+        "building.created",
+        "building.updated",
+        "building.activated",
+        "building.archived",
+        "building.deleted",
+      ],
+    }),
+  });
+
+  new aws.cloudwatch.EventTarget("BuildingOnBuildingEventsTarget", {
+    rule: buildingEventsRule.name,
+    eventBusName,
+    arn: buildingSearchIndexer.nodes.function.arn,
+    deadLetterConfig: { arn: buildingIndexerDlq.arn },
+  });
+
+  new aws.lambda.Permission("BuildingSearchIndexerInvoke", {
+    action: "lambda:InvokeFunction",
+    function: buildingSearchIndexer.nodes.function.name,
+    principal: "events.amazonaws.com",
+    sourceArn: buildingEventsRule.arn,
+  });
+
+  // ─── Backfill Lambda (invoked manually — seeds Typesense from DDB) ────────
+
+  const buildingBackfill = new sst.aws.Function("BuildingBackfill", {
+    link: [buildingsTable],
+    environment: {
+      STAGE: stage,
+      SERVICE_NAME: "s-building-backfill",
+      BUILDINGS_TABLE_NAME: buildingsTable.name,
+    },
+    permissions: [...typesenseSsmPermissions],
+    timeout: "5 minutes",
+    handler: "../../packages/s-building/functions/src/backfill.handler",
+  });
+
   return {
     buildingsTable: buildingsTable.name,
     buildingApiArn: buildingApi.arn,
     buildingStreamHandlerArn: buildingStreamHandler.arn,
+    buildingSearchIndexerArn: buildingSearchIndexer.arn,
+    buildingBackfillArn: buildingBackfill.arn,
   };
 }

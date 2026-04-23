@@ -107,23 +107,39 @@ unset ADMIN_KEY SEARCH_KEY TYPESENSE_MASTER_KEY
 KMS key, which every module Lambda already has `kms:Decrypt` access to
 via its IAM policy.
 
-## Step 3 — (Optional) Backfill the `users` collection
+## Step 3 — (Optional) Backfill existing collections
 
-The search indexer Lambda keeps the collection in sync for every new
-event. For a stage with existing profiles (e.g. standing up search
-against `dev` or `prod` after migration), invoke the backfill:
+The search-indexer Lambdas keep their collections in sync for every new
+event. For a stage with pre-existing rows (standing up search against
+`dev` or `prod` after migration, adding a new collection to a live
+stage), invoke the backfill for each collection you need to seed.
+
+**Collections on the platform today:**
+
+- `{stage}_users` — backed by `s-module-user-{stage}-UserBackfill`
+- `{stage}_buildings` — backed by `s-module-s-building-{stage}-BuildingBackfill`
 
 ```bash
+# Users
 aws lambda invoke \
   --function-name "s-module-user-${STAGE}-UserBackfill" \
   --cli-binary-format raw-in-base64-out \
   --payload '{"batchSize":500,"maxBatches":1}' \
-  /tmp/backfill.json
-cat /tmp/backfill.json
+  /tmp/backfill-users.json
+cat /tmp/backfill-users.json
+
+# Buildings
+aws lambda invoke \
+  --function-name "s-module-s-building-${STAGE}-BuildingBackfill" \
+  --cli-binary-format raw-in-base64-out \
+  --payload '{"batchSize":500,"maxBatches":1}' \
+  /tmp/backfill-buildings.json
+cat /tmp/backfill-buildings.json
 ```
 
-The response includes a `lastKey` field. When it is `null`, the backfill
-is complete. Otherwise, invoke again with `{"startKey": <lastKey>, ...}`.
+Each response includes a `lastKey` field. When it is `null`, that
+collection is fully seeded. Otherwise, invoke again with
+`{"startKey": <lastKey>, ...}` until it returns `null`.
 
 ## Step 4 — Verify
 
@@ -156,8 +172,10 @@ Personal stages should drop their collections when the stage is
 destroyed — prevents cluster clutter:
 
 ```bash
-curl -sS -X DELETE "https://$TYPESENSE_HOST/collections/${STAGE}_users" \
-  -H "X-TYPESENSE-API-KEY: $ADMIN_KEY"
+for COLLECTION in "${STAGE}_users" "${STAGE}_buildings"; do
+  curl -sS -X DELETE "https://$TYPESENSE_HOST/collections/$COLLECTION" \
+    -H "X-TYPESENSE-API-KEY: $ADMIN_KEY"
+done
 ```
 
 And delete the stage's keys from the cluster:
