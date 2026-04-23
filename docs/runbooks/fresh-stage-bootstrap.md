@@ -178,6 +178,15 @@ done
 
 All five should return `{"status":"ok"} HTTP 200`.
 
+### Step 3b — Seed Typesense (optional, only for stages with existing data)
+
+A fresh stage has empty DDB tables and therefore nothing to index. Skip
+this step unless you're adding search on top of a stage that already
+has rows (e.g. promoting `dev` search after migration), in which case
+follow the backfill commands in
+[typesense-stage-bootstrap.md § Step 3](./typesense-stage-bootstrap.md#step-3--optional-backfill-existing-collections)
+for both `{stage}_users` and `{stage}_buildings`.
+
 ## Step 4 — Run the auth journey
 
 ```bash

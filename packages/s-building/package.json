@@ -10,7 +10,7 @@
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "test": "bun test tests/*.test.ts",
+    "test": "bun test tests/*.test.ts tests/search/*.test.ts",
     "test:integration": "bun test tests/integration --timeout 60000",
     "lint": "biome check --write ."
   },

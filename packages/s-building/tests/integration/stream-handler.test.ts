@@ -33,7 +33,7 @@ interface CapturedPutEvents {
  *     (schema validation on the payload runs too)
  */
 
-const BUILDINGS_TABLE = "Buildings-stream-test";
+const BUILDINGS_TABLE = "Buildings-test";
 const STAGE = "dev";
 
 let dynamo: LocalDynamo;
