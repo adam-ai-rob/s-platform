@@ -100,9 +100,14 @@ Chose `/admin` + `/user` prefixes because they map 1:1 to the client apps we bui
 
 ### Negative / migration cost
 
-- **s-user is non-conforming** (singular paths, thin `metadata` envelope). Retrofit tracked in [#73](https://github.com/adam-ai-rob/s-platform/issues/73) as `breaking-api-change`. During the deprecation window both shapes are served; `Sunset:`/`Deprecation:` headers signal clients.
-- **`metadata` → `meta`** in list envelopes is a cross-module breaking change, folded into the same retrofit PR to keep the blast radius contained.
-- Clients currently calling the old s-user paths or depending on `metadata.nextToken` need updating — migration plan will accompany [#73](https://github.com/adam-ai-rob/s-platform/issues/73).
+Full non-conforming inventory — all folded into [#73](https://github.com/adam-ai-rob/s-platform/issues/73) as a single `breaking-api-change` retrofit:
+
+- **s-user path shape** — `GET /user/me`, `PATCH /user/me`, `GET /user/{id}` are singular. v1 requires plural collections under an explicit audience.
+- **s-user `GET /user/search`** — returns a flat `{ hits, page, per_page, found, out_of, search_time_ms, next_cursor }` with **snake_case** keys and no `data` wrapper. v1 requires `{ data, meta: { … } }` with camelCase.
+- **s-authn `/user/me/*` routes** — `POST /authn/user/me/logout` and `PATCH /authn/user/me/password` use the same legacy shape.
+- **`@s/shared/types` `ListResponse` helper** — returns `{ data, metadata: { nextToken } }`; v1 mandates `{ data, meta: { page, perPage, found, outOf, searchTimeMs, nextCursor?, facets? } }`. The helper + every consumer rename in lockstep.
+
+During the deprecation window both shapes are served on the same endpoints; `Sunset:` / `Deprecation:` headers signal clients. The `ListResponse` shim emits both `metadata` (legacy) and `meta` (v1) fields for one release so consumers can migrate independently. Removal lands in the next release.
 
 ### Neutral
 

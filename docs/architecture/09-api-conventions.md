@@ -68,12 +68,16 @@ When a resource has children, nest by plural name: `GET /building/admin/building
 
 ### Inherited inconsistencies (tracked for retrofit)
 
-Modules built before this convention may not yet conform. They remain valid but are **flagged for retrofit**:
+Modules built before this convention may not yet conform. They remain valid but are **flagged for retrofit** in [#73](https://github.com/adam-ai-rob/s-platform/issues/73):
 
-- **s-user** — returns `GET /user/me`, `PATCH /user/me`, `GET /user/{id}`. Retrofit tracked in [#73](https://github.com/adam-ai-rob/s-platform/issues/73).
-- **List response envelope** — existing modules return `{ data, metadata }`; v1 mandates `{ data, meta }` with the richer shape below. Retrofit rolled into [#73](https://github.com/adam-ai-rob/s-platform/issues/73).
+- **s-user path shape** — `GET /user/me`, `PATCH /user/me`, `GET /user/{id}` are singular. v1 requires `/user/user/users/me` and `/user/admin/users/{id}`.
+- **s-user search envelope + casing** — `GET /user/search` returns a flat `{ hits, page, per_page, found, out_of, search_time_ms, next_cursor }` with **snake_case** keys and **no `data` wrapper**. v1 requires `{ data, meta: { page, perPage, found, outOf, searchTimeMs, nextCursor? } }` with camelCase.
+- **s-authn user routes** — `POST /authn/user/me/logout`, `PATCH /authn/user/me/password` are singular. Retrofit to the v1 shape (`POST /authn/user/sessions:revoke` and `PATCH /authn/user/users/me/password`, or similar — exact form decided in the retrofit PR).
+- **List envelope** — existing list endpoints (and the shared `ListResponse` schema helper in [`packages/shared/src/types/index.ts`](../../packages/shared/src/types/index.ts)) return `{ data, metadata: { nextToken } }`. v1 mandates `{ data, meta: { page, perPage, found, outOf, searchTimeMs, nextCursor?, facets? } }`. The shared helper + every consumer must rename in lockstep.
 
-New code MUST use the v1 shape. Existing non-conforming endpoints stay until the retrofit PR (which will keep the old paths/envelope for one release behind `Deprecation:` + `Sunset:` headers).
+New code MUST use the v1 shape. Existing non-conforming endpoints stay until the retrofit PR — which will keep the old paths/envelope for one release behind `Deprecation:` + `Sunset:` headers.
+
+> **Why `/user/user/users/{id}` looks triple-redundant and still correct:** the first segment is the **module** (`s-user` → basePath `/user`), the second is the **audience** (`user` vs `admin`), the third is the **resource** (`users`, plural). Each segment earns its place; modules where the bounded context name happens to match the primary resource pay a small cosmetic cost in exchange for a uniform URL grammar platform-wide.
 
 ## 2. HTTP methods + status codes
 
@@ -145,7 +149,7 @@ Any list endpoint backed by Typesense MUST accept this exact query envelope:
 
 ### Why pass Typesense syntax through
 
-- Already established by [#59](https://github.com/adam-ai-rob/s-platform/issues/59). Don't invent a second DSL.
+- Builds on [#59](https://github.com/adam-ai-rob/s-platform/issues/59), which shipped `q`, `filter_by`, `sort_by`, `page`, `per_page`, `cursor` on `GET /user/search`. v1 standardises those across every list endpoint and **adds `facet_by`** (not shipped in #59) as part of the canonical envelope. The `SORT_FIELDS` / `FILTER_FIELDS` whitelist pattern also originates from #59.
 - Covers boolean, range, `IN`, negation — enough for every list endpoint we have.
 - Field whitelist neutralises the injection risk; same approach Algolia + Typesense recommend.
 
@@ -390,17 +394,17 @@ export const handler = handle(app);
 
 ## 9. CORS — do not change
 
-API Gateway CORS is configured platform-wide:
+API Gateway CORS is configured platform-wide. Current policy in [`platform/infra/gateway.ts`](../../platform/infra/gateway.ts):
 
 ```ts
-// platform/infra/gateway.ts
 cors: {
   allowOrigins: ["*"],
   allowMethods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-  allowHeaders: ["Content-Type", "Authorization", "Traceparent", "Idempotency-Key", "If-Match", "X-Request-Id"],
-  allowCredentials: false,
+  allowHeaders: ["Content-Type", "Authorization", "Traceparent", "X-Location"],
 }
 ```
+
+(`credentials: false` is implicit — SST defaults to false, which is required for wildcard origin.)
 
 Why wildcard:
 
@@ -408,7 +412,19 @@ Why wildcard:
 - `credentials: false` is required for wildcard `allowOrigins: ["*"]`.
 - No security risk — bearer token must be present for protected routes.
 
-**Do not change CORS. Reviewers: do not flag wildcard.**
+### Header allowlist — current vs v1
+
+| Header | In gateway today | Required by v1 | Notes |
+|---|---|---|---|
+| `Content-Type` | ✅ | ✅ | |
+| `Authorization` | ✅ | ✅ | |
+| `Traceparent` | ✅ | ✅ | W3C trace context |
+| `X-Location` | ✅ | (keep) | Legacy, still in use — leave in place |
+| `Idempotency-Key` | ❌ | when implemented | Gateway update required **in the same PR that turns on idempotency** (see §6). Until then the header is accepted by permissive browsers on same-origin calls but will be stripped cross-origin. |
+| `If-Match` | ❌ | when implemented | Same — ship optimistic concurrency and the gateway update together. |
+| `X-Request-Id` | ❌ | when implemented | Gateway generates if absent; the issue is only whether cross-origin clients can *send* one. Opt-in. |
+
+**Do not change CORS without coordinating** — every deployed stage inherits from the platform app. Reviewers: do not flag wildcard.
 
 ## 10. Rate limiting
 
