@@ -236,6 +236,20 @@ describe("GET /building/user/buildings", () => {
     );
     expect(res.status).toBe(400);
   });
+
+  test("superadmin passing `(` / `||` in filter_by → 400 (active-only gate applies universally)", async () => {
+    // Even superadmin must not be able to OR-escape the
+    // `status:=active` outer gate on the user audience. The guard must
+    // fire BEFORE the isSuper branch — if this regresses to 200, check
+    // `user.routes.ts`.
+    const token = await jwt.sign({ sub: SUPER_ID });
+    const res = await invoke(
+      app,
+      `/building/user/buildings?filter_by=${encodeURIComponent("status:=active) || (status:=draft")}`,
+      { token },
+    );
+    expect(res.status).toBe(400);
+  });
 });
 
 describe("GET /building/user/buildings/{id}", () => {

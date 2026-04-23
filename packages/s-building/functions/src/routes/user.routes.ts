@@ -59,15 +59,24 @@ user.openapi(
     // is always AND-ed on top of the scope filter.
     const ACTIVE_FILTER = "status:=active";
 
+    // Scope-escape hardening applies to EVERY caller on this audience —
+    // even superadmin. A crafted `filter_by` like
+    // `status:=active) || (status:=draft` can otherwise slip drafts
+    // past the outermost AND on the superadmin path. The user audience
+    // is "active rows only, no exceptions" regardless of role.
+    if (qp.filter_by && /[()|]/.test(qp.filter_by)) {
+      throw new ValidationError("filter_by cannot contain `(`, `)` or `|` on the user audience");
+    }
+
     if (!isSuper) {
-      // Same scope-escape hardening as the admin list — a caller
-      // crafting `)) || (( ` can otherwise shift the scope filter out
-      // of the AND and read the whole active index.
-      if (qp.filter_by && /[()|]/.test(qp.filter_by)) {
-        throw new ValidationError(
-          "filter_by cannot contain `(`, `)` or `|` for non-superadmin callers",
-        );
-      }
+      // `callerScopedBuildingIds` drops permissions without a `value`
+      // field (the "global variant"). The seeded `building_user` role
+      // template always carries `value: []`, so a real assignment will
+      // populate specific ids here. If a future role ever grants
+      // `building_user` globally, callers on that role will hit the
+      // empty-scope short-circuit below (200 empty list) even though
+      // `buildingAccess` on a single id would grant. Single-resource
+      // GET is source-of-truth; list is a denormalised mirror.
       const scope = callerScopedBuildingIds(caller, ["building_user"]);
       if (scope.length === 0) {
         return c.json(
