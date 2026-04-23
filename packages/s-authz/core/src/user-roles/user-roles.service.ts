@@ -29,22 +29,28 @@ export async function assignRoleToUser(params: {
 
   if (existing) {
     const existingValues = existing.value ?? [];
+    const existingSet = new Set(existingValues);
     const incoming = params.value ?? [];
-    const merged = uniqueValues([...existingValues, ...incoming]);
-    // Only write if the merged value is actually different — no-op
-    // otherwise to keep reassignment cheap.
-    const changed = merged.length !== existingValues.length;
-    if (changed) {
-      await authzUserRolesRepository.insert({
-        ...existing,
-        value: merged.length > 0 ? merged : undefined,
-      });
-      logger.info("🔒 Role scope extended", {
-        userId: params.userId,
-        roleId: params.roleId,
-        addedCount: merged.length - existingValues.length,
-      });
+    // Set-based check: write iff the incoming batch contains at least one
+    // value not already present. `uniqueValues` alone is fragile — if a
+    // legacy row happens to contain duplicates, a length-based check can
+    // silently misreport "changed" in either direction.
+    const addedValues = incoming.filter((v) => !existingSet.has(v));
+    if (addedValues.length === 0) {
+      // True no-op: identical re-assignment. Skip the DynamoDB write AND
+      // the view rebuild — nothing would change.
+      return;
     }
+    const merged = uniqueValues([...existingValues, ...addedValues]);
+    await authzUserRolesRepository.insert({
+      ...existing,
+      value: merged.length > 0 ? merged : undefined,
+    });
+    logger.info("🔒 Role scope extended", {
+      userId: params.userId,
+      roleId: params.roleId,
+      addedCount: addedValues.length,
+    });
   } else {
     const entry = createAuthzUserRole(params);
     await authzUserRolesRepository.insert(entry);

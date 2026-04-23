@@ -134,7 +134,7 @@ describe("resolvePermissionsForAssignments", () => {
     }
   });
 
-  test("global + scoped assignment for same permission id → most-permissive (global) wins", async () => {
+  test("global + scoped assignment for same permission id → most-permissive (global) wins (scoped first)", async () => {
     stubRoles([
       role({
         id: "r-global",
@@ -149,6 +149,31 @@ describe("resolvePermissionsForAssignments", () => {
       const result = await resolvePermissionsForAssignments([
         assignment({ roleId: "r-scoped", value: ["bld-A"] }),
         assignment({ roleId: "r-global" }),
+      ]);
+      expect(result).toHaveLength(1);
+      expect(result[0]).toEqual({ id: "building_admin" });
+    } finally {
+      restoreRoles();
+    }
+  });
+
+  test("global + scoped assignment for same permission id → most-permissive (global) wins (global first)", async () => {
+    // Reverse-order variant: the global assignment comes BEFORE the scoped
+    // one. Guards against order-dependent bugs in the merge logic.
+    stubRoles([
+      role({
+        id: "r-global",
+        permissions: [{ id: "building_admin" }],
+      }),
+      role({
+        id: "r-scoped",
+        permissions: [{ id: "building_admin", value: [] }],
+      }),
+    ]);
+    try {
+      const result = await resolvePermissionsForAssignments([
+        assignment({ roleId: "r-global" }),
+        assignment({ roleId: "r-scoped", value: ["bld-A"] }),
       ]);
       expect(result).toHaveLength(1);
       expect(result[0]).toEqual({ id: "building_admin" });

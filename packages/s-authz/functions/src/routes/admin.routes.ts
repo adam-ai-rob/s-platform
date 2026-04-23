@@ -105,15 +105,15 @@ admin.openapi(
   }),
   async (c) => {
     const { userId, roleId } = c.req.valid("param");
-    // Body is optional (request.body.required = false). Parse defensively:
-    // an absent or empty body is treated as "no scope value".
-    const parsed = (await c.req.json().catch(() => ({}))) as { value?: unknown[] };
-    const value = Array.isArray(parsed.value) ? parsed.value : undefined;
+    // Body is validated by AssignRoleBody (see schemas/authz.schema.ts) and
+    // optional per the route definition. zod-openapi returns an empty object
+    // when no body is sent because every field in AssignRoleBody is optional.
+    const body = c.req.valid("json");
     const caller = c.get("user");
     await assignRoleToUser({
       userId,
       roleId,
-      ...(value ? { value } : {}),
+      ...(body?.value ? { value: body.value } : {}),
       createdBy: caller.userId,
     });
     return c.body(null, 204);

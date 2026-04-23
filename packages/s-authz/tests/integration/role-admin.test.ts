@@ -183,6 +183,75 @@ describe("s-authz admin flow (integration)", () => {
     expect(new Set(buildingAdmin[0]?.value)).toEqual(new Set(["bld-A", "bld-B", "bld-C"]));
   });
 
+  test("identical re-assignment is a no-op (no DDB write, no value change)", async () => {
+    const adminToken = await jwt.sign({ sub: ADMIN_USER_ID });
+    const USER_ID = "01HXNOOP0000000000000000NOP";
+
+    const createRes = await invoke<{ data: { id: string } }>(app, "/authz/admin/roles", {
+      method: "POST",
+      token: adminToken,
+      body: {
+        name: "building-admin-noop-test",
+        description: "test-only",
+        permissions: [{ id: "building_admin", value: [] }],
+      },
+    });
+    expect(createRes.status).toBe(201);
+    const roleId = createRes.body.data.id;
+
+    const first = await invoke(app, `/authz/admin/users/${USER_ID}/roles/${roleId}`, {
+      method: "POST",
+      token: adminToken,
+      body: { value: ["bld-X"] },
+    });
+    expect(first.status).toBe(204);
+
+    // Same value, same user, same role — the service should recognise the
+    // no-op and skip the write + rebuild. We can't introspect writes from
+    // the outside, but the AuthzView should still contain exactly the same
+    // permission shape.
+    const second = await invoke(app, `/authz/admin/users/${USER_ID}/roles/${roleId}`, {
+      method: "POST",
+      token: adminToken,
+      body: { value: ["bld-X"] },
+    });
+    expect(second.status).toBe(204);
+
+    const viewRow = await getDdbClient().send(
+      new GetCommand({ TableName: AUTHZ_VIEW_TABLE, Key: { userId: USER_ID } }),
+    );
+    const perms = (viewRow.Item?.permissions ?? []) as { id: string; value?: unknown[] }[];
+    const buildingAdmin = perms.filter((p) => p.id === "building_admin");
+    expect(buildingAdmin).toHaveLength(1);
+    expect(buildingAdmin[0]?.value).toEqual(["bld-X"]);
+  });
+
+  test("malformed body (value not an array) → 400 from zod validation", async () => {
+    const adminToken = await jwt.sign({ sub: ADMIN_USER_ID });
+    const USER_ID = "01HXBADBODY000000000000BAD0";
+
+    const createRes = await invoke<{ data: { id: string } }>(app, "/authz/admin/roles", {
+      method: "POST",
+      token: adminToken,
+      body: {
+        name: "building-admin-badbody-test",
+        description: "test-only",
+        permissions: [{ id: "building_admin", value: [] }],
+      },
+    });
+    expect(createRes.status).toBe(201);
+    const roleId = createRes.body.data.id;
+
+    // `value` must be an array. An object should be rejected by zod-openapi
+    // before the handler runs — this verifies we're not silently coercing.
+    const res = await invoke(app, `/authz/admin/users/${USER_ID}/roles/${roleId}`, {
+      method: "POST",
+      token: adminToken,
+      body: { value: { "0": "bld-A" } },
+    });
+    expect(res.status).toBe(400);
+  });
+
   test("scope-free assignment still works — no body, no value field on the resulting permission", async () => {
     const adminToken = await jwt.sign({ sub: ADMIN_USER_ID });
     const USER_ID = "01HXSUPERADMN00000000000SUP";
