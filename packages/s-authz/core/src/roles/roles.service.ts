@@ -33,29 +33,6 @@ export async function deleteRole(id: string): Promise<void> {
   logger.info("🔒 Role deleted", { roleId: id });
 }
 
-/**
- * Given a set of role IDs, return the merged permission list.
- *
- * Phase 1: flat union of each role's direct `permissions` array.
- * Phase 2: recursively resolve `childRoleIds` and merge value-scoped
- * permissions (dedupe by `id`, union `value` arrays).
- */
-export async function resolvePermissions(roleIds: string[]): Promise<Permission[]> {
-  const byId = new Map<string, Permission>();
-  for (const roleId of roleIds) {
-    const role = await authzRolesRepository.findById(roleId);
-    if (!role) continue;
-    for (const perm of role.permissions) {
-      if (!byId.has(perm.id)) {
-        byId.set(perm.id, { id: perm.id, ...(perm.value ? { value: [...perm.value] } : {}) });
-        continue;
-      }
-      const merged = byId.get(perm.id);
-      if (!merged || !perm.value) continue;
-      const existingValues = merged.value ?? [];
-      const union = [...new Set([...existingValues, ...perm.value])];
-      merged.value = union;
-    }
-  }
-  return Array.from(byId.values());
-}
+// Permission resolution moved to `view/view.service.ts`
+// (`resolvePermissionsForAssignments`) because it now needs the
+// per-assignment `value` field, which wasn't available here.

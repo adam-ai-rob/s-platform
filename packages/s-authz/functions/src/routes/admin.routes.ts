@@ -5,7 +5,7 @@ import {
   unassignRoleFromUser,
 } from "@s-authz/core/user-roles/user-roles.service";
 import { authMiddleware, requirePermission } from "@s/shared/auth";
-import { CreateRoleBody, RoleResponse } from "../schemas/authz.schema";
+import { AssignRoleBody, CreateRoleBody, RoleResponse } from "../schemas/authz.schema";
 import type { AppEnv } from "../types";
 
 const admin = new OpenAPIHono<AppEnv>();
@@ -88,20 +88,34 @@ admin.openapi(
     path: "/users/{userId}/roles/{roleId}",
     tags: ["Authz Admin"],
     security: [{ Bearer: [] }],
-    summary: "Assign a role to a user",
+    summary: "Assign a role to a user (optionally with a scope value)",
+    description:
+      "Assigns `roleId` to `userId`. The optional `value` array is the per-assignment scope for scope-requiring permissions (e.g. building UUIDs for the `building-admin` role). Idempotent: re-assigning the same role unions the incoming `value` with any existing scope on the row — no 409.",
     request: {
       params: z.object({ userId: z.string(), roleId: z.string() }),
+      body: {
+        content: { "application/json": { schema: AssignRoleBody } },
+        required: false,
+      },
     },
     responses: {
-      204: { description: "Assigned" },
+      204: { description: "Assigned (or scope extended)" },
       404: { description: "Role not found" },
-      409: { description: "Already assigned" },
     },
   }),
   async (c) => {
     const { userId, roleId } = c.req.valid("param");
+    // Body is validated by AssignRoleBody (see schemas/authz.schema.ts) and
+    // optional per the route definition. zod-openapi returns an empty object
+    // when no body is sent because every field in AssignRoleBody is optional.
+    const body = c.req.valid("json");
     const caller = c.get("user");
-    await assignRoleToUser({ userId, roleId, createdBy: caller.userId });
+    await assignRoleToUser({
+      userId,
+      roleId,
+      ...(body?.value ? { value: body.value } : {}),
+      createdBy: caller.userId,
+    });
     return c.body(null, 204);
   },
 );

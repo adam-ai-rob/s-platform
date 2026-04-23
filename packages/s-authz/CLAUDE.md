@@ -59,4 +59,29 @@ Deferred to follow-up:
 - Role hierarchy (`childRoleIds` inheritance resolution)
 - Group-role assignments (needs s-group's group membership data first)
 - Admin sync-all endpoint for bulk rebuild after role-schema migrations
-- Value-scoped permission aggregation across roles (currently just a flat union)
+
+## Scope-required permissions + per-assignment `value`
+
+Some permissions carry a per-user scope (e.g. `building_admin` on buildings `[A, B]`). The mechanics:
+
+- **Role template** — each `Permission` in the role's `permissions` array may or may not carry a `value` field:
+  - `{ id: "X" }` (no field) → **global permission**. Consumers ignore scope. Assignment `value` is dropped.
+  - `{ id: "X", value: [] }` (empty array marker) → **scope-required permission**. Assignment `value` flows through.
+- **Assignment** (`AuthzUserRole`) carries an optional `value: unknown[]`. `POST /authz/admin/users/{userId}/roles/{roleId}` accepts body `{ value?: unknown[] }`. Re-assigning the same role to the same user **unions** the incoming `value` with the existing row's value — no 409.
+- **View rebuild** (`rebuildViewForUser` → `resolvePermissionsForAssignments`):
+  - For each assignment, walk the role's permission template.
+  - Scope-required permissions get `unique([...template.value, ...assignment.value])`.
+  - Across multiple assignments that contribute the same permission id, values are unioned. If either side is global, the merged entry drops `value` entirely (most-permissive wins).
+
+## System roles
+
+System roles (`system: true`) can't be deleted via API. They're idempotently seeded by `modules/s-authz/`'s `AuthzSeeds` Lambda (run once per fresh stage — see [`docs/runbooks/fresh-stage-bootstrap.md`](../../docs/runbooks/fresh-stage-bootstrap.md)):
+
+| Role | Template |
+|---|---|
+| `building-superadmin` | `[{ id: "building_superadmin" }]` (global) |
+| `building-admin` | `[{ id: "building_admin", value: [] }]` (scope-required) |
+| `building-manager` | `[{ id: "building_manager", value: [] }]` |
+| `building-user` | `[{ id: "building_user", value: [] }]` |
+
+Extend by appending to `packages/s-authz/core/src/seeds/system-roles.ts`'s `SYSTEM_ROLES` array. Redeploying + re-invoking `AuthzSeeds` picks up additions.

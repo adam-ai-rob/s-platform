@@ -39,3 +39,17 @@ export const PermissionsResponse = z
     }),
   })
   .openapi("PermissionsResponse");
+
+/**
+ * Body for `POST /admin/users/{userId}/roles/{roleId}`.
+ *
+ * `value` is the per-assignment scope (e.g. building UUIDs for the
+ * `building-admin` role). Optional — omitting it preserves legacy
+ * behaviour. Re-assigning the same role unions incoming `value` with
+ * any existing scope on the row.
+ */
+export const AssignRoleBody = z
+  .object({
+    value: z.array(z.unknown()).optional(),
+  })
+  .openapi("AssignRoleBody");

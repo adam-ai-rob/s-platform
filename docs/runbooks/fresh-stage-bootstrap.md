@@ -115,6 +115,33 @@ curl -sS -o /dev/null -w '%{http_code}\n' $GW/authz/info   # 401 (Missing Bearer
 curl -sS $GW/authz/openapi.json | head -c 200               # OpenAPI 3.1 spec
 ```
 
+### Seed the s-authz system roles
+
+`modules/s-authz` stands up an idempotent `AuthzSeeds` Lambda that
+creates the platform-wide system roles (`building-superadmin`,
+`building-admin`, `building-manager`, `building-user`) if they don't
+already exist. Invoke it once per fresh stage:
+
+```bash
+aws lambda invoke \
+  --function-name $(aws ssm get-parameter \
+    --name /s-platform/phase3-dev/s-authz/seeds-arn \
+    --region eu-west-1 --profile itinn-bot \
+    --query 'Parameter.Value' --output text 2>/dev/null || echo "s-authz-phase3-dev-AuthzSeeds") \
+  --region eu-west-1 --profile itinn-bot \
+  --payload '{}' \
+  /tmp/authz-seed.json
+
+cat /tmp/authz-seed.json
+# {"created":["building-superadmin","building-admin","building-manager","building-user"],"skipped":[]}
+```
+
+Safe to re-run — already-seeded roles land in `skipped`. The Lambda's
+function name is `{stack-name}-AuthzSeeds` where the stack name follows
+SST's `s-authz-{stage}` convention; if you can't remember it, `aws
+lambda list-functions --region eu-west-1 --profile itinn-bot --query
+'Functions[?contains(FunctionName,\`Seeds\`)].FunctionName'` lists it.
+
 ## Step 3 — Deploy the remaining modules
 
 ```bash
