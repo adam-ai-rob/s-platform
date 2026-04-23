@@ -13,6 +13,9 @@
     "test:prod": "STAGE=prod bun test src/smoke.test.ts --timeout 60000"
   },
   "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.650.0",
+    "@aws-sdk/client-ssm": "^3.650.0",
+    "@aws-sdk/lib-dynamodb": "^3.650.0",
     "@s/shared": "workspace:*",
     "ulid": "^2.3.0",
     "zod": "^3.23.0"
