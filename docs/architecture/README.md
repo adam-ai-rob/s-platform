@@ -32,6 +32,8 @@ numbered docs above is authoritative; ADRs describe how we got there.
 | ADR | Status | Summary |
 |---|---|---|
 | [001 — Per-module SST apps + contracts](./adr/001-per-module-sst-apps-and-contracts.md) | Accepted, realized 2026-04 | Platform tier + per-module SST apps, OpenAPI/AsyncAPI contracts, testing pyramid. Implemented via PRs #48–#55. |
+| [002 — Search: shared Typesense cluster, stage-prefixed collections](./adr/002-search-typesense-shared-cluster.md) | Accepted, realized via #59 | Single shared Typesense Cloud cluster serves every stage; logical isolation via `{stage}_{entity}` collection prefixes + scoped API keys. |
+| [003 — REST API conventions v1](./adr/003-rest-api-conventions-v1.md) | Accepted, realized via #63 | URL shape `/{module}/{audience}/{resources}[/{id}][:{action}]`, plural collections, `{ data, meta }` envelope, Typesense passthrough filter DSL, no URL versioning. |
 
 ## Quick Facts
 

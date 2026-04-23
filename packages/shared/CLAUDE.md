@@ -4,6 +4,8 @@ Platform-wide utilities imported by every module. **Every other package depends 
 
 Read [monorepo CLAUDE.md](../../CLAUDE.md) and [architecture docs](../../docs/architecture/README.md) first.
 
+**REST conventions:** see [`docs/architecture/09-api-conventions.md`](../../docs/architecture/09-api-conventions.md). `@s/shared/http` (`createApi()`) owns the mandatory endpoints + CORS + error handler and is the single point to enforce envelope + conventions platform-wide — changes here affect every module.
+
 ## Scope
 
 This package exports **only generic, domain-agnostic utilities**. Anything that encodes a specific bounded context (authn, authz, user, group, …) belongs in that module, never here.

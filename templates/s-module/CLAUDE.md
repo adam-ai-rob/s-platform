@@ -50,9 +50,13 @@ TODO: list permissions this module checks.
 - `GET /info` — platform standard
 - `GET /openapi.json` — platform standard
 - `GET /docs` — platform standard
-- TODO: list custom routes
+- TODO: list custom routes. Mount them under `/admin` and `/user` — see [`docs/architecture/09-api-conventions.md`](../../docs/architecture/09-api-conventions.md) for the full URL shape, list DSL, envelope, and headers.
 
 See generated `/openapi.json` for the full contract.
+
+## REST conventions
+
+Follow [`docs/architecture/09-api-conventions.md`](../../docs/architecture/09-api-conventions.md). URL shape is `/{module}/{audience}/{resources}[/{id}][:{action}]` (plural resources, `admin`/`user` audience, Google AIP-136 verbs). Response envelope is `{ data }` / `{ data, meta }` / `{ error }`. No `PUT`. No URL versioning.
 
 ## Running Locally
 
