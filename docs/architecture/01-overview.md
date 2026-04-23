@@ -19,6 +19,7 @@ The platform is designed to grow to 20+ modules while keeping per-module cogniti
 | **s-authz** | Authorization: roles, permissions, authz-view materialized view, permission checks |
 | **s-user** | User profiles: profile CRUD, search, profile sync from auth events |
 | **s-group** | Groups: group CRUD, membership management, domain-based auto-assignment |
+| **s-building** | Buildings: building CRUD with scoped permissions (first resource-scoped module), Typesense-backed admin + user lists, lifecycle events |
 
 Business modules (20+ planned) build on this foundation.
 
