@@ -1,9 +1,9 @@
 import { unmarshall } from "@aws-sdk/util-dynamodb";
-import type { Building } from "@s-building/core/buildings/buildings.entity";
+import { Building } from "@s-building/core/buildings/buildings.entity";
 import { buildingEventCatalog } from "@s-building/core/events";
 import { publishEvent } from "@s/shared/events";
 import { logger } from "@s/shared/logger";
-import type { DynamoDBRecord, DynamoDBStreamEvent } from "aws-lambda";
+import type { AttributeValue, DynamoDBRecord, DynamoDBStreamEvent } from "aws-lambda";
 
 /**
  * Publishes lifecycle events off the Buildings DDB stream.
@@ -40,8 +40,8 @@ export async function handler(event: DynamoDBStreamEvent): Promise<void> {
 }
 
 async function processRecord(record: DynamoDBRecord): Promise<void> {
-  const newImage = unmarshallImage(record.dynamodb?.NewImage);
-  const oldImage = unmarshallImage(record.dynamodb?.OldImage);
+  const newImage = unmarshallImage(record.dynamodb?.NewImage, "NewImage", record.eventID);
+  const oldImage = unmarshallImage(record.dynamodb?.OldImage, "OldImage", record.eventID);
 
   for (const emit of diffRecord(record.eventName, newImage, oldImage)) {
     await publishEvent({
@@ -54,11 +54,29 @@ async function processRecord(record: DynamoDBRecord): Promise<void> {
 }
 
 function unmarshallImage(
-  // biome-ignore lint/suspicious/noExplicitAny: DDB Record type mismatch with unmarshall
-  image: any,
+  image: { [key: string]: AttributeValue } | undefined,
+  kind: "NewImage" | "OldImage",
+  eventId: string | undefined,
 ): Building | undefined {
   if (!image) return undefined;
-  return unmarshall(image) as Building;
+  // aws-lambda and @aws-sdk/util-dynamodb ship different AttributeValue
+  // type definitions for the same wire format — known bridge. The
+  // unmarshalled value is then validated through the Building Zod
+  // schema so a corrupt row silently drops instead of emitting a
+  // malformed event.
+  // biome-ignore lint/suspicious/noExplicitAny: DDB Record type mismatch with unmarshall
+  const raw = unmarshall(image as any);
+  const parsed = Building.safeParse(raw);
+  if (!parsed.success) {
+    logger.warn("⚠️ Skipping malformed Buildings stream image", {
+      kind,
+      eventId,
+      buildingId: typeof raw?.buildingId === "string" ? raw.buildingId : undefined,
+      issues: parsed.error.issues,
+    });
+    return undefined;
+  }
+  return parsed.data;
 }
 
 /**

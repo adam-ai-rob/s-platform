@@ -142,7 +142,11 @@
             "type": "string"
           }
         },
-        "required": ["userId", "firstName", "lastName"],
+        "required": [
+          "userId",
+          "firstName",
+          "lastName"
+        ],
         "additionalProperties": false,
         "$schema": "http://json-schema.org/draft-07/schema#"
       },
@@ -159,7 +163,11 @@
             "type": "string"
           }
         },
-        "required": ["userId", "firstName", "lastName"],
+        "required": [
+          "userId",
+          "firstName",
+          "lastName"
+        ],
         "additionalProperties": false,
         "$schema": "http://json-schema.org/draft-07/schema#"
       },
@@ -170,7 +178,9 @@
             "type": "string"
           }
         },
-        "required": ["userId"],
+        "required": [
+          "userId"
+        ],
         "additionalProperties": false,
         "$schema": "http://json-schema.org/draft-07/schema#"
       }

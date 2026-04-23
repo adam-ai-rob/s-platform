@@ -36,7 +36,7 @@
     },
     "building.archived": {
       "address": "building.archived",
-      "description": "A Building transitioned to `archived` (active→archived).",
+      "description": "A Building transitioned to `archived`. Today the service only exposes active→archived, but the handler fires on any non-archived→archived so defensive raw DDB writes don't slip through.",
       "messages": {
         "building_archived": {
           "$ref": "#/components/messages/building_archived"
@@ -167,7 +167,7 @@
       "building_archived": {
         "name": "building.archived",
         "title": "building.archived",
-        "summary": "A Building transitioned to `archived` (active→archived).",
+        "summary": "A Building transitioned to `archived`. Today the service only exposes active→archived, but the handler fires on any non-archived→archived so defensive raw DDB writes don't slip through.",
         "contentType": "application/json",
         "payload": {
           "$ref": "#/components/schemas/building_archived"
@@ -208,10 +208,17 @@
           },
           "status": {
             "type": "string",
-            "enum": ["draft", "active", "archived"]
+            "enum": [
+              "draft",
+              "active",
+              "archived"
+            ]
           }
         },
-        "required": ["buildingId", "status"],
+        "required": [
+          "buildingId",
+          "status"
+        ],
         "additionalProperties": false,
         "$schema": "http://json-schema.org/draft-07/schema#"
       },
@@ -222,7 +229,9 @@
             "type": "string"
           }
         },
-        "required": ["buildingId"],
+        "required": [
+          "buildingId"
+        ],
         "additionalProperties": false,
         "$schema": "http://json-schema.org/draft-07/schema#"
       },
@@ -233,7 +242,9 @@
             "type": "string"
           }
         },
-        "required": ["buildingId"],
+        "required": [
+          "buildingId"
+        ],
         "additionalProperties": false,
         "$schema": "http://json-schema.org/draft-07/schema#"
       },
@@ -244,7 +255,9 @@
             "type": "string"
           }
         },
-        "required": ["buildingId"],
+        "required": [
+          "buildingId"
+        ],
         "additionalProperties": false,
         "$schema": "http://json-schema.org/draft-07/schema#"
       },
@@ -255,7 +268,9 @@
             "type": "string"
           }
         },
-        "required": ["buildingId"],
+        "required": [
+          "buildingId"
+        ],
         "additionalProperties": false,
         "$schema": "http://json-schema.org/draft-07/schema#"
       }

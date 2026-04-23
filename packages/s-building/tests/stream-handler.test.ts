@@ -83,6 +83,15 @@ describe("stream-handler diffRecord", () => {
     expect(emitted.map((e) => e.eventName)).toEqual(["building.updated", "building.archived"]);
   });
 
+  test("MODIFY draft → archived emits updated + archived (defensive: raw DDB write)", () => {
+    // Not allowed via the service, but the handler reads raw DDB so
+    // this covers the direct-write / migration edge case.
+    const old = buildingFixture({ status: "draft" });
+    const next = buildingFixture({ status: "archived" });
+    const emitted = diffRecord("MODIFY", next, old);
+    expect(emitted.map((e) => e.eventName)).toEqual(["building.updated", "building.archived"]);
+  });
+
   test("MODIFY active → active does NOT emit a transition event", () => {
     const old = buildingFixture({ status: "active", name: "Before" });
     const next = buildingFixture({ status: "active", name: "After" });

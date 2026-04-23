@@ -37,10 +37,8 @@ const BUILDINGS_TABLE = "Buildings-stream-test";
 const STAGE = "dev";
 
 let dynamo: LocalDynamo;
-// biome-ignore lint/suspicious/noExplicitAny: dynamic-imported handler
-let handler: any;
-// biome-ignore lint/suspicious/noExplicitAny: dynamic-imported repo
-let repo: any;
+let handler: typeof import("../../functions/src/stream-handler")["handler"];
+let repo: typeof import("../../core/src/buildings/buildings.repository")["buildingsRepository"];
 let sent: CapturedPutEvents[] = [];
 
 // Minimal EventBridge client stub that records every PutEventsCommand.

@@ -44,7 +44,14 @@
             }
           }
         },
-        "required": ["id", "firstName", "lastName", "displayName", "createdAtMs", "updatedAtMs"]
+        "required": [
+          "id",
+          "firstName",
+          "lastName",
+          "displayName",
+          "createdAtMs",
+          "updatedAtMs"
+        ]
       },
       "UserSearchResponse": {
         "type": "object",
@@ -74,7 +81,14 @@
             "type": "string"
           }
         },
-        "required": ["hits", "page", "per_page", "found", "out_of", "search_time_ms"]
+        "required": [
+          "hits",
+          "page",
+          "per_page",
+          "found",
+          "out_of",
+          "search_time_ms"
+        ]
       },
       "UserProfile": {
         "type": "object",
@@ -127,7 +141,9 @@
             "$ref": "#/components/schemas/UserProfile"
           }
         },
-        "required": ["data"]
+        "required": [
+          "data"
+        ]
       },
       "UpdateProfileBody": {
         "type": "object",
@@ -165,7 +181,9 @@
   "paths": {
     "/user/search": {
       "get": {
-        "tags": ["User"],
+        "tags": [
+          "User"
+        ],
         "security": [
           {
             "Bearer": []
@@ -243,7 +261,9 @@
     },
     "/user/me": {
       "get": {
-        "tags": ["User"],
+        "tags": [
+          "User"
+        ],
         "security": [
           {
             "Bearer": []
@@ -267,7 +287,9 @@
         }
       },
       "patch": {
-        "tags": ["User"],
+        "tags": [
+          "User"
+        ],
         "security": [
           {
             "Bearer": []
@@ -303,7 +325,9 @@
     },
     "/user/{id}": {
       "get": {
-        "tags": ["User"],
+        "tags": [
+          "User"
+        ],
         "security": [
           {
             "Bearer": []

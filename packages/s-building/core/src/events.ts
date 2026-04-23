@@ -76,7 +76,8 @@ export const buildingEventCatalog = {
   },
   "building.archived": {
     schema: BuildingArchivedPayload,
-    summary: "A Building transitioned to `archived` (active→archived).",
+    summary:
+      "A Building transitioned to `archived`. Today the service only exposes active→archived, but the handler fires on any non-archived→archived so defensive raw DDB writes don't slip through.",
     example: {
       buildingId: "01HXYBUILDING00000000000000",
     },
