@@ -6,10 +6,259 @@
     "description": "Events published by s-building onto the platform EventBridge bus. Payloads are wrapped in the PlatformEvent envelope (see packages/shared/src/events/envelope.ts); each payload below matches PlatformEvent.payload."
   },
   "defaultContentType": "application/json",
-  "channels": {},
-  "operations": {},
+  "channels": {
+    "building.created": {
+      "address": "building.created",
+      "description": "A new Building row was inserted. `status` lets routers skip drafts if they care.",
+      "messages": {
+        "building_created": {
+          "$ref": "#/components/messages/building_created"
+        }
+      }
+    },
+    "building.updated": {
+      "address": "building.updated",
+      "description": "A Building row was MODIFIED. Always fires on MODIFY — transition events below are additive.",
+      "messages": {
+        "building_updated": {
+          "$ref": "#/components/messages/building_updated"
+        }
+      }
+    },
+    "building.activated": {
+      "address": "building.activated",
+      "description": "A Building transitioned to `active` (draft→active or archived→active).",
+      "messages": {
+        "building_activated": {
+          "$ref": "#/components/messages/building_activated"
+        }
+      }
+    },
+    "building.archived": {
+      "address": "building.archived",
+      "description": "A Building transitioned to `archived` (active→archived).",
+      "messages": {
+        "building_archived": {
+          "$ref": "#/components/messages/building_archived"
+        }
+      }
+    },
+    "building.deleted": {
+      "address": "building.deleted",
+      "description": "A Building row was REMOVED. Consumers should drop any mirror they hold.",
+      "messages": {
+        "building_deleted": {
+          "$ref": "#/components/messages/building_deleted"
+        }
+      }
+    }
+  },
+  "operations": {
+    "send_building_created": {
+      "action": "send",
+      "channel": {
+        "$ref": "#/channels/building.created"
+      },
+      "messages": [
+        {
+          "$ref": "#/channels/building.created/messages/building_created"
+        }
+      ]
+    },
+    "send_building_updated": {
+      "action": "send",
+      "channel": {
+        "$ref": "#/channels/building.updated"
+      },
+      "messages": [
+        {
+          "$ref": "#/channels/building.updated/messages/building_updated"
+        }
+      ]
+    },
+    "send_building_activated": {
+      "action": "send",
+      "channel": {
+        "$ref": "#/channels/building.activated"
+      },
+      "messages": [
+        {
+          "$ref": "#/channels/building.activated/messages/building_activated"
+        }
+      ]
+    },
+    "send_building_archived": {
+      "action": "send",
+      "channel": {
+        "$ref": "#/channels/building.archived"
+      },
+      "messages": [
+        {
+          "$ref": "#/channels/building.archived/messages/building_archived"
+        }
+      ]
+    },
+    "send_building_deleted": {
+      "action": "send",
+      "channel": {
+        "$ref": "#/channels/building.deleted"
+      },
+      "messages": [
+        {
+          "$ref": "#/channels/building.deleted/messages/building_deleted"
+        }
+      ]
+    }
+  },
   "components": {
-    "messages": {},
-    "schemas": {}
+    "messages": {
+      "building_created": {
+        "name": "building.created",
+        "title": "building.created",
+        "summary": "A new Building row was inserted. `status` lets routers skip drafts if they care.",
+        "contentType": "application/json",
+        "payload": {
+          "$ref": "#/components/schemas/building_created"
+        },
+        "examples": [
+          {
+            "name": "default",
+            "payload": {
+              "buildingId": "01HXYBUILDING00000000000000",
+              "status": "draft"
+            }
+          }
+        ]
+      },
+      "building_updated": {
+        "name": "building.updated",
+        "title": "building.updated",
+        "summary": "A Building row was MODIFIED. Always fires on MODIFY — transition events below are additive.",
+        "contentType": "application/json",
+        "payload": {
+          "$ref": "#/components/schemas/building_updated"
+        },
+        "examples": [
+          {
+            "name": "default",
+            "payload": {
+              "buildingId": "01HXYBUILDING00000000000000"
+            }
+          }
+        ]
+      },
+      "building_activated": {
+        "name": "building.activated",
+        "title": "building.activated",
+        "summary": "A Building transitioned to `active` (draft→active or archived→active).",
+        "contentType": "application/json",
+        "payload": {
+          "$ref": "#/components/schemas/building_activated"
+        },
+        "examples": [
+          {
+            "name": "default",
+            "payload": {
+              "buildingId": "01HXYBUILDING00000000000000"
+            }
+          }
+        ]
+      },
+      "building_archived": {
+        "name": "building.archived",
+        "title": "building.archived",
+        "summary": "A Building transitioned to `archived` (active→archived).",
+        "contentType": "application/json",
+        "payload": {
+          "$ref": "#/components/schemas/building_archived"
+        },
+        "examples": [
+          {
+            "name": "default",
+            "payload": {
+              "buildingId": "01HXYBUILDING00000000000000"
+            }
+          }
+        ]
+      },
+      "building_deleted": {
+        "name": "building.deleted",
+        "title": "building.deleted",
+        "summary": "A Building row was REMOVED. Consumers should drop any mirror they hold.",
+        "contentType": "application/json",
+        "payload": {
+          "$ref": "#/components/schemas/building_deleted"
+        },
+        "examples": [
+          {
+            "name": "default",
+            "payload": {
+              "buildingId": "01HXYBUILDING00000000000000"
+            }
+          }
+        ]
+      }
+    },
+    "schemas": {
+      "building_created": {
+        "type": "object",
+        "properties": {
+          "buildingId": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["draft", "active", "archived"]
+          }
+        },
+        "required": ["buildingId", "status"],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      },
+      "building_updated": {
+        "type": "object",
+        "properties": {
+          "buildingId": {
+            "type": "string"
+          }
+        },
+        "required": ["buildingId"],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      },
+      "building_activated": {
+        "type": "object",
+        "properties": {
+          "buildingId": {
+            "type": "string"
+          }
+        },
+        "required": ["buildingId"],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      },
+      "building_archived": {
+        "type": "object",
+        "properties": {
+          "buildingId": {
+            "type": "string"
+          }
+        },
+        "required": ["buildingId"],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      },
+      "building_deleted": {
+        "type": "object",
+        "properties": {
+          "buildingId": {
+            "type": "string"
+          }
+        },
+        "required": ["buildingId"],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    }
   }
 }
