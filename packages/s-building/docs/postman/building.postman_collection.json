@@ -1,0 +1,131 @@
+{
+  "info": {
+    "_postman_id": "s-building-admin-v1",
+    "name": "s-building — admin API",
+    "description": "Admin routes for /building/admin/* landed in #69. User routes under /building/user/* land with #70.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }]
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "https://dev.s-api.smartiqi.com" },
+    { "key": "buildingId", "value": "01HXYBUILDING00000000000000" }
+  ],
+  "item": [
+    {
+      "name": "Health",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{baseUrl}}/building/health",
+          "host": ["{{baseUrl}}"],
+          "path": ["building", "health"]
+        }
+      }
+    },
+    {
+      "name": "Info",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{baseUrl}}/building/info",
+          "host": ["{{baseUrl}}"],
+          "path": ["building", "info"]
+        }
+      }
+    },
+    {
+      "name": "Admin · Create building",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Karlín Tower\",\n  \"description\": \"Office building in Karlín\",\n  \"address\": {\n    \"formatted\": \"Karlínské nám. 5, 186 00 Praha 8, Czech Republic\",\n    \"streetAddress\": \"Karlínské nám. 5\",\n    \"locality\": \"Praha\",\n    \"countryCode\": \"CZ\"\n  },\n  \"areaSqm\": 4200,\n  \"population\": 350,\n  \"primaryLanguage\": \"en\",\n  \"supportedLanguages\": [\"en\"],\n  \"currency\": \"EUR\",\n  \"timezone\": \"Europe/Prague\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/building/admin/buildings",
+          "host": ["{{baseUrl}}"],
+          "path": ["building", "admin", "buildings"]
+        }
+      }
+    },
+    {
+      "name": "Admin · List buildings (Typesense-backed)",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{baseUrl}}/building/admin/buildings?per_page=20",
+          "host": ["{{baseUrl}}"],
+          "path": ["building", "admin", "buildings"],
+          "query": [
+            { "key": "per_page", "value": "20" },
+            { "key": "sort_by", "value": "createdAtMs:desc", "disabled": true },
+            { "key": "filter_by", "value": "status:=active", "disabled": true },
+            { "key": "facet_by", "value": "status,countryCode", "disabled": true },
+            { "key": "q", "value": "tower", "disabled": true }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Admin · Get building",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{baseUrl}}/building/admin/buildings/{{buildingId}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["building", "admin", "buildings", "{{buildingId}}"]
+        }
+      }
+    },
+    {
+      "name": "Admin · Update building (PATCH)",
+      "request": {
+        "method": "PATCH",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"name\": \"Karlín Tower (renamed)\"\n}" },
+        "url": {
+          "raw": "{{baseUrl}}/building/admin/buildings/{{buildingId}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["building", "admin", "buildings", "{{buildingId}}"]
+        }
+      }
+    },
+    {
+      "name": "Admin · Archive building (:archive)",
+      "request": {
+        "method": "POST",
+        "url": {
+          "raw": "{{baseUrl}}/building/admin/buildings/{{buildingId}}:archive",
+          "host": ["{{baseUrl}}"],
+          "path": ["building", "admin", "buildings", "{{buildingId}}:archive"]
+        }
+      }
+    },
+    {
+      "name": "Admin · Activate building (:activate)",
+      "request": {
+        "method": "POST",
+        "url": {
+          "raw": "{{baseUrl}}/building/admin/buildings/{{buildingId}}:activate",
+          "host": ["{{baseUrl}}"],
+          "path": ["building", "admin", "buildings", "{{buildingId}}:activate"]
+        }
+      }
+    },
+    {
+      "name": "Admin · Delete building",
+      "request": {
+        "method": "DELETE",
+        "url": {
+          "raw": "{{baseUrl}}/building/admin/buildings/{{buildingId}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["building", "admin", "buildings", "{{buildingId}}"]
+        }
+      }
+    }
+  ]
+}

@@ -12,8 +12,822 @@
         "bearerFormat": "JWT"
       }
     },
-    "schemas": {},
+    "schemas": {
+      "Building": {
+        "type": "object",
+        "properties": {
+          "buildingId": {
+            "type": "string",
+            "example": "01HXYBUILDING00000000000000"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "address": {
+            "type": "object",
+            "properties": {
+              "formatted": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 500
+              },
+              "streetAddress": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 200
+              },
+              "extendedAddress": {
+                "type": "string",
+                "maxLength": 200
+              },
+              "locality": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 100
+              },
+              "region": {
+                "type": "string",
+                "maxLength": 100
+              },
+              "postalCode": {
+                "type": "string",
+                "maxLength": 20
+              },
+              "countryCode": {
+                "type": "string",
+                "minLength": 2,
+                "maxLength": 2,
+                "pattern": "^[A-Z]{2}$"
+              },
+              "location": {
+                "type": "object",
+                "properties": {
+                  "lat": {
+                    "type": "number",
+                    "minimum": -90,
+                    "maximum": 90
+                  },
+                  "lng": {
+                    "type": "number",
+                    "minimum": -180,
+                    "maximum": 180
+                  }
+                },
+                "required": ["lat", "lng"]
+              }
+            },
+            "required": ["formatted", "streetAddress", "locality", "countryCode"]
+          },
+          "areaSqm": {
+            "type": "number"
+          },
+          "population": {
+            "type": "integer"
+          },
+          "primaryLanguage": {
+            "type": "string"
+          },
+          "supportedLanguages": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "currency": {
+            "type": "string"
+          },
+          "timezone": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["draft", "active", "archived"]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-04-22T08:00:00.000Z"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-04-22T08:00:00.000Z"
+          },
+          "createdAtMs": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "updatedAtMs": {
+            "type": "integer",
+            "format": "int64"
+          }
+        },
+        "required": [
+          "buildingId",
+          "name",
+          "address",
+          "areaSqm",
+          "population",
+          "primaryLanguage",
+          "supportedLanguages",
+          "currency",
+          "timezone",
+          "status",
+          "createdAt",
+          "updatedAt",
+          "createdAtMs",
+          "updatedAtMs"
+        ]
+      },
+      "BuildingResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/Building"
+          }
+        },
+        "required": ["data"]
+      },
+      "CreateBuildingBody": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 2000
+          },
+          "address": {
+            "type": "object",
+            "properties": {
+              "formatted": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 500
+              },
+              "streetAddress": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 200
+              },
+              "extendedAddress": {
+                "type": "string",
+                "maxLength": 200
+              },
+              "locality": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 100
+              },
+              "region": {
+                "type": "string",
+                "maxLength": 100
+              },
+              "postalCode": {
+                "type": "string",
+                "maxLength": 20
+              },
+              "countryCode": {
+                "type": "string",
+                "minLength": 2,
+                "maxLength": 2,
+                "pattern": "^[A-Z]{2}$"
+              },
+              "location": {
+                "type": "object",
+                "properties": {
+                  "lat": {
+                    "type": "number",
+                    "minimum": -90,
+                    "maximum": 90
+                  },
+                  "lng": {
+                    "type": "number",
+                    "minimum": -180,
+                    "maximum": 180
+                  }
+                },
+                "required": ["lat", "lng"]
+              }
+            },
+            "required": ["formatted", "streetAddress", "locality", "countryCode"]
+          },
+          "areaSqm": {
+            "type": "number",
+            "minimum": 0
+          },
+          "population": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "primaryLanguage": {
+            "type": "string"
+          },
+          "supportedLanguages": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1,
+            "maxItems": 50
+          },
+          "currency": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 3
+          },
+          "timezone": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["draft", "active", "archived"]
+          }
+        },
+        "required": [
+          "name",
+          "address",
+          "areaSqm",
+          "population",
+          "primaryLanguage",
+          "supportedLanguages",
+          "currency",
+          "timezone"
+        ]
+      },
+      "BuildingSearchHit": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["draft", "active", "archived"]
+          },
+          "countryCode": {
+            "type": "string"
+          },
+          "locality": {
+            "type": "string"
+          },
+          "region": {
+            "type": "string"
+          },
+          "createdAtMs": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "updatedAtMs": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "areaSqm": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "population": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "highlights": {
+            "type": "object",
+            "additionalProperties": {
+              "nullable": true
+            }
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "status",
+          "countryCode",
+          "locality",
+          "createdAtMs",
+          "updatedAtMs",
+          "areaSqm",
+          "population"
+        ]
+      },
+      "BuildingListMeta": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "integer"
+          },
+          "perPage": {
+            "type": "integer"
+          },
+          "found": {
+            "type": "integer"
+          },
+          "outOf": {
+            "type": "integer"
+          },
+          "searchTimeMs": {
+            "type": "integer"
+          },
+          "nextCursor": {
+            "type": "string"
+          },
+          "facets": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "field": {
+                  "type": "string"
+                },
+                "counts": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "value": {
+                        "type": "string"
+                      },
+                      "count": {
+                        "type": "integer"
+                      }
+                    },
+                    "required": ["value", "count"]
+                  }
+                }
+              },
+              "required": ["field", "counts"]
+            }
+          }
+        },
+        "required": ["page", "perPage", "found", "outOf", "searchTimeMs"]
+      },
+      "BuildingListResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BuildingSearchHit"
+            }
+          },
+          "meta": {
+            "$ref": "#/components/schemas/BuildingListMeta"
+          }
+        },
+        "required": ["data", "meta"]
+      },
+      "UpdateBuildingBody": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 2000
+          },
+          "address": {
+            "type": "object",
+            "properties": {
+              "formatted": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 500
+              },
+              "streetAddress": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 200
+              },
+              "extendedAddress": {
+                "type": "string",
+                "maxLength": 200
+              },
+              "locality": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 100
+              },
+              "region": {
+                "type": "string",
+                "maxLength": 100
+              },
+              "postalCode": {
+                "type": "string",
+                "maxLength": 20
+              },
+              "countryCode": {
+                "type": "string",
+                "minLength": 2,
+                "maxLength": 2,
+                "pattern": "^[A-Z]{2}$"
+              },
+              "location": {
+                "type": "object",
+                "properties": {
+                  "lat": {
+                    "type": "number",
+                    "minimum": -90,
+                    "maximum": 90
+                  },
+                  "lng": {
+                    "type": "number",
+                    "minimum": -180,
+                    "maximum": 180
+                  }
+                },
+                "required": ["lat", "lng"]
+              }
+            },
+            "required": ["formatted", "streetAddress", "locality", "countryCode"]
+          },
+          "areaSqm": {
+            "type": "number",
+            "minimum": 0
+          },
+          "population": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "primaryLanguage": {
+            "type": "string"
+          },
+          "supportedLanguages": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1,
+            "maxItems": 50
+          },
+          "currency": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 3
+          },
+          "timezone": {
+            "type": "string"
+          }
+        }
+      }
+    },
     "parameters": {}
   },
-  "paths": {}
+  "paths": {
+    "/building/admin/buildings": {
+      "post": {
+        "tags": ["Building Admin"],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "summary": "Create a building",
+        "description": "Creates a new building. Requires `building_superadmin`.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateBuildingBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "headers": {
+              "Location": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Canonical URL of the new resource"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BuildingResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "403": {
+            "description": "Missing permission"
+          }
+        }
+      },
+      "get": {
+        "tags": ["Building Admin"],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "summary": "List buildings",
+        "description": "Typesense-backed list. Superadmin sees every building; scoped admin/manager callers see only buildings in their assignment's `value[]`. A scoped caller with an empty scope gets a 200 with an empty data array (no 403).",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": false,
+            "name": "q",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": false,
+            "name": "filter_by",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": false,
+            "name": "sort_by",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": false,
+            "name": "facet_by",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "exclusiveMinimum": true
+            },
+            "required": false,
+            "name": "page",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "exclusiveMinimum": true,
+              "maximum": 100
+            },
+            "required": false,
+            "name": "per_page",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": false,
+            "name": "cursor",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List results",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BuildingListResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/building/admin/buildings/{id}": {
+      "get": {
+        "tags": ["Building Admin"],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "summary": "Get a building",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Ok",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BuildingResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not in caller's scope"
+          },
+          "404": {
+            "description": "Not found"
+          }
+        }
+      },
+      "patch": {
+        "tags": ["Building Admin"],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "summary": "Update a building",
+        "description": "PATCH does not change status — use `:archive` or `:activate` for lifecycle transitions.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateBuildingBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Ok",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BuildingResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "403": {
+            "description": "Not in caller's scope"
+          },
+          "404": {
+            "description": "Not found"
+          }
+        }
+      },
+      "delete": {
+        "tags": ["Building Admin"],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "summary": "Delete a building",
+        "description": "Hard delete. Manager → 403; only superadmin or scoped admin can delete.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Deleted"
+          },
+          "403": {
+            "description": "Not in caller's scope"
+          },
+          "404": {
+            "description": "Not found"
+          }
+        }
+      }
+    },
+    "/building/admin/buildings/{id}:archive": {
+      "post": {
+        "tags": ["Building Admin"],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "summary": "Archive a building (active → archived)",
+        "description": "Public URL: `POST /building/admin/buildings/{id}:archive`. The `_actions/` segment is a transport workaround — see the module's api.ts for the rewrite.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Ok",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BuildingResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not in caller's scope (manager can read/update but not archive)"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "409": {
+            "description": "Illegal status transition"
+          }
+        }
+      }
+    },
+    "/building/admin/buildings/{id}:activate": {
+      "post": {
+        "tags": ["Building Admin"],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "summary": "Activate a building (draft/archived → active)",
+        "description": "Public URL: `POST /building/admin/buildings/{id}:activate`. See `:archive` note about the `_actions/` workaround.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Ok",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BuildingResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not in caller's scope"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "409": {
+            "description": "Illegal status transition"
+          }
+        }
+      }
+    }
+  }
 }
