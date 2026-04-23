@@ -44,6 +44,7 @@ const DUMMY_ENV: Record<string, string> = {
   AUTHZ_VIEW_TABLE_NAME: "contract-harvest-authz-view",
   GROUPS_TABLE_NAME: "contract-harvest-groups",
   GROUP_USERS_TABLE_NAME: "contract-harvest-group-users",
+  BUILDINGS_TABLE_NAME: "contract-harvest-buildings",
 };
 for (const [k, v] of Object.entries(DUMMY_ENV)) {
   if (!process.env[k]) process.env[k] = v;
@@ -105,6 +106,15 @@ const modules: ModuleConfig[] = [
     catalogPath: `${ROOT}packages/s-group/core/src/events.ts`,
     catalogExport: "groupEventCatalog",
     contractsDir: `${ROOT}packages/s-group/contracts`,
+  },
+  {
+    name: "s-building",
+    title: "s-building event contract",
+    version: "1.0.0",
+    appPath: `${ROOT}packages/s-building/functions/src/api.ts`,
+    catalogPath: `${ROOT}packages/s-building/core/src/events.ts`,
+    catalogExport: "buildingEventCatalog",
+    contractsDir: `${ROOT}packages/s-building/contracts`,
   },
 ];
 

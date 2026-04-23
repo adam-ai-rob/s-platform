@@ -2,7 +2,7 @@
 
 How to stand up a new `s-platform` stage (dev, test, prod, personal,
 or a `pr-{N}` ephemeral) from zero. Every stage boots the same five
-SST apps in order: `platform/` first, then the 4 modules.
+SST apps in order: `platform/` first, then the 5 modules.
 
 > The commands below use `phase3-dev` as a concrete example stage name;
 > substitute your own (`$USER`, `alex-feature-x`, whatever). For
@@ -15,9 +15,12 @@ SST apps in order: `platform/` first, then the 4 modules.
 
 ```
 platform/        →   s-authz          →   s-authn   ─┐
-                                                     ├─→ modules that depend on authz-view + bus
+                                                     │
                       (writes authz-view-         s-user
-                       table-name to SSM)         s-group
+                       table-name to SSM)           │── → modules that depend on authz-view + bus
+                                                 s-group
+                                                     │
+                                               s-building
 ```
 
 Rationale:
@@ -26,9 +29,12 @@ Rationale:
 - `s-authz` owns the `AuthzView` table. Every other module's API Lambda
   receives `AUTHZ_VIEW_TABLE_NAME` read from SSM at deploy time; the
   parameter must exist before those modules deploy.
-- The remaining modules (s-authn, s-user, s-group) only depend on
-  platform primitives + the authz-view SSM key. They can deploy in any
-  order relative to each other.
+- The remaining modules (s-authn, s-user, s-group, s-building) only
+  depend on platform primitives + the authz-view SSM key. They can
+  deploy in any order relative to each other. s-building additionally
+  needs the system roles seeded (the `AuthzSeeds` step after s-authz) —
+  without those seeds, roles the building APIs later assume can't be
+  assigned to users.
 
 ## Step 1 — Deploy the platform tier
 
@@ -145,9 +151,10 @@ lambda list-functions --region eu-west-1 --profile itinn-bot --query
 ## Step 3 — Deploy the remaining modules
 
 ```bash
-cd modules/s-authn && bun sst deploy --stage phase3-dev
-cd modules/s-user  && bun sst deploy --stage phase3-dev
-cd modules/s-group && bun sst deploy --stage phase3-dev
+cd modules/s-authn    && bun sst deploy --stage phase3-dev
+cd modules/s-user     && bun sst deploy --stage phase3-dev
+cd modules/s-group    && bun sst deploy --stage phase3-dev
+cd modules/s-building && bun sst deploy --stage phase3-dev
 ```
 
 The three can deploy in parallel — they each only depend on
@@ -163,13 +170,13 @@ Smoke-test every module's public `/health` endpoint:
 ```bash
 GW=$(aws ssm get-parameter --name /s-platform/phase3-dev/gateway-url \
   --region eu-west-1 --profile itinn-bot --query 'Parameter.Value' --output text)
-for m in authn authz user group; do
+for m in authn authz user group building; do
   printf "/%s/health → " "$m"
   curl -sS -w "HTTP %{http_code}\n" $GW/$m/health
 done
 ```
 
-All four should return `{"status":"ok"} HTTP 200`.
+All five should return `{"status":"ok"} HTTP 200`.
 
 ## Step 4 — Run the auth journey
 
@@ -204,7 +211,7 @@ STAGE=phase3-dev API_URL=$GW bun run test:e2e   # should hit 12/12
 Reverse order. `bun sst remove` in each module, then `platform`:
 
 ```bash
-for m in s-group s-user s-authn s-authz; do
+for m in s-building s-group s-user s-authn s-authz; do
   (cd modules/$m && bun sst remove --stage phase3-dev)
 done
 (cd platform && bun sst remove --stage phase3-dev)

@@ -1,0 +1,15 @@
+{
+  "asyncapi": "3.0.0",
+  "info": {
+    "title": "s-building event contract",
+    "version": "1.0.0",
+    "description": "Events published by s-building onto the platform EventBridge bus. Payloads are wrapped in the PlatformEvent envelope (see packages/shared/src/events/envelope.ts); each payload below matches PlatformEvent.payload."
+  },
+  "defaultContentType": "application/json",
+  "channels": {},
+  "operations": {},
+  "components": {
+    "messages": {},
+    "schemas": {}
+  }
+}
