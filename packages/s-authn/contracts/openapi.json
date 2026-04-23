@@ -29,16 +29,10 @@
                 "type": "number"
               }
             },
-            "required": [
-              "accessToken",
-              "refreshToken",
-              "expiresIn"
-            ]
+            "required": ["accessToken", "refreshToken", "expiresIn"]
           }
         },
-        "required": [
-          "data"
-        ]
+        "required": ["data"]
       },
       "RegisterBody": {
         "type": "object",
@@ -55,10 +49,7 @@
             "example": "Test1234!"
           }
         },
-        "required": [
-          "email",
-          "password"
-        ]
+        "required": ["email", "password"]
       },
       "LoginBody": {
         "type": "object",
@@ -71,10 +62,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "email",
-          "password"
-        ]
+        "required": ["email", "password"]
       },
       "AccessTokenResponse": {
         "type": "object",
@@ -89,15 +77,10 @@
                 "type": "number"
               }
             },
-            "required": [
-              "accessToken",
-              "expiresIn"
-            ]
+            "required": ["accessToken", "expiresIn"]
           }
         },
-        "required": [
-          "data"
-        ]
+        "required": ["data"]
       },
       "RefreshTokenBody": {
         "type": "object",
@@ -106,9 +89,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "refreshToken"
-        ]
+        "required": ["refreshToken"]
       },
       "JwksResponse": {
         "type": "object",
@@ -137,20 +118,11 @@
                   "type": "string"
                 }
               },
-              "required": [
-                "kid",
-                "kty",
-                "alg",
-                "use",
-                "n",
-                "e"
-              ]
+              "required": ["kid", "kty", "alg", "use", "n", "e"]
             }
           }
         },
-        "required": [
-          "keys"
-        ]
+        "required": ["keys"]
       },
       "ChangePasswordBody": {
         "type": "object",
@@ -164,10 +136,7 @@
             "maxLength": 128
           }
         },
-        "required": [
-          "currentPassword",
-          "newPassword"
-        ]
+        "required": ["currentPassword", "newPassword"]
       }
     },
     "parameters": {}
@@ -175,9 +144,7 @@
   "paths": {
     "/authn/auth/register": {
       "post": {
-        "tags": [
-          "Auth"
-        ],
+        "tags": ["Auth"],
         "summary": "Register a new user",
         "requestBody": {
           "required": true,
@@ -208,9 +175,7 @@
     },
     "/authn/auth/login": {
       "post": {
-        "tags": [
-          "Auth"
-        ],
+        "tags": ["Auth"],
         "summary": "Log in with email and password",
         "requestBody": {
           "required": true,
@@ -244,9 +209,7 @@
     },
     "/authn/auth/token/refresh": {
       "post": {
-        "tags": [
-          "Auth"
-        ],
+        "tags": ["Auth"],
         "summary": "Exchange refresh token for a new access token",
         "requestBody": {
           "required": true,
@@ -277,9 +240,7 @@
     },
     "/authn/auth/jwks": {
       "get": {
-        "tags": [
-          "Auth"
-        ],
+        "tags": ["Auth"],
         "summary": "Public JWKS for verifying JWTs issued by this service",
         "responses": {
           "200": {
@@ -297,9 +258,7 @@
     },
     "/authn/user/me/logout": {
       "post": {
-        "tags": [
-          "User"
-        ],
+        "tags": ["User"],
         "summary": "Revoke the caller's refresh token",
         "security": [
           {
@@ -315,9 +274,7 @@
     },
     "/authn/user/me/password": {
       "patch": {
-        "tags": [
-          "User"
-        ],
+        "tags": ["User"],
         "summary": "Change the caller's password",
         "security": [
           {
