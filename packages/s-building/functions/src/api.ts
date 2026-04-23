@@ -1,6 +1,7 @@
 import { createApi } from "@s/shared/http";
 import { typesenseHealthProbe } from "@s/shared/search";
 import admin from "./routes/admin.routes";
+import userRoutes from "./routes/user.routes";
 import type { AppEnv } from "./types";
 
 /**
@@ -57,10 +58,7 @@ const app = createApi<AppEnv>({
 });
 
 app.route("/admin", admin);
-
-// User-audience routes land in #70. `createApi()` already provides
-// /health, /info, /openapi.json, /docs so the module is deployable
-// end-to-end with just the admin surface.
+app.route("/user", userRoutes);
 
 // Flip `/_actions/{verb}` → `:{verb}` in the emitted OpenAPI document so
 // the contract matches the public URL convention. Consumers — including

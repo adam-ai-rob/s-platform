@@ -1,8 +1,8 @@
 {
   "info": {
-    "_postman_id": "s-building-admin-v1",
-    "name": "s-building — admin API",
-    "description": "Admin routes for /building/admin/* landed in #69. User routes under /building/user/* land with #70.",
+    "_postman_id": "s-building-v1",
+    "name": "s-building — admin + user API",
+    "description": "Admin routes under /building/admin/* (#69) and consumer routes under /building/user/* (#70).",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -125,6 +125,34 @@
           "host": ["{{baseUrl}}"],
           "path": ["building", "admin", "buildings", "{{buildingId}}"]
         }
+      }
+    },
+    {
+      "name": "User · List active buildings in caller's scope",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{baseUrl}}/building/user/buildings?per_page=20",
+          "host": ["{{baseUrl}}"],
+          "path": ["building", "user", "buildings"],
+          "query": [
+            { "key": "per_page", "value": "20" },
+            { "key": "sort_by", "value": "createdAtMs:desc", "disabled": true },
+            { "key": "q", "value": "tower", "disabled": true }
+          ]
+        }
+      }
+    },
+    {
+      "name": "User · Get active building (404 on hidden)",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{baseUrl}}/building/user/buildings/{{buildingId}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["building", "user", "buildings", "{{buildingId}}"]
+        },
+        "description": "Returns 200 only when the building is active AND the caller has it in building_user scope (or is superadmin). Otherwise 404 — never 403."
       }
     }
   ]

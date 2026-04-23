@@ -828,6 +828,131 @@
           }
         }
       }
+    },
+    "/building/user/buildings": {
+      "get": {
+        "tags": ["Building User"],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "summary": "List active buildings the caller can see",
+        "description": "Superadmin sees every active building. Any other caller sees only active buildings in their `building_user` scope. Empty scope returns `{ data: [], meta: { found: 0, ... } }` — never a 403.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": false,
+            "name": "q",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": false,
+            "name": "filter_by",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": false,
+            "name": "sort_by",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": false,
+            "name": "facet_by",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "exclusiveMinimum": true
+            },
+            "required": false,
+            "name": "page",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "exclusiveMinimum": true,
+              "maximum": 100
+            },
+            "required": false,
+            "name": "per_page",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": false,
+            "name": "cursor",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List results",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BuildingListResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/building/user/buildings/{id}": {
+      "get": {
+        "tags": ["Building User"],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "summary": "Get an active building the caller can see",
+        "description": "Returns 200 iff the building is `active` AND the caller has it in `building_user` scope (or is superadmin). Every other case — missing row, draft/archived status, out-of-scope, or non-existent id — returns **404**. This is deliberate: the consumer audience must not leak building existence through a 403.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Ok",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BuildingResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found, or not visible to the caller"
+          }
+        }
+      }
     }
   }
 }
