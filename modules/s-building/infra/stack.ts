@@ -1,33 +1,41 @@
 /**
- * s-building module stack — scaffold (issue #65).
+ * s-building module stack.
  *
  * Mirrors `modules/s-user/infra/stack.ts` with the same standalone-app
  * adaptations: platform primitives come from SSM, the gateway route is
  * raw Pulumi, cross-app IAM is declared explicitly.
  *
- * Scope of this PR is the **scaffold only** — API Lambda + DDB table
- * + gateway wiring + Typesense SSM permissions (for the health probe
- * on /building/info). The stream-handler, event-handler, search-indexer
- * and backfill Lambdas land in the follow-up sub-issues (#67, #68)
- * that actually implement the features they wrap.
+ * Scope so far:
+ *   - #65: API Lambda + DDB table + gateway wiring + Typesense SSM
+ *   - #67: stream-handler Lambda + DLQ/alarm + EventSourceMapping
+ *
+ * Still to come: search-indexer + backfill Lambdas (#68).
  */
 
 import * as aws from "@pulumi/aws";
 import * as pulumi from "@pulumi/pulumi";
-import { readSsmOutput } from "@s/infra-shared";
+import { createDlqWithAlarm, readSsmOutput } from "@s/infra-shared";
 
 export async function buildStack() {
   const stage = $app.stage;
 
-  const [gatewayId, gatewayUrl, eventBusName, eventBusArn, authzViewTableName, authzViewTableArn] =
-    await Promise.all([
-      readSsmOutput("gateway-id", stage),
-      readSsmOutput("gateway-url", stage),
-      readSsmOutput("event-bus-name", stage),
-      readSsmOutput("event-bus-arn", stage),
-      readSsmOutput("authz-view-table-name", stage),
-      readSsmOutput("authz-view-table-arn", stage),
-    ]);
+  const [
+    gatewayId,
+    gatewayUrl,
+    eventBusName,
+    eventBusArn,
+    alarmsTopicArn,
+    authzViewTableName,
+    authzViewTableArn,
+  ] = await Promise.all([
+    readSsmOutput("gateway-id", stage),
+    readSsmOutput("gateway-url", stage),
+    readSsmOutput("event-bus-name", stage),
+    readSsmOutput("event-bus-arn", stage),
+    readSsmOutput("alarms-topic-arn", stage),
+    readSsmOutput("authz-view-table-name", stage),
+    readSsmOutput("authz-view-table-arn", stage),
+  ]);
 
   const [caller, regionResult] = await Promise.all([aws.getCallerIdentity({}), aws.getRegion({})]);
   const accountId = caller.accountId;
@@ -107,8 +115,50 @@ export async function buildStack() {
     sourceArn: `arn:aws:execute-api:${region}:${accountId}:${gatewayId}/*/*/building/*`,
   });
 
+  // ─── Stream handler (Buildings DDB → EventBridge) ─────────────────────────
+
+  const buildingStreamDlq = createDlqWithAlarm("BuildingStream", { alarmsTopicArn, stage });
+
+  const buildingStreamHandler = new sst.aws.Function("BuildingStreamHandler", {
+    link: [buildingsTable],
+    environment: {
+      STAGE: stage,
+      SERVICE_NAME: "s-building-stream",
+      EVENT_BUS_NAME: eventBusName,
+    },
+    permissions: [
+      {
+        actions: ["dynamodb:DescribeStream", "dynamodb:GetRecords", "dynamodb:GetShardIterator"],
+        resources: [buildingsTable.nodes.table.streamArn],
+      },
+      {
+        actions: ["dynamodb:ListStreams"],
+        resources: ["*"],
+      },
+      {
+        actions: ["sqs:SendMessage"],
+        resources: [buildingStreamDlq.arn],
+      },
+      { actions: ["events:PutEvents"], resources: [eventBusArn] },
+    ],
+    handler: "../../packages/s-building/functions/src/stream-handler.handler",
+  });
+
+  new aws.lambda.EventSourceMapping("BuildingsStreamMapping", {
+    eventSourceArn: buildingsTable.nodes.table.streamArn,
+    functionName: buildingStreamHandler.nodes.function.arn,
+    startingPosition: "LATEST",
+    batchSize: 10,
+    maximumRetryAttempts: 3,
+    maximumRecordAgeInSeconds: 3600,
+    destinationConfig: {
+      onFailure: { destinationArn: buildingStreamDlq.arn },
+    },
+  });
+
   return {
     buildingsTable: buildingsTable.name,
     buildingApiArn: buildingApi.arn,
+    buildingStreamHandlerArn: buildingStreamHandler.arn,
   };
 }

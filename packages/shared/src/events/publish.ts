@@ -27,6 +27,19 @@ function getClient(): EventBridgeClient {
   return client;
 }
 
+/**
+ * Test-only: swap the EventBridge client singleton so tests can assert
+ * on `send` calls without standing up a real EventBridge. Mirrors the
+ * pattern in `@s/shared/search` (`__setClientsForTests`).
+ */
+export function __setEventBridgeClientForTests(override: EventBridgeClient): void {
+  client = override;
+}
+
+export function __resetEventBridgeClientForTests(): void {
+  client = null;
+}
+
 export interface PublishEventParams<T = unknown> {
   eventName: string;
   source: string; // module name, e.g. "s-authn"
