@@ -127,7 +127,10 @@ export const ListQuery = z.object({
   sort_by: z.string().optional(),
   facet_by: z.string().optional(),
   page: z.coerce.number().int().positive().optional(),
-  per_page: z.coerce.number().int().positive().optional(),
+  // Hard cap at the conventions doc's ≤100 ceiling. Validator rejects
+  // with 400; `searchBuildings.clampPerPage` still applies as a
+  // belt-and-braces defence for any caller path that bypasses zod.
+  per_page: z.coerce.number().int().positive().max(100).optional(),
   cursor: z.string().optional(),
 });
 

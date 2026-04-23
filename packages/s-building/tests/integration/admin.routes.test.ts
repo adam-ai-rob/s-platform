@@ -337,4 +337,34 @@ describe("/building/admin/buildings list — scope filter", () => {
     expect(res.body.data).toEqual([]);
     expect(res.body.meta.found).toBe(0);
   });
+
+  test("scoped caller supplying `(` or `||` in filter_by → 400 (scope-escape guard)", async () => {
+    const token = await jwt.sign({ sub: ADMIN_ID });
+    const res = await invoke(
+      app,
+      `/building/admin/buildings?filter_by=${encodeURIComponent("id:=[foo]) || (status:=active")}`,
+      { token },
+    );
+    expect(res.status).toBe(400);
+  });
+
+  test("per_page > 100 is rejected by the schema (400)", async () => {
+    const token = await jwt.sign({ sub: SUPER_ID });
+    const res = await invoke(app, "/building/admin/buildings?per_page=250", { token });
+    expect(res.status).toBe(400);
+  });
+});
+
+describe("/_actions/ internal path is not publicly routable", () => {
+  test("direct POST to /_actions/archive returns 404", async () => {
+    // The :verb rewrite is the only supported ingress. A caller who
+    // tries to address the internal path directly should not reach the
+    // handler — this test pins that guarantee.
+    const token = await jwt.sign({ sub: SUPER_ID });
+    const res = await invoke(app, `/building/admin/buildings/${SCOPED_BUILDING}/_actions/archive`, {
+      method: "POST",
+      token,
+    });
+    expect(res.status).toBe(404);
+  });
 });

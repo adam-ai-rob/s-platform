@@ -18,14 +18,22 @@
       "name": "Health",
       "request": {
         "method": "GET",
-        "url": { "raw": "{{baseUrl}}/building/health", "host": ["{{baseUrl}}"], "path": ["building", "health"] }
+        "url": {
+          "raw": "{{baseUrl}}/building/health",
+          "host": ["{{baseUrl}}"],
+          "path": ["building", "health"]
+        }
       }
     },
     {
       "name": "Info",
       "request": {
         "method": "GET",
-        "url": { "raw": "{{baseUrl}}/building/info", "host": ["{{baseUrl}}"], "path": ["building", "info"] }
+        "url": {
+          "raw": "{{baseUrl}}/building/info",
+          "host": ["{{baseUrl}}"],
+          "path": ["building", "info"]
+        }
       }
     },
     {
@@ -37,7 +45,11 @@
           "mode": "raw",
           "raw": "{\n  \"name\": \"Karlín Tower\",\n  \"description\": \"Office building in Karlín\",\n  \"address\": {\n    \"formatted\": \"Karlínské nám. 5, 186 00 Praha 8, Czech Republic\",\n    \"streetAddress\": \"Karlínské nám. 5\",\n    \"locality\": \"Praha\",\n    \"countryCode\": \"CZ\"\n  },\n  \"areaSqm\": 4200,\n  \"population\": 350,\n  \"primaryLanguage\": \"en\",\n  \"supportedLanguages\": [\"en\"],\n  \"currency\": \"EUR\",\n  \"timezone\": \"Europe/Prague\"\n}"
         },
-        "url": { "raw": "{{baseUrl}}/building/admin/buildings", "host": ["{{baseUrl}}"], "path": ["building", "admin", "buildings"] }
+        "url": {
+          "raw": "{{baseUrl}}/building/admin/buildings",
+          "host": ["{{baseUrl}}"],
+          "path": ["building", "admin", "buildings"]
+        }
       }
     },
     {

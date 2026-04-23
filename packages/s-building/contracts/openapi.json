@@ -587,7 +587,8 @@
             "schema": {
               "type": "integer",
               "minimum": 0,
-              "exclusiveMinimum": true
+              "exclusiveMinimum": true,
+              "maximum": 100
             },
             "required": false,
             "name": "per_page",

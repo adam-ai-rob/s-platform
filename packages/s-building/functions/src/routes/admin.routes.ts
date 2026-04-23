@@ -9,7 +9,7 @@ import {
 } from "@s-building/core/buildings/buildings.service";
 import { buildScopedIdFilter, searchBuildings } from "@s-building/core/search/buildings.search";
 import { authMiddleware } from "@s/shared/auth";
-import { ForbiddenError } from "@s/shared/errors";
+import { ForbiddenError, ValidationError } from "@s/shared/errors";
 import {
   BuildingIdParam,
   BuildingListResponse,
@@ -103,6 +103,17 @@ admin.openapi(
 
     let filterBy = qp.filter_by;
     if (!isSuper) {
+      // Non-superadmin callers cannot use OR/parens/pipes in `filter_by`
+      // — those can craft a top-level OR that escapes the scope filter
+      // (e.g. `id:=[foo]) || (status:=active` would let a scoped caller
+      // read every active building). We keep the DSL restricted to
+      // simple `field:op value` chains joined by `&&`. Superadmin keeps
+      // the full DSL because there is no scope gate to escape.
+      if (filterBy && /[()|]/.test(filterBy)) {
+        throw new ValidationError(
+          "filter_by cannot contain `(`, `)` or `|` for non-superadmin callers",
+        );
+      }
       const scope = callerScopedBuildingIds(user, scopedPermissions);
       if (scope.length === 0) {
         // Empty scope → 200 with empty list. Do NOT call Typesense with
@@ -122,7 +133,10 @@ admin.openapi(
         );
       }
       const scopeFilter = buildScopedIdFilter(scope);
-      filterBy = filterBy ? `(${filterBy}) && (${scopeFilter})` : scopeFilter;
+      // Scope filter is the OUTERMOST clause so any operator precedence
+      // surprise in the caller's expression still lands inside the
+      // AND — the filter is load-bearing for security.
+      filterBy = filterBy ? `(${scopeFilter}) && (${filterBy})` : scopeFilter;
     }
 
     const result = await searchBuildings({

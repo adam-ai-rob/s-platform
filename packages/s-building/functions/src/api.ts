@@ -81,9 +81,15 @@ app.getOpenAPIDocument = ((config: Parameters<typeof originalGetOpenAPIDocument>
 
 // Route-time URL rewrite: accept the public `:verb` URL on the wire,
 // forward to the `/_actions/verb` internal path for the router.
+// Any client that tries to hit `/_actions/{verb}` directly gets 404 —
+// the rewrite is the only supported ingress for custom actions.
+const INTERNAL_ACTION_SEGMENT = /\/_actions\//;
 const originalFetch = app.fetch.bind(app);
 const rewritingFetch: typeof app.fetch = (request, env, ctx) => {
   const url = new URL(request.url);
+  if (INTERNAL_ACTION_SEGMENT.test(url.pathname)) {
+    return Promise.resolve(new Response(null, { status: 404 }));
+  }
   const rewritten = rewriteRequestPath(url);
   if (!rewritten) return originalFetch(request, env, ctx);
   const newReq = new Request(rewritten.toString(), request);
@@ -99,6 +105,9 @@ const originalRequest = app.request.bind(app);
 const rewritingRequest: typeof app.request = (input, requestInit, env, ctx) => {
   if (typeof input === "string") {
     const url = new URL(input, "http://localhost");
+    if (INTERNAL_ACTION_SEGMENT.test(url.pathname)) {
+      return Promise.resolve(new Response(null, { status: 404 }));
+    }
     const rewritten = rewriteRequestPath(url);
     if (rewritten) {
       const outPath = `${rewritten.pathname}${rewritten.search}`;
