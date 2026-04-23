@@ -44,6 +44,16 @@ describe("searchBuildings input validation", () => {
     await expect(searchBuildings({ facetBy: "ownerSsn" })).rejects.toBeInstanceOf(ValidationError);
   });
 
+  test("rejects facet on a filter-only field (createdAtMs/id — not faceted in the schema)", async () => {
+    // These are filterable but NOT declared `facet: true` in
+    // buildingsCollectionSchema. Typesense would 500 at runtime if we
+    // passed them through — the facet allow-list keeps them out.
+    await expect(searchBuildings({ facetBy: "createdAtMs" })).rejects.toBeInstanceOf(
+      ValidationError,
+    );
+    await expect(searchBuildings({ facetBy: "id" })).rejects.toBeInstanceOf(ValidationError);
+  });
+
   test("allows `id` in filter_by — drives scoped id:=[...] queries", async () => {
     // `id` is whitelisted for FILTER but not SORT (Typesense doesn't
     // permit declaring `id` as a sortable field). This test pins the

@@ -115,6 +115,12 @@ beforeAll(async () => {
   const search = await import("@s/shared/search");
   search.__setClientsForTests({ admin: fakeClient.client });
 
+  // Clear the memoized `ensurePromise` so this test starts against its
+  // own fake client — defends against test-order dependencies when the
+  // backfill suite runs earlier in the same Bun process.
+  const indexerMod = await import("../../core/src/search/buildings.indexer");
+  indexerMod.__resetEnsureCacheForTests();
+
   const mod = await import("../../functions/src/search-indexer");
   handler = mod.handler;
 
@@ -128,6 +134,8 @@ afterAll(async () => {
   search.__resetClientCacheForTests();
   const ddb = await import("@s/shared/ddb");
   ddb.__resetDdbClientForTests();
+  const indexerMod = await import("../../core/src/search/buildings.indexer");
+  indexerMod.__resetEnsureCacheForTests();
   await dynamo.stop();
 });
 

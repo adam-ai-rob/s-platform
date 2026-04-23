@@ -33,9 +33,15 @@ const FILTER_FIELDS = [
   "updatedAtMs",
   "id",
 ] as const;
+// Facet-able fields must match the `facet: true` entries in the
+// collection schema — Typesense 500s at runtime if you ask to facet on
+// a non-faceted field, so this allow-list is a tighter subset of
+// FILTER_FIELDS (no `id`, no timestamps).
+const FACET_FIELDS = ["status", "countryCode", "locality", "region"] as const;
 
 type SortField = (typeof SORT_FIELDS)[number];
 type FilterField = (typeof FILTER_FIELDS)[number];
+type FacetField = (typeof FACET_FIELDS)[number];
 
 export interface BuildingSearchQuery {
   q?: string;
@@ -191,7 +197,7 @@ function validateFacetExpression(raw: string): string {
     .map((s) => s.trim())
     .filter(Boolean);
   for (const part of parts) {
-    if (!FILTER_FIELDS.includes(part as FilterField)) {
+    if (!FACET_FIELDS.includes(part as FacetField)) {
       throw new ValidationError(`facet_by field not allowed: ${part}`);
     }
   }
