@@ -1,19 +1,24 @@
-import { OpenAPIHono, createRoute, z } from "@hono/zod-openapi";
+import { OpenAPIHono, createRoute } from "@hono/zod-openapi";
 import { getProfile, updateProfile } from "@s-user/core/profiles/profiles.service";
 import { authMiddleware } from "@s/shared/auth";
 import { ProfileResponse, UpdateProfileBody } from "../schemas/profile.schema";
 import type { AppEnv } from "../types";
 
+/**
+ * User-audience routes for s-user. Mounted under `/user/user`.
+ *
+ * `/user/user/users/me` is the caller's own profile — self-access is
+ * gated by the JWT alone, no permission check.
+ */
 const user = new OpenAPIHono<AppEnv>();
 
 // biome-ignore lint/suspicious/noExplicitAny: generic middleware adapter
 user.use("*", authMiddleware() as any);
 
-// GET /user/me
 user.openapi(
   createRoute({
     method: "get",
-    path: "/me",
+    path: "/users/me",
     tags: ["User"],
     security: [{ Bearer: [] }],
     summary: "Get the caller's profile",
@@ -29,11 +34,10 @@ user.openapi(
   },
 );
 
-// PATCH /user/me
 user.openapi(
   createRoute({
     method: "patch",
-    path: "/me",
+    path: "/users/me",
     tags: ["User"],
     security: [{ Bearer: [] }],
     summary: "Update the caller's profile (partial)",
@@ -53,29 +57,6 @@ user.openapi(
     const body = c.req.valid("json");
     const updated = await updateProfile(caller.userId, body);
     return c.json({ data: updated }, 200);
-  },
-);
-
-// GET /user/{id}
-user.openapi(
-  createRoute({
-    method: "get",
-    path: "/{id}",
-    tags: ["User"],
-    security: [{ Bearer: [] }],
-    summary: "Get any user's profile",
-    request: {
-      params: z.object({ id: z.string() }),
-    },
-    responses: {
-      200: { content: { "application/json": { schema: ProfileResponse } }, description: "Profile" },
-      404: { description: "Profile not found" },
-    },
-  }),
-  async (c) => {
-    const { id } = c.req.valid("param");
-    const profile = await getProfile(id);
-    return c.json({ data: profile }, 200);
   },
 );
 

@@ -1,27 +1,24 @@
-import { beforeAll, describe, expect, test } from "bun:test";
+import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { TestHttpError, createTestClient } from "../client";
+import { clearAuthzPermissions, seedAuthzPermissions } from "../helpers/authz-seed";
 import { eventually } from "../helpers/eventually";
 import "../setup";
 
 /**
  * User search journey — end-to-end against the Typesense-backed
- * `GET /user/search` endpoint.
+ * `GET /user/admin/users` endpoint.
  *
  * Flow:
  *   1. Register a user (via s-authn) → profile auto-provisioned (s-user
  *      `user.registered` handler).
- *   2. /user/info reports typesense probe up.
- *   3. Wait for the search indexer to consume `user.profile.created`
+ *   2. Grant `user_superadmin` via the AuthzView seeder; re-login to get
+ *      a token whose claims carry the permission.
+ *   3. /user/info reports typesense probe up.
+ *   4. Wait for the search indexer to consume `user.profile.created`
  *      and upsert the document.
- *   4. Update the profile (PATCH /user/me) → search reflects the new
- *      first name.
- *   5. Page-based pagination works; cursor is returned when a page is
- *      full.
- *   6. Bad sort fields are rejected with 400.
- *
- * The `user.profile.deleted` leg is skipped here because s-user has no
- * delete endpoint yet. When a deletion API lands we'll extend this
- * journey rather than write a new one.
+ *   5. Update the profile (PATCH /user/user/users/me) → search reflects
+ *      the new first name.
+ *   6. Page-based pagination + cursor + bad-sort 400.
  *
  * Pre-req: the target stage must have the Typesense SSM params seeded
  * (see `docs/runbooks/typesense-stage-bootstrap.md`). If not, /user/info
@@ -40,22 +37,37 @@ describe("user search journey", () => {
     console.log(`  journey email: ${email}`);
   });
 
-  test("[0] register → returns tokens", async () => {
-    const res = await client.request<{
+  afterAll(async () => {
+    if (callerId) {
+      await clearAuthzPermissions(callerId).catch(() => {
+        // best effort — stage cleanup shouldn't fail the journey
+      });
+    }
+  });
+
+  test("[0] register → grant user_superadmin → re-login", async () => {
+    const reg = await client.request<{
       data: { accessToken: string; refreshToken: string };
     }>("POST", "/authn/auth/register", {
       body: { email, password },
     });
-    expect(res.data.accessToken).toBeDefined();
-    accessToken = res.data.accessToken;
-    // Extract the userId from the JWT's `sub` claim so [2] can assert
-    // the caller's specific profile appears in the index (rather than
-    // passing trivially on any pre-existing user in the stage).
-    const payloadB64 = accessToken.split(".")[1];
+    expect(reg.data.accessToken).toBeDefined();
+    // Extract userId from JWT sub so we can seed permissions for it.
+    const payloadB64 = reg.data.accessToken.split(".")[1];
     const payload = JSON.parse(Buffer.from(payloadB64, "base64url").toString("utf8")) as {
       sub: string;
     };
     callerId = payload.sub;
+
+    await seedAuthzPermissions(callerId, [{ id: "user_superadmin" }]);
+
+    // Re-login so the new token's claims embed user_superadmin.
+    const login = await client.request<{ data: { accessToken: string } }>(
+      "POST",
+      "/authn/auth/login",
+      { body: { email, password } },
+    );
+    accessToken = login.data.accessToken;
     client.setToken(accessToken);
   });
 
@@ -67,30 +79,26 @@ describe("user search journey", () => {
   });
 
   test("[2] caller's profile eventually indexed in search", async () => {
-    // Freshly-registered profile has empty names, so displayName falls
-    // back to userId. Assert specifically on the caller's userId in the
-    // index, not just `found > 0` — otherwise a stage with other users
-    // passes trivially and doesn't prove our user's chain worked.
+    // AuthzView propagation — first authenticated admin call may land on
+    // a Lambda container whose cache still has empty permissions. Retry
+    // until 200 and the caller's userId is present in the index.
     await eventually(
       async () => {
         const res = await client.request<{
-          hits: Array<{ id: string }>;
-          found: number;
-        }>("GET", "/user/search?per_page=100");
-        expect(res.hits.some((h) => h.id === callerId)).toBe(true);
+          data: Array<{ id: string }>;
+          meta: { found: number };
+        }>("GET", "/user/admin/users?per_page=100");
+        expect(res.data.some((h) => h.id === callerId)).toBe(true);
       },
       { timeout: 45_000, interval: 1_000 },
     );
   });
 
-  test("[3] PATCH /user/me → search reflects new first name", async () => {
+  test("[3] PATCH /user/user/users/me → search reflects new first name", async () => {
     const firstName = `Searchable${suffix.slice(0, 6)}`;
-    // Even with [2] green, the PATCH can race a re-indexer retry. Retry
-    // the PATCH itself briefly if the profile row hasn't been provisioned
-    // yet (rare once [2] passed, but not impossible in cold-chain deploys).
     await eventually(
       async () => {
-        await client.request("PATCH", "/user/me", {
+        await client.request("PATCH", "/user/user/users/me", {
           body: { firstName, lastName: "Journey" },
         });
       },
@@ -100,11 +108,11 @@ describe("user search journey", () => {
     await eventually(
       async () => {
         const res = await client.request<{
-          hits: Array<{ firstName: string }>;
-          found: number;
-        }>("GET", `/user/search?q=${encodeURIComponent(firstName)}&per_page=5`);
-        expect(res.found).toBeGreaterThan(0);
-        expect(res.hits.some((h) => h.firstName === firstName)).toBe(true);
+          data: Array<{ firstName: string }>;
+          meta: { found: number };
+        }>("GET", `/user/admin/users?q=${encodeURIComponent(firstName)}&per_page=5`);
+        expect(res.meta.found).toBeGreaterThan(0);
+        expect(res.data.some((h) => h.firstName === firstName)).toBe(true);
       },
       { timeout: 45_000, interval: 1_000 },
     );
@@ -112,33 +120,30 @@ describe("user search journey", () => {
 
   test("[4] page-based pagination returns consistent totals", async () => {
     const page1 = await client.request<{
-      hits: unknown[];
-      page: number;
-      per_page: number;
-      found: number;
-    }>("GET", "/user/search?per_page=1&page=1");
+      data: unknown[];
+      meta: { page: number; perPage: number; found: number };
+    }>("GET", "/user/admin/users?per_page=1&page=1");
 
-    expect(page1.page).toBe(1);
-    expect(page1.per_page).toBe(1);
-    expect(page1.hits.length).toBeLessThanOrEqual(1);
-    expect(page1.found).toBeGreaterThanOrEqual(1);
+    expect(page1.meta.page).toBe(1);
+    expect(page1.meta.perPage).toBe(1);
+    expect(page1.data.length).toBeLessThanOrEqual(1);
+    expect(page1.meta.found).toBeGreaterThanOrEqual(1);
   });
 
-  test("[5] next_cursor present when more results follow", async () => {
+  test("[5] nextCursor present when more results follow", async () => {
     const res = await client.request<{
-      hits: unknown[];
-      next_cursor?: string;
-      found: number;
-    }>("GET", "/user/search?per_page=1");
+      data: unknown[];
+      meta: { found: number; nextCursor?: string };
+    }>("GET", "/user/admin/users?per_page=1");
 
-    if (res.found > 1) {
-      expect(typeof res.next_cursor).toBe("string");
+    if (res.meta.found > 1) {
+      expect(typeof res.meta.nextCursor).toBe("string");
     }
   });
 
   test("[6] bad sort field is rejected with 400", async () => {
     try {
-      await client.request("GET", "/user/search?sort_by=ssn:desc");
+      await client.request("GET", "/user/admin/users?sort_by=ssn:desc");
       throw new Error("Expected 400");
     } catch (err) {
       if (err instanceof TestHttpError) {

@@ -42,7 +42,7 @@ describe("auth journey", () => {
     client.setToken(accessToken);
   });
 
-  test("[2] /user/me — profile provisioned by user.registered event", async () => {
+  test("[2] /user/user/users/me — profile provisioned by user.registered event", async () => {
     // Event-driven: s-user's event-handler Lambda creates the profile
     // after receiving the user.registered EventBridge event. Give it
     // up to 10s (EventBridge + Lambda cold start).
@@ -50,7 +50,7 @@ describe("auth journey", () => {
       async () => {
         const res = await client.request<{
           data: { userId: string; firstName: string; lastName: string };
-        }>("GET", "/user/me");
+        }>("GET", "/user/user/users/me");
         expect(res.data.firstName).toBe("");
         expect(res.data.lastName).toBe("");
       },
@@ -70,18 +70,18 @@ describe("auth journey", () => {
     );
   });
 
-  test("[4] PATCH /user/me — update first/last name", async () => {
+  test("[4] PATCH /user/user/users/me — update first/last name", async () => {
     const res = await client.request<{
       data: { firstName: string; lastName: string };
-    }>("PATCH", "/user/me", {
+    }>("PATCH", "/user/user/users/me", {
       body: { firstName: "Alice", lastName: "Example" },
     });
     expect(res.data.firstName).toBe("Alice");
     expect(res.data.lastName).toBe("Example");
   });
 
-  test("[5] PATCH /user/me/password — change password", async () => {
-    await client.request("PATCH", "/authn/user/me/password", {
+  test("[5] PATCH /authn/user/users/me/password — change password", async () => {
+    await client.request("PATCH", "/authn/user/users/me/password", {
       body: { currentPassword: password1, newPassword: password2 },
     });
   });

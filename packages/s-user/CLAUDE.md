@@ -4,7 +4,7 @@ User profile data: names, avatar, preferences, metadata. Profile records share t
 
 Read [monorepo CLAUDE.md](../../CLAUDE.md) and [architecture docs](../../docs/architecture/README.md) first.
 
-**REST conventions:** see [`docs/architecture/09-api-conventions.md`](../../docs/architecture/09-api-conventions.md). This module's current `GET /user/me`, `PATCH /user/me`, `GET /user/{id}` are non-conforming and tracked for retrofit in [#73](https://github.com/adam-ai-rob/s-platform/issues/73). **Do not add new endpoints in the old shape** — any new s-user endpoint must follow the v1 convention (plural `/users`, explicit `admin`/`user` audience).
+**REST conventions:** see [`docs/architecture/09-api-conventions.md`](../../docs/architecture/09-api-conventions.md). All s-user endpoints conform to v1 conventions (plural `/users`, explicit `admin`/`user` audience, `{ data }` / `{ data, meta }` envelope, camelCase meta fields).
 
 ## Bounded Context
 
@@ -39,12 +39,29 @@ Read [monorepo CLAUDE.md](../../CLAUDE.md) and [architecture docs](../../docs/ar
 |---|---|---|
 | `user.registered` | s-authn | Create empty UserProfile with matching userId |
 
+## Permissions (registered in s-authz)
+
+Registered via the system-role seeds in s-authz. Profiles are not
+resource-scoped (there is no per-row admin tier the way buildings have);
+the single global permission covers every admin read.
+
+| Permission | Scope | Role template |
+|---|---|---|
+| `user_superadmin` | global | `[{ id: "user_superadmin" }]` |
+
 ## API Surface
 
-- `GET /user/me` — caller's profile (authenticated)
-- `PATCH /user/me` — update caller's profile
-- `GET /user/{id}` — any profile (authenticated, admin-permissioned in future)
-- Plus platform-standard `/user/health`, `/info`, `/openapi.json`, `/docs`
+User audience (`/user/user/*`):
+
+- `GET   /user/user/users/me` — caller's profile
+- `PATCH /user/user/users/me` — update caller's profile
+
+Admin audience (`/user/admin/*`) — requires `user_superadmin`:
+
+- `GET   /user/admin/users` — Typesense-backed list (`{ data, meta }`)
+- `GET   /user/admin/users/{id}` — read any profile
+
+Plus platform-standard `/user/health`, `/info`, `/openapi.json`, `/docs`.
 
 ## Change Rules
 

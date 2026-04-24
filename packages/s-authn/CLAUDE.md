@@ -4,7 +4,7 @@ Authentication service: identity, credentials, JWT issuance, JWKS, refresh token
 
 Read [monorepo CLAUDE.md](../../CLAUDE.md) and [architecture docs](../../docs/architecture/README.md) first.
 
-**REST conventions:** see [`docs/architecture/09-api-conventions.md`](../../docs/architecture/09-api-conventions.md). New endpoints MUST conform; non-conforming legacy paths are tracked for retrofit and MUST NOT be copied into new code.
+**REST conventions:** see [`docs/architecture/09-api-conventions.md`](../../docs/architecture/09-api-conventions.md). All s-authn endpoints conform to v1 conventions. Custom actions (e.g. `sessions:revoke`) follow Google AIP-136 `:verb` form — the module rewrites `:verb` to an internal `/_actions/verb` segment because Hono's router can't parse `:` as a path suffix; see `functions/src/api.ts`.
 
 ## Bounded Context
 
@@ -77,8 +77,8 @@ None currently.
 ### Authenticated
 
 - `GET /authn/info` — platform standard (service metadata)
-- `POST /authn/auth/logout` — revoke the caller's refresh token
-- `PATCH /authn/user/me/password` — change password
+- `POST /authn/user/sessions:revoke` — revoke the caller's refresh token (AIP-136 custom action; identify session via `X-Refresh-JTI` header)
+- `PATCH /authn/user/users/me/password` — change password
 
 ### Phase 2 (not in this port)
 

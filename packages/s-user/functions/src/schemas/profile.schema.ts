@@ -1,5 +1,59 @@
 import { z } from "@hono/zod-openapi";
 
+const Int64 = z.number().int().openapi({ format: "int64" });
+
+/**
+ * Flat shape of a user document in Typesense — the admin list endpoint
+ * returns this, NOT the full `ProfileSchema`. Consumers who need the
+ * full row call `GET /user/admin/users/{id}` for any hit they care about.
+ */
+export const UserSearchHit = z
+  .object({
+    id: z.string(),
+    firstName: z.string(),
+    lastName: z.string(),
+    displayName: z.string(),
+    avatarUrl: z.string().optional(),
+    createdAtMs: Int64,
+    updatedAtMs: Int64,
+    highlights: z.record(z.unknown()).optional(),
+  })
+  .openapi("UserSearchHit");
+
+const UserListMeta = z
+  .object({
+    page: z.number().int(),
+    perPage: z.number().int(),
+    found: z.number().int(),
+    outOf: z.number().int(),
+    searchTimeMs: z.number().int(),
+    nextCursor: z.string().optional(),
+  })
+  .openapi("UserListMeta");
+
+export const UserListResponse = z
+  .object({
+    data: z.array(UserSearchHit),
+    meta: UserListMeta,
+  })
+  .openapi("UserListResponse");
+
+export const UserListQuery = z.object({
+  q: z.string().optional(),
+  filter_by: z.string().optional(),
+  sort_by: z.string().optional(),
+  page: z.coerce.number().int().positive().optional(),
+  per_page: z.coerce.number().int().positive().max(100).optional(),
+  cursor: z.string().optional(),
+});
+
+export const UserIdParam = z.object({
+  id: z
+    .string()
+    .min(1)
+    .openapi({ param: { name: "id", in: "path" } }),
+});
+
 export const ProfileSchema = z
   .object({
     userId: z.string(),

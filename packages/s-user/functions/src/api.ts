@@ -1,6 +1,6 @@
 import { createApi } from "@s/shared/http";
 import { typesenseHealthProbe } from "@s/shared/search";
-import userSearchRoutes from "./routes/user-search.routes";
+import admin from "./routes/admin.routes";
 import userRoutes from "./routes/user.routes";
 import type { AppEnv } from "./types";
 
@@ -12,7 +12,7 @@ const app = createApi<AppEnv>({
   version: "1.0.0",
   basePath: "/user",
   permissions: {
-    user_admin: "Read/update any user's profile (Phase 2)",
+    user_superadmin: "Full access to every user profile. Global, unscoped.",
   },
   events: {
     publishes: ["user.profile.created", "user.profile.updated", "user.profile.deleted"],
@@ -26,11 +26,7 @@ const app = createApi<AppEnv>({
   },
 });
 
-// basePath already provides /user; mount user routes at the base.
-// Order matters: the user-search routes MUST be mounted before the
-// parameterised `GET /user/{id}` route, otherwise `/user/search` is
-// captured as an {id} lookup and 404s.
-app.route("/", userSearchRoutes);
-app.route("/", userRoutes);
+app.route("/admin", admin);
+app.route("/user", userRoutes);
 
 export default app;

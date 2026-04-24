@@ -1,0 +1,132 @@
+{
+  "info": {
+    "_postman_id": "s-authn-v1",
+    "name": "s-authn — authentication API",
+    "description": "Platform identity, credentials, JWT issuance, JWKS, and refresh-token management.\n\n**Setup**\n1. Set `{{baseUrl}}` to the stage you want to hit (default `https://dev.s-api.smartiqi.com`).\n2. Register or login to get a JWT; paste access + refresh tokens into `{{accessToken}}` / `{{refreshToken}}`.\n3. `{{refreshJti}}` is the refresh token's JTI (ULID) — used as the `X-Refresh-JTI` header on `sessions:revoke`.\n\n**Notes**\n- `/authn/user/sessions:revoke` is an AIP-136 custom action. Public URL is `POST …/sessions:revoke`; the module internally rewrites to `/sessions/_actions/revoke`.\n- `/authn/user/users/me/password` is a PATCH — do not use PUT (platform convention).\n\n**Common error codes**\n- `401` — invalid credentials, missing bearer token, or wrong current password on PATCH password.\n- `400` — zod validation failed (missing `X-Refresh-JTI` for `sessions:revoke`).\n- `409` — email already registered.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }]
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "https://dev.s-api.smartiqi.com" },
+    { "key": "refreshToken", "value": "" },
+    { "key": "refreshJti", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "Health",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{baseUrl}}/authn/health",
+          "host": ["{{baseUrl}}"],
+          "path": ["authn", "health"]
+        }
+      }
+    },
+    {
+      "name": "Info",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{baseUrl}}/authn/info",
+          "host": ["{{baseUrl}}"],
+          "path": ["authn", "info"]
+        }
+      }
+    },
+    {
+      "name": "Auth · Register",
+      "request": {
+        "method": "POST",
+        "auth": { "type": "noauth" },
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"alice@example.com\",\n  \"password\": \"Sup3rSecret!pw\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/authn/auth/register",
+          "host": ["{{baseUrl}}"],
+          "path": ["authn", "auth", "register"]
+        }
+      }
+    },
+    {
+      "name": "Auth · Login",
+      "request": {
+        "method": "POST",
+        "auth": { "type": "noauth" },
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"alice@example.com\",\n  \"password\": \"Sup3rSecret!pw\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/authn/auth/login",
+          "host": ["{{baseUrl}}"],
+          "path": ["authn", "auth", "login"]
+        }
+      }
+    },
+    {
+      "name": "Auth · Refresh token",
+      "request": {
+        "method": "POST",
+        "auth": { "type": "noauth" },
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/authn/auth/token/refresh",
+          "host": ["{{baseUrl}}"],
+          "path": ["authn", "auth", "token", "refresh"]
+        }
+      }
+    },
+    {
+      "name": "Auth · JWKS",
+      "request": {
+        "method": "GET",
+        "auth": { "type": "noauth" },
+        "url": {
+          "raw": "{{baseUrl}}/authn/auth/jwks",
+          "host": ["{{baseUrl}}"],
+          "path": ["authn", "auth", "jwks"]
+        }
+      }
+    },
+    {
+      "name": "User · Revoke session (sessions:revoke)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "X-Refresh-JTI", "value": "{{refreshJti}}" }],
+        "url": {
+          "raw": "{{baseUrl}}/authn/user/sessions:revoke",
+          "host": ["{{baseUrl}}"],
+          "path": ["authn", "user", "sessions:revoke"]
+        }
+      }
+    },
+    {
+      "name": "User · Change my password",
+      "request": {
+        "method": "PATCH",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"currentPassword\": \"Sup3rSecret!pw\",\n  \"newPassword\": \"NewSecret!pw42\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/authn/user/users/me/password",
+          "host": ["{{baseUrl}}"],
+          "path": ["authn", "user", "users", "me", "password"]
+        }
+      }
+    }
+  ]
+}

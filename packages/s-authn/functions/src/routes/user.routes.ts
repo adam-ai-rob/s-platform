@@ -10,21 +10,25 @@ const user = new OpenAPIHono<AppEnv>();
 // biome-ignore lint/suspicious/noExplicitAny: generic middleware adapter
 user.use("*", authMiddleware() as any);
 
-// POST /user/me/logout
+// POST /authn/user/sessions:revoke
+// Custom action per AIP-136. Routed internally at `/sessions/_actions/revoke`
+// (see api.ts for the rewrite rationale). Public URL is the `:verb` form.
 user.openapi(
   createRoute({
     method: "post",
-    path: "/me/logout",
+    path: "/sessions/_actions/revoke",
     tags: ["User"],
     summary: "Revoke the caller's refresh token",
+    description:
+      "Public URL: `POST /authn/user/sessions:revoke`. The `_actions/` segment is a transport workaround — see `api.ts` for the rewrite.",
     security: [{ Bearer: [] }],
     responses: {
       204: { description: "Logged out" },
+      400: { description: "Missing X-Refresh-JTI header" },
     },
   }),
   async (c) => {
     const caller = c.get("user");
-    // Client sends refresh token jti via header to avoid needing it in the body
     const tokenId = c.req.header("x-refresh-jti");
     if (!tokenId) {
       return c.json(
@@ -42,11 +46,11 @@ user.openapi(
   },
 );
 
-// PATCH /user/me/password
+// PATCH /authn/user/users/me/password
 user.openapi(
   createRoute({
     method: "patch",
-    path: "/me/password",
+    path: "/users/me/password",
     tags: ["User"],
     summary: "Change the caller's password",
     security: [{ Bearer: [] }],

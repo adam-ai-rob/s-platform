@@ -140,3 +140,15 @@ describe("s-authn auth flow (integration)", () => {
     expect(refreshRes.body.data.accessToken.split(".")).toHaveLength(3);
   });
 });
+
+describe("/authn/user/sessions:revoke — AIP-136 custom action", () => {
+  test("direct POST to /_actions/revoke returns 404 (internal path is not publicly routable)", async () => {
+    // The `:verb` rewrite is the only supported ingress. A caller who
+    // tries to address the internal path directly must not reach the
+    // handler — this test pins that guarantee.
+    const res = await invoke(app, "/authn/user/sessions/_actions/revoke", {
+      method: "POST",
+    });
+    expect(res.status).toBe(404);
+  });
+});

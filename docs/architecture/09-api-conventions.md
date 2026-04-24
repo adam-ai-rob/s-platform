@@ -66,16 +66,9 @@ Everything below elaborates on these rules and shows the code patterns.
 
 When a resource has children, nest by plural name: `GET /building/admin/buildings/{id}/floors`. Recursively applies the same rules to each level.
 
-### Inherited inconsistencies (tracked for retrofit)
+### Retrofit history
 
-Modules built before this convention may not yet conform. They remain valid but are **flagged for retrofit** in [#73](https://github.com/adam-ai-rob/s-platform/issues/73):
-
-- **s-user path shape** — `GET /user/me`, `PATCH /user/me`, `GET /user/{id}` are singular. v1 requires `/user/user/users/me` and `/user/admin/users/{id}`.
-- **s-user search envelope + casing** — `GET /user/search` returns a flat `{ hits, page, per_page, found, out_of, search_time_ms, next_cursor }` with **snake_case** keys and **no `data` wrapper**. v1 requires `{ data, meta: { page, perPage, found, outOf, searchTimeMs, nextCursor? } }` with camelCase.
-- **s-authn user routes** — `POST /authn/user/me/logout`, `PATCH /authn/user/me/password` are singular. Retrofit to the v1 shape (`POST /authn/user/sessions:revoke` and `PATCH /authn/user/users/me/password`, or similar — exact form decided in the retrofit PR).
-- **List envelope** — existing list endpoints (and the shared `ListResponse` schema helper in [`packages/shared/src/types/index.ts`](../../packages/shared/src/types/index.ts)) return `{ data, metadata: { nextToken } }`. v1 mandates `{ data, meta: { page, perPage, found, outOf, searchTimeMs, nextCursor?, facets? } }`. The shared helper + every consumer must rename in lockstep.
-
-New code MUST use the v1 shape. Existing non-conforming endpoints stay until the retrofit PR — which will keep the old paths/envelope for one release behind `Deprecation:` + `Sunset:` headers.
+s-user, s-authn, and the shared `ListResponse` helper were retrofitted to v1 in [#73](https://github.com/adam-ai-rob/s-platform/issues/73). All modules now conform to v1. New code MUST use the v1 shape; there are no legacy paths or envelopes still served.
 
 > **Why `/user/user/users/{id}` looks triple-redundant and still correct:** the first segment is the **module** (`s-user` → basePath `/user`), the second is the **audience** (`user` vs `admin`), the third is the **resource** (`users`, plural). Each segment earns its place; modules where the bounded context name happens to match the primary resource pay a small cosmetic cost in exchange for a uniform URL grammar platform-wide.
 

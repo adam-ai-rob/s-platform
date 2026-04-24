@@ -1,0 +1,97 @@
+{
+  "info": {
+    "_postman_id": "s-user-v1",
+    "name": "s-user — user profile API",
+    "description": "User profile data (names, avatar, preferences, metadata). Profiles are auto-provisioned via the `user.registered` event; the admin list is Typesense-backed.\n\n**Setup**\n1. Set `{{baseUrl}}` to the stage you want to hit (default `https://dev.s-api.smartiqi.com`).\n2. `POST /authn/auth/login` (out of scope for this collection) to get a JWT; paste it into `{{accessToken}}`.\n3. `{{userId}}` addresses any profile via the admin read path.\n\n**Audiences**\n- `/user/user/*` — consumer audience. Caller acts on their own profile (`users/me`).\n- `/user/admin/*` — requires the global `user_superadmin` permission. There is no scoped admin tier (profiles are not resource-scoped).\n\n**Common error codes**\n- `401` — missing or invalid bearer token.\n- `403` — admin audience without `user_superadmin`.\n- `404` — profile not provisioned yet, or admin read for a non-existent id.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }]
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "https://dev.s-api.smartiqi.com" },
+    { "key": "userId", "value": "01HXUSER0000000000000000000" }
+  ],
+  "item": [
+    {
+      "name": "Health",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{baseUrl}}/user/health",
+          "host": ["{{baseUrl}}"],
+          "path": ["user", "health"]
+        }
+      }
+    },
+    {
+      "name": "Info",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{baseUrl}}/user/info",
+          "host": ["{{baseUrl}}"],
+          "path": ["user", "info"]
+        }
+      }
+    },
+    {
+      "name": "User · Get my profile",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{baseUrl}}/user/user/users/me",
+          "host": ["{{baseUrl}}"],
+          "path": ["user", "user", "users", "me"]
+        }
+      }
+    },
+    {
+      "name": "User · Update my profile",
+      "request": {
+        "method": "PATCH",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"firstName\": \"Ada\",\n  \"lastName\": \"Lovelace\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/user/user/users/me",
+          "host": ["{{baseUrl}}"],
+          "path": ["user", "user", "users", "me"]
+        }
+      }
+    },
+    {
+      "name": "Admin · List users",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{baseUrl}}/user/admin/users?per_page=20&page=1",
+          "host": ["{{baseUrl}}"],
+          "path": ["user", "admin", "users"],
+          "query": [
+            { "key": "per_page", "value": "20" },
+            { "key": "page", "value": "1" },
+            { "key": "q", "value": "", "disabled": true },
+            { "key": "sort_by", "value": "createdAtMs:desc", "disabled": true },
+            { "key": "filter_by", "value": "", "disabled": true },
+            { "key": "cursor", "value": "", "disabled": true }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Admin · Get user by id",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{baseUrl}}/user/admin/users/{{userId}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["user", "admin", "users", "{{userId}}"]
+        }
+      }
+    }
+  ]
+}
