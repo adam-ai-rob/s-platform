@@ -26,7 +26,9 @@
             }
           }
         },
-        "required": ["id"]
+        "required": [
+          "id"
+        ]
       },
       "PermissionsResponse": {
         "type": "object",
@@ -44,10 +46,15 @@
                 }
               }
             },
-            "required": ["userId", "permissions"]
+            "required": [
+              "userId",
+              "permissions"
+            ]
           }
         },
-        "required": ["data"]
+        "required": [
+          "data"
+        ]
       },
       "AuthzRole": {
         "type": "object",
@@ -100,7 +107,9 @@
             "$ref": "#/components/schemas/AuthzRole"
           }
         },
-        "required": ["data"]
+        "required": [
+          "data"
+        ]
       },
       "CreateRoleBody": {
         "type": "object",
@@ -129,7 +138,9 @@
             "default": []
           }
         },
-        "required": ["name"]
+        "required": [
+          "name"
+        ]
       },
       "AssignRoleBody": {
         "type": "object",
@@ -148,7 +159,9 @@
   "paths": {
     "/authz/user/me/permissions": {
       "get": {
-        "tags": ["Authz"],
+        "tags": [
+          "Authz"
+        ],
         "security": [
           {
             "Bearer": []
@@ -171,7 +184,9 @@
     },
     "/authz/admin/roles": {
       "post": {
-        "tags": ["Authz Admin"],
+        "tags": [
+          "Authz Admin"
+        ],
         "security": [
           {
             "Bearer": []
@@ -207,7 +222,9 @@
     },
     "/authz/admin/roles/{id}": {
       "get": {
-        "tags": ["Authz Admin"],
+        "tags": [
+          "Authz Admin"
+        ],
         "security": [
           {
             "Bearer": []
@@ -241,7 +258,9 @@
         }
       },
       "delete": {
-        "tags": ["Authz Admin"],
+        "tags": [
+          "Authz Admin"
+        ],
         "security": [
           {
             "Bearer": []
@@ -273,7 +292,9 @@
     },
     "/authz/admin/users/{userId}/roles/{roleId}": {
       "post": {
-        "tags": ["Authz Admin"],
+        "tags": [
+          "Authz Admin"
+        ],
         "security": [
           {
             "Bearer": []
@@ -319,7 +340,9 @@
         }
       },
       "delete": {
-        "tags": ["Authz Admin"],
+        "tags": [
+          "Authz Admin"
+        ],
         "security": [
           {
             "Bearer": []

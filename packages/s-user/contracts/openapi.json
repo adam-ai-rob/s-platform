@@ -64,7 +64,9 @@
             "$ref": "#/components/schemas/UserProfile"
           }
         },
-        "required": ["data"]
+        "required": [
+          "data"
+        ]
       },
       "UpdateProfileBody": {
         "type": "object",
@@ -127,7 +129,14 @@
             }
           }
         },
-        "required": ["id", "firstName", "lastName", "displayName", "createdAtMs", "updatedAtMs"]
+        "required": [
+          "id",
+          "firstName",
+          "lastName",
+          "displayName",
+          "createdAtMs",
+          "updatedAtMs"
+        ]
       },
       "UserSearchResponse": {
         "type": "object",
@@ -157,7 +166,14 @@
             "type": "string"
           }
         },
-        "required": ["hits", "page", "per_page", "found", "out_of", "search_time_ms"]
+        "required": [
+          "hits",
+          "page",
+          "per_page",
+          "found",
+          "out_of",
+          "search_time_ms"
+        ]
       }
     },
     "parameters": {}
@@ -165,7 +181,9 @@
   "paths": {
     "/user/admin/users": {
       "get": {
-        "tags": ["User Admin"],
+        "tags": [
+          "User Admin"
+        ],
         "security": [
           {
             "Bearer": []
@@ -298,10 +316,19 @@
                           "type": "string"
                         }
                       },
-                      "required": ["page", "perPage", "found", "outOf", "searchTimeMs"]
+                      "required": [
+                        "page",
+                        "perPage",
+                        "found",
+                        "outOf",
+                        "searchTimeMs"
+                      ]
                     }
                   },
-                  "required": ["data", "meta"]
+                  "required": [
+                    "data",
+                    "meta"
+                  ]
                 }
               }
             }
@@ -314,7 +341,9 @@
     },
     "/user/admin/users/{id}": {
       "get": {
-        "tags": ["User Admin"],
+        "tags": [
+          "User Admin"
+        ],
         "security": [
           {
             "Bearer": []
@@ -354,7 +383,9 @@
     },
     "/user/user/users/me": {
       "get": {
-        "tags": ["User"],
+        "tags": [
+          "User"
+        ],
         "security": [
           {
             "Bearer": []
@@ -378,7 +409,9 @@
         }
       },
       "patch": {
-        "tags": ["User"],
+        "tags": [
+          "User"
+        ],
         "security": [
           {
             "Bearer": []
@@ -414,7 +447,9 @@
     },
     "/user/user/users/{id}": {
       "get": {
-        "tags": ["User Admin"],
+        "tags": [
+          "User Admin"
+        ],
         "security": [
           {
             "Bearer": []
@@ -452,108 +487,11 @@
         }
       }
     },
-    "/user/me": {
-      "get": {
-        "tags": ["User (DEPRECATED)"],
-        "security": [
-          {
-            "Bearer": []
-          }
-        ],
-        "summary": "Get the caller's profile (DEPRECATED)",
-        "description": "Legacy endpoint. Deprecated and will be removed in the next release.\nUse `GET /user/users/me` instead.",
-        "responses": {
-          "200": {
-            "description": "Profile",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProfileResponse"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Profile not yet provisioned"
-          }
-        }
-      },
-      "patch": {
-        "tags": ["User (DEPRECATED)"],
-        "security": [
-          {
-            "Bearer": []
-          }
-        ],
-        "summary": "Update the caller's profile (partial) (DEPRECATED)",
-        "description": "Legacy endpoint. Deprecated and will be removed in the next release.\nUse `PATCH /user/users/me` instead.",
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/UpdateProfileBody"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Updated profile",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProfileResponse"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Profile not found"
-          }
-        }
-      }
-    },
-    "/user/{id}": {
-      "get": {
-        "tags": ["User Admin (DEPRECATED)"],
-        "security": [
-          {
-            "Bearer": []
-          }
-        ],
-        "summary": "Get any user's profile (DEPRECATED)",
-        "description": "Legacy endpoint. Deprecated and will be removed in the next release.\nUse `GET /user/admin/users/{id}` instead, which requires `user_superadmin` permission.",
-        "parameters": [
-          {
-            "schema": {
-              "type": "string"
-            },
-            "required": true,
-            "name": "id",
-            "in": "path"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Profile",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProfileResponse"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Profile not found"
-          }
-        }
-      }
-    },
     "/user/search": {
       "get": {
-        "tags": ["User"],
+        "tags": [
+          "User"
+        ],
         "security": [
           {
             "Bearer": []
@@ -625,6 +563,111 @@
                 }
               }
             }
+          }
+        }
+      }
+    },
+    "/user/me": {
+      "get": {
+        "tags": [
+          "User (DEPRECATED)"
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "summary": "Get the caller's profile (DEPRECATED)",
+        "description": "Legacy endpoint. Deprecated and will be removed in the next release.\nUse `GET /user/users/me` instead.",
+        "responses": {
+          "200": {
+            "description": "Profile",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProfileResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Profile not yet provisioned"
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "User (DEPRECATED)"
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "summary": "Update the caller's profile (partial) (DEPRECATED)",
+        "description": "Legacy endpoint. Deprecated and will be removed in the next release.\nUse `PATCH /user/users/me` instead.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateProfileBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated profile",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProfileResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Profile not found"
+          }
+        }
+      }
+    },
+    "/user/{id}": {
+      "get": {
+        "tags": [
+          "User Admin (DEPRECATED)"
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "summary": "Get any user's profile (DEPRECATED)",
+        "description": "Legacy endpoint. Deprecated and will be removed in the next release.\nUse `GET /user/admin/users/{id}` instead, which requires `user_superadmin` permission.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Profile",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProfileResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Profile not found"
           }
         }
       }

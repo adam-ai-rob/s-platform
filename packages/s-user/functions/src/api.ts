@@ -34,7 +34,8 @@ app.route("/user", userRoutes);
 
 // Mount legacy routes at the root (with deprecation)
 // Legacy paths: /me, /{id}, /search
-app.route("/", deprecatedUser);
+// Order matters: newer routes must come before legacy fallbacks
 app.route("/", userSearchRoutes);
+app.route("/", deprecatedUser);
 
 export default app;
