@@ -1,7 +1,8 @@
 import { createApi } from "@s/shared/http";
 import { typesenseHealthProbe } from "@s/shared/search";
+import adminRoutes from "./routes/admin.routes";
 import userSearchRoutes from "./routes/user-search.routes";
-import userRoutes from "./routes/user.routes";
+import userRoutes, { deprecatedUser } from "./routes/user.routes";
 import type { AppEnv } from "./types";
 
 const app = createApi<AppEnv>({
@@ -12,6 +13,7 @@ const app = createApi<AppEnv>({
   version: "1.0.0",
   basePath: "/user",
   permissions: {
+    user_superadmin: "Full access to every user profile. Global, unscoped.",
     user_admin: "Read/update any user's profile (Phase 2)",
   },
   events: {
@@ -26,11 +28,13 @@ const app = createApi<AppEnv>({
   },
 });
 
-// basePath already provides /user; mount user routes at the base.
-// Order matters: the user-search routes MUST be mounted before the
-// parameterised `GET /user/{id}` route, otherwise `/user/search` is
-// captured as an {id} lookup and 404s.
+// Mount new v1 routes first
+app.route("/admin", adminRoutes);
+app.route("/user", userRoutes);
+
+// Mount legacy routes at the root (with deprecation)
+// Legacy paths: /me, /{id}, /search
+app.route("/", deprecatedUser);
 app.route("/", userSearchRoutes);
-app.route("/", userRoutes);
 
 export default app;

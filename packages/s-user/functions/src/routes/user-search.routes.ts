@@ -8,6 +8,17 @@ const search = new OpenAPIHono<AppEnv>();
 // biome-ignore lint/suspicious/noExplicitAny: generic middleware adapter
 search.use("*", authMiddleware() as any);
 
+// Deprecation headers middleware - adds Sunset and Deprecation headers to response
+search.use("*", async (c, next) => {
+  await next();
+  // Set deprecation headers for one release cycle
+  // Sunset date: 6 weeks from now (typical deprecation window)
+  const sunsetDate = new Date();
+  sunsetDate.setDate(sunsetDate.getDate() + 42); // 6 weeks
+  c.header("Deprecation", "true");
+  c.header("Sunset", sunsetDate.toUTCString());
+});
+
 const UserHit = z
   .object({
     id: z.string(),
@@ -48,14 +59,17 @@ search.openapi(
     path: "/search",
     tags: ["User"],
     security: [{ Bearer: [] }],
-    summary: "Search user profiles",
+    summary: "Search user profiles (DEPRECATED)",
     description:
-      "Linear-style list over the users collection: full-text search + whitelisted filter/sort, page-based pagination with an opt-in opaque keyset cursor for deep scroll.",
+      "Linear-style list over the users collection: full-text search + whitelisted filter/sort, page-based pagination with an opt-in opaque keyset cursor for deep scroll.\n\n" +
+      "## Deprecation Notice\n" +
+      "This endpoint is deprecated and will be removed in the next release.\n" +
+      "Use `GET /user/admin/users` instead, which returns a v1 envelope with camelCase fields.",
     request: { query: UserSearchQuery },
     responses: {
       200: {
         content: { "application/json": { schema: UserSearchResponse } },
-        description: "Search results",
+        description: "Search results (DEPRECATED)",
       },
     },
   }),

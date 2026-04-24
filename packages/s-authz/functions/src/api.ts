@@ -12,6 +12,7 @@ const app = createApi<AppEnv>({
   basePath: "/authz",
   permissions: {
     authz_admin: "Manage roles and role assignments",
+    user_superadmin: "Full access to every user profile (s-user admin). Global, unscoped.",
   },
   events: {
     publishes: [

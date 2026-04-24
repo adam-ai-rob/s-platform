@@ -13,69 +13,6 @@
       }
     },
     "schemas": {
-      "UserSearchHit": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string"
-          },
-          "firstName": {
-            "type": "string"
-          },
-          "lastName": {
-            "type": "string"
-          },
-          "displayName": {
-            "type": "string"
-          },
-          "avatarUrl": {
-            "type": "string"
-          },
-          "createdAtMs": {
-            "type": "number"
-          },
-          "updatedAtMs": {
-            "type": "number"
-          },
-          "highlights": {
-            "type": "object",
-            "additionalProperties": {
-              "nullable": true
-            }
-          }
-        },
-        "required": ["id", "firstName", "lastName", "displayName", "createdAtMs", "updatedAtMs"]
-      },
-      "UserSearchResponse": {
-        "type": "object",
-        "properties": {
-          "hits": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/UserSearchHit"
-            }
-          },
-          "page": {
-            "type": "integer"
-          },
-          "per_page": {
-            "type": "integer"
-          },
-          "found": {
-            "type": "integer"
-          },
-          "out_of": {
-            "type": "integer"
-          },
-          "search_time_ms": {
-            "type": "integer"
-          },
-          "next_cursor": {
-            "type": "string"
-          }
-        },
-        "required": ["hits", "page", "per_page", "found", "out_of", "search_time_ms"]
-      },
       "UserProfile": {
         "type": "object",
         "properties": {
@@ -127,7 +64,9 @@
             "$ref": "#/components/schemas/UserProfile"
           }
         },
-        "required": ["data"]
+        "required": [
+          "data"
+        ]
       },
       "UpdateProfileBody": {
         "type": "object",
@@ -158,21 +97,100 @@
             }
           }
         }
+      },
+      "UserSearchHit": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "firstName": {
+            "type": "string"
+          },
+          "lastName": {
+            "type": "string"
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "avatarUrl": {
+            "type": "string"
+          },
+          "createdAtMs": {
+            "type": "number"
+          },
+          "updatedAtMs": {
+            "type": "number"
+          },
+          "highlights": {
+            "type": "object",
+            "additionalProperties": {
+              "nullable": true
+            }
+          }
+        },
+        "required": [
+          "id",
+          "firstName",
+          "lastName",
+          "displayName",
+          "createdAtMs",
+          "updatedAtMs"
+        ]
+      },
+      "UserSearchResponse": {
+        "type": "object",
+        "properties": {
+          "hits": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/UserSearchHit"
+            }
+          },
+          "page": {
+            "type": "integer"
+          },
+          "per_page": {
+            "type": "integer"
+          },
+          "found": {
+            "type": "integer"
+          },
+          "out_of": {
+            "type": "integer"
+          },
+          "search_time_ms": {
+            "type": "integer"
+          },
+          "next_cursor": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "hits",
+          "page",
+          "per_page",
+          "found",
+          "out_of",
+          "search_time_ms"
+        ]
       }
     },
     "parameters": {}
   },
   "paths": {
-    "/user/search": {
+    "/user/admin/users": {
       "get": {
-        "tags": ["User"],
+        "tags": [
+          "User Admin"
+        ],
         "security": [
           {
             "Bearer": []
           }
         ],
-        "summary": "Search user profiles",
-        "description": "Linear-style list over the users collection: full-text search + whitelisted filter/sort, page-based pagination with an opt-in opaque keyset cursor for deep scroll.",
+        "summary": "List/search all user profiles (admin)",
+        "description": "Typesense-backed search over all users. Requires `user_superadmin` permission. Returns v1 envelope with camelCase fields.",
         "parameters": [
           {
             "schema": {
@@ -229,21 +247,145 @@
         ],
         "responses": {
           "200": {
-            "description": "Search results",
+            "description": "List results",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/UserSearchResponse"
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "firstName": {
+                            "type": "string"
+                          },
+                          "lastName": {
+                            "type": "string"
+                          },
+                          "displayName": {
+                            "type": "string"
+                          },
+                          "avatarUrl": {
+                            "type": "string"
+                          },
+                          "createdAt": {
+                            "type": "string"
+                          },
+                          "updatedAt": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "firstName",
+                          "lastName",
+                          "displayName",
+                          "createdAt",
+                          "updatedAt"
+                        ]
+                      }
+                    },
+                    "meta": {
+                      "type": "object",
+                      "properties": {
+                        "page": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "exclusiveMinimum": true
+                        },
+                        "perPage": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "exclusiveMinimum": true
+                        },
+                        "found": {
+                          "type": "integer"
+                        },
+                        "outOf": {
+                          "type": "integer"
+                        },
+                        "searchTimeMs": {
+                          "type": "integer"
+                        },
+                        "nextCursor": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "page",
+                        "perPage",
+                        "found",
+                        "outOf",
+                        "searchTimeMs"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta"
+                  ]
                 }
               }
             }
+          },
+          "403": {
+            "description": "Missing user_superadmin permission"
           }
         }
       }
     },
-    "/user/me": {
+    "/user/admin/users/{id}": {
       "get": {
-        "tags": ["User"],
+        "tags": [
+          "User Admin"
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "summary": "Get any user's profile (admin)",
+        "description": "Fetch a user profile by ID. Requires `user_superadmin` permission.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Profile",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProfileResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing user_superadmin permission"
+          },
+          "404": {
+            "description": "Profile not found"
+          }
+        }
+      }
+    },
+    "/user/user/users/me": {
+      "get": {
+        "tags": [
+          "User"
+        ],
         "security": [
           {
             "Bearer": []
@@ -267,7 +409,9 @@
         }
       },
       "patch": {
-        "tags": ["User"],
+        "tags": [
+          "User"
+        ],
         "security": [
           {
             "Bearer": []
@@ -301,15 +445,126 @@
         }
       }
     },
-    "/user/{id}": {
+    "/user/user/users/{id}": {
       "get": {
-        "tags": ["User"],
+        "tags": [
+          "User Admin"
+        ],
         "security": [
           {
             "Bearer": []
           }
         ],
-        "summary": "Get any user's profile",
+        "summary": "Get any user's profile (admin)",
+        "description": "Fetch a user profile by ID. Requires `user_superadmin` permission.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Profile",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProfileResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing user_superadmin permission"
+          },
+          "404": {
+            "description": "Profile not found"
+          }
+        }
+      }
+    },
+    "/user/me": {
+      "get": {
+        "tags": [
+          "User (DEPRECATED)"
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "summary": "Get the caller's profile (DEPRECATED)",
+        "description": "Legacy endpoint. Deprecated and will be removed in the next release.\nUse `GET /user/users/me` instead.",
+        "responses": {
+          "200": {
+            "description": "Profile",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProfileResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Profile not yet provisioned"
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "User (DEPRECATED)"
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "summary": "Update the caller's profile (partial) (DEPRECATED)",
+        "description": "Legacy endpoint. Deprecated and will be removed in the next release.\nUse `PATCH /user/users/me` instead.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateProfileBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated profile",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProfileResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Profile not found"
+          }
+        }
+      }
+    },
+    "/user/{id}": {
+      "get": {
+        "tags": [
+          "User Admin (DEPRECATED)"
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "summary": "Get any user's profile (DEPRECATED)",
+        "description": "Legacy endpoint. Deprecated and will be removed in the next release.\nUse `GET /user/admin/users/{id}` instead, which requires `user_superadmin` permission.",
         "parameters": [
           {
             "schema": {
@@ -333,6 +588,86 @@
           },
           "404": {
             "description": "Profile not found"
+          }
+        }
+      }
+    },
+    "/user/search": {
+      "get": {
+        "tags": [
+          "User"
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "summary": "Search user profiles (DEPRECATED)",
+        "description": "Linear-style list over the users collection: full-text search + whitelisted filter/sort, page-based pagination with an opt-in opaque keyset cursor for deep scroll.\n\n## Deprecation Notice\nThis endpoint is deprecated and will be removed in the next release.\nUse `GET /user/admin/users` instead, which returns a v1 envelope with camelCase fields.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": false,
+            "name": "q",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": false,
+            "name": "filter_by",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": false,
+            "name": "sort_by",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "exclusiveMinimum": true
+            },
+            "required": false,
+            "name": "page",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "exclusiveMinimum": true
+            },
+            "required": false,
+            "name": "per_page",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": false,
+            "name": "cursor",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Search results (DEPRECATED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserSearchResponse"
+                }
+              }
+            }
           }
         }
       }
