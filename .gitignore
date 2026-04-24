@@ -16,6 +16,9 @@ dist/
 .env.*.local
 !.env.example
 
+# direnv
+.envrc
+
 # Editor
 .vscode/
 .idea/
