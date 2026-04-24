@@ -26,6 +26,14 @@ export interface SystemRoleSpec {
   permissions: Permission[];
 }
 
+export const USER_SYSTEM_ROLES: readonly SystemRoleSpec[] = [
+  {
+    name: "user-superadmin",
+    description: "Full access to every user profile. Global, unscoped.",
+    permissions: [{ id: "user_superadmin" }],
+  },
+] as const;
+
 export const BUILDING_SYSTEM_ROLES: readonly SystemRoleSpec[] = [
   {
     name: "building-superadmin",
@@ -54,7 +62,10 @@ export const BUILDING_SYSTEM_ROLES: readonly SystemRoleSpec[] = [
  * All system-role seeds this module owns. Extend by appending to this
  * array — the seed Lambda walks every entry in one invocation.
  */
-export const SYSTEM_ROLES: readonly SystemRoleSpec[] = [...BUILDING_SYSTEM_ROLES];
+export const SYSTEM_ROLES: readonly SystemRoleSpec[] = [
+  ...BUILDING_SYSTEM_ROLES,
+  ...USER_SYSTEM_ROLES,
+];
 
 /**
  * Ensure every system role exists. Idempotent — existing roles (matched

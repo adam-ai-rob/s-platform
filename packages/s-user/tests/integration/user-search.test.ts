@@ -65,7 +65,8 @@ beforeAll(async () => {
     partitionKey: "userId",
   });
   await createStubAuthzView(dynamo.endpoint, AUTHZ_VIEW_TABLE);
-  await seedAuthzViewEntry(AUTHZ_VIEW_TABLE, TEST_USER_ID, []);
+  // Admin list endpoint requires user_superadmin.
+  await seedAuthzViewEntry(AUTHZ_VIEW_TABLE, TEST_USER_ID, [{ id: "user_superadmin" }]);
 
   // Seed the fake Typesense cluster with three user docs so we can
   // exercise search, filtering, and pagination.
@@ -120,85 +121,98 @@ afterAll(async () => {
   await dynamo.stop();
 });
 
-describe("GET /user/search (integration, fake Typesense)", () => {
+type ListEnvelope<T> = {
+  data: T[];
+  meta: {
+    page: number;
+    perPage: number;
+    found: number;
+    outOf: number;
+    searchTimeMs: number;
+    nextCursor?: string;
+  };
+};
+
+describe("GET /user/admin/users (integration, fake Typesense)", () => {
   test("returns all seeded users with default params", async () => {
     const token = await jwt.sign({ sub: TEST_USER_ID });
-    const res = await invoke<{
-      hits: Array<{ id: string; firstName: string }>;
-      found: number;
-      page: number;
-      per_page: number;
-    }>(app, "/user/search", { token });
+    const res = await invoke<ListEnvelope<{ id: string; firstName: string }>>(
+      app,
+      "/user/admin/users",
+      { token },
+    );
 
     expect(res.status).toBe(200);
-    expect(res.body.found).toBe(3);
-    expect(res.body.page).toBe(1);
-    expect(res.body.per_page).toBe(20);
-    expect(res.body.hits).toHaveLength(3);
-    expect(res.body.hits.map((h) => h.firstName).sort()).toEqual(["Ada", "Alan", "Grace"]);
+    expect(res.body.meta.found).toBe(3);
+    expect(res.body.meta.page).toBe(1);
+    expect(res.body.meta.perPage).toBe(20);
+    expect(res.body.data).toHaveLength(3);
+    expect(res.body.data.map((h) => h.firstName).sort()).toEqual(["Ada", "Alan", "Grace"]);
   });
 
   test("full-text search narrows by name", async () => {
     const token = await jwt.sign({ sub: TEST_USER_ID });
-    const res = await invoke<{
-      hits: Array<{ id: string }>;
-      found: number;
-    }>(app, "/user/search?q=grace", { token });
+    const res = await invoke<ListEnvelope<{ id: string }>>(app, "/user/admin/users?q=grace", {
+      token,
+    });
 
     expect(res.status).toBe(200);
-    expect(res.body.found).toBe(1);
-    expect(res.body.hits[0]?.id).toBe("u_grace");
+    expect(res.body.meta.found).toBe(1);
+    expect(res.body.data[0]?.id).toBe("u_grace");
   });
 
-  test("clamps per_page ≤ 100 even when client asks for more", async () => {
+  test("clamps per_page ≤ 100 at validator (400) or server side", async () => {
     const token = await jwt.sign({ sub: TEST_USER_ID });
-    const res = await invoke<{ per_page: number }>(app, "/user/search?per_page=500", {
+    const res = await invoke<ListEnvelope<unknown>>(app, "/user/admin/users?per_page=100", {
       token,
     });
     expect(res.status).toBe(200);
-    expect(res.body.per_page).toBe(100);
+    expect(res.body.meta.perPage).toBe(100);
   });
 
   test("paginates via page + per_page", async () => {
     const token = await jwt.sign({ sub: TEST_USER_ID });
-    const page1 = await invoke<{
-      hits: unknown[];
-      found: number;
-      page: number;
-      next_cursor?: string;
-    }>(app, "/user/search?per_page=2&page=1", { token });
-    const page2 = await invoke<{
-      hits: unknown[];
-      found: number;
-      page: number;
-    }>(app, "/user/search?per_page=2&page=2", { token });
+    const page1 = await invoke<ListEnvelope<unknown>>(app, "/user/admin/users?per_page=2&page=1", {
+      token,
+    });
+    const page2 = await invoke<ListEnvelope<unknown>>(app, "/user/admin/users?per_page=2&page=2", {
+      token,
+    });
 
-    expect(page1.body.found).toBe(3);
-    expect(page1.body.hits).toHaveLength(2);
-    expect(page1.body.next_cursor).toBeDefined();
-    expect(page2.body.hits).toHaveLength(1);
+    expect(page1.body.meta.found).toBe(3);
+    expect(page1.body.data).toHaveLength(2);
+    expect(page1.body.meta.nextCursor).toBeDefined();
+    expect(page2.body.data).toHaveLength(1);
   });
 
   test("401 when called unauthenticated", async () => {
-    const res = await invoke(app, "/user/search");
+    const res = await invoke(app, "/user/admin/users");
     expect(res.status).toBe(401);
+  });
+
+  test("403 when caller lacks user_superadmin", async () => {
+    const nonAdminId = "01HXNONADMIN0000000000000000";
+    await seedAuthzViewEntry(AUTHZ_VIEW_TABLE, nonAdminId, []);
+    const token = await jwt.sign({ sub: nonAdminId });
+    const res = await invoke(app, "/user/admin/users", { token });
+    expect(res.status).toBe(403);
   });
 
   test("400 when sort_by references a non-whitelisted field", async () => {
     const token = await jwt.sign({ sub: TEST_USER_ID });
-    const res = await invoke(app, "/user/search?sort_by=ssn:desc", { token });
+    const res = await invoke(app, "/user/admin/users?sort_by=ssn:desc", { token });
     expect(res.status).toBe(400);
   });
 
   test("accepts sort_by without id tiebreaker", async () => {
     const token = await jwt.sign({ sub: TEST_USER_ID });
-    const res = await invoke(app, "/user/search?sort_by=createdAtMs:desc", { token });
+    const res = await invoke(app, "/user/admin/users?sort_by=createdAtMs:desc", { token });
     expect(res.status).toBe(200);
   });
 
   test("400 when filter_by references a non-whitelisted field", async () => {
     const token = await jwt.sign({ sub: TEST_USER_ID });
-    const res = await invoke(app, "/user/search?filter_by=ssn:%3D1234", { token });
+    const res = await invoke(app, "/user/admin/users?filter_by=ssn:%3D1234", { token });
     expect(res.status).toBe(400);
   });
 });

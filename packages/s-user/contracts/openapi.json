@@ -32,10 +32,12 @@
             "type": "string"
           },
           "createdAtMs": {
-            "type": "number"
+            "type": "integer",
+            "format": "int64"
           },
           "updatedAtMs": {
-            "type": "number"
+            "type": "integer",
+            "format": "int64"
           },
           "highlights": {
             "type": "object",
@@ -46,35 +48,44 @@
         },
         "required": ["id", "firstName", "lastName", "displayName", "createdAtMs", "updatedAtMs"]
       },
-      "UserSearchResponse": {
+      "UserListMeta": {
         "type": "object",
         "properties": {
-          "hits": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/UserSearchHit"
-            }
-          },
           "page": {
             "type": "integer"
           },
-          "per_page": {
+          "perPage": {
             "type": "integer"
           },
           "found": {
             "type": "integer"
           },
-          "out_of": {
+          "outOf": {
             "type": "integer"
           },
-          "search_time_ms": {
+          "searchTimeMs": {
             "type": "integer"
           },
-          "next_cursor": {
+          "nextCursor": {
             "type": "string"
           }
         },
-        "required": ["hits", "page", "per_page", "found", "out_of", "search_time_ms"]
+        "required": ["page", "perPage", "found", "outOf", "searchTimeMs"]
+      },
+      "UserListResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/UserSearchHit"
+            }
+          },
+          "meta": {
+            "$ref": "#/components/schemas/UserListMeta"
+          }
+        },
+        "required": ["data", "meta"]
       },
       "UserProfile": {
         "type": "object",
@@ -163,16 +174,16 @@
     "parameters": {}
   },
   "paths": {
-    "/user/search": {
+    "/user/admin/users": {
       "get": {
-        "tags": ["User"],
+        "tags": ["User Admin"],
         "security": [
           {
             "Bearer": []
           }
         ],
         "summary": "Search user profiles",
-        "description": "Linear-style list over the users collection: full-text search + whitelisted filter/sort, page-based pagination with an opt-in opaque keyset cursor for deep scroll.",
+        "description": "Typesense-backed list over the users collection: full-text search + whitelisted filter/sort, page-based pagination with an opt-in opaque keyset cursor for deep scroll. Requires `user_superadmin`.",
         "parameters": [
           {
             "schema": {
@@ -212,7 +223,8 @@
             "schema": {
               "type": "integer",
               "minimum": 0,
-              "exclusiveMinimum": true
+              "exclusiveMinimum": true,
+              "maximum": 100
             },
             "required": false,
             "name": "per_page",
@@ -229,11 +241,11 @@
         ],
         "responses": {
           "200": {
-            "description": "Search results",
+            "description": "List results",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/UserSearchResponse"
+                  "$ref": "#/components/schemas/UserListResponse"
                 }
               }
             }
@@ -241,7 +253,44 @@
         }
       }
     },
-    "/user/me": {
+    "/user/admin/users/{id}": {
+      "get": {
+        "tags": ["User Admin"],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "summary": "Get any user's profile",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Profile",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProfileResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Profile not found"
+          }
+        }
+      }
+    },
+    "/user/user/users/me": {
       "get": {
         "tags": ["User"],
         "security": [
@@ -287,42 +336,6 @@
         "responses": {
           "200": {
             "description": "Updated profile",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProfileResponse"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Profile not found"
-          }
-        }
-      }
-    },
-    "/user/{id}": {
-      "get": {
-        "tags": ["User"],
-        "security": [
-          {
-            "Bearer": []
-          }
-        ],
-        "summary": "Get any user's profile",
-        "parameters": [
-          {
-            "schema": {
-              "type": "string"
-            },
-            "required": true,
-            "name": "id",
-            "in": "path"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Profile",
             "content": {
               "application/json": {
                 "schema": {

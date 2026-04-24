@@ -29,14 +29,32 @@ export type UserContext = z.infer<typeof UserContextSchema>;
  */
 export const SingleResponse = <T extends z.ZodTypeAny>(data: T) => z.object({ data });
 
+/**
+ * List response envelope — v1 REST conventions (`docs/architecture/09-api-conventions.md`).
+ * Typesense-backed list endpoints return `{ data, meta }` with page/cursor state
+ * camelCased on the wire.
+ */
+export const ListMeta = z.object({
+  page: z.number().int(),
+  perPage: z.number().int(),
+  found: z.number().int(),
+  outOf: z.number().int(),
+  searchTimeMs: z.number().int(),
+  nextCursor: z.string().optional(),
+  facets: z
+    .array(
+      z.object({
+        field: z.string(),
+        counts: z.array(z.object({ value: z.string(), count: z.number().int() })),
+      }),
+    )
+    .optional(),
+});
+
 export const ListResponse = <T extends z.ZodTypeAny>(item: T) =>
   z.object({
     data: z.array(item),
-    metadata: z
-      .object({
-        nextToken: z.string().optional(),
-      })
-      .optional(),
+    meta: ListMeta,
   });
 
 export const ErrorResponseSchema = z.object({

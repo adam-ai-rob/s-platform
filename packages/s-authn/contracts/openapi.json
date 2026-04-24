@@ -256,10 +256,11 @@
         }
       }
     },
-    "/authn/user/me/logout": {
+    "/authn/user/sessions:revoke": {
       "post": {
         "tags": ["User"],
         "summary": "Revoke the caller's refresh token",
+        "description": "Public URL: `POST /authn/user/sessions:revoke`. The `_actions/` segment is a transport workaround — see `api.ts` for the rewrite.",
         "security": [
           {
             "Bearer": []
@@ -268,11 +269,14 @@
         "responses": {
           "204": {
             "description": "Logged out"
+          },
+          "400": {
+            "description": "Missing X-Refresh-JTI header"
           }
         }
       }
     },
-    "/authn/user/me/password": {
+    "/authn/user/users/me/password": {
       "patch": {
         "tags": ["User"],
         "summary": "Change the caller's password",
