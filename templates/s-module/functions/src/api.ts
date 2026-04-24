@@ -1,14 +1,18 @@
 import { createApi } from "@s/shared/http";
+import adminRoutes from "./routes/admin.routes";
+import userRoutes from "./routes/user.routes";
 import type { AppEnv } from "./types";
 
 const app = createApi<AppEnv>({
-  service: "s-{module-name}",
-  title: "s-{module-name} — TODO: one-line description",
+  service: "{module-name}",
+  title: "{module-name} — TODO: one-line description",
   description: "TODO: bounded context description",
   version: "1.0.0",
+  basePath: "/{module}",
   permissions: {
-    // TODO: list permissions this module checks
-    // "{module}_admin": "Full admin access to this module's resources",
+    "{module}_superadmin": "Full access to every resource in this module. Global, unscoped.",
+    "{module}_admin": "Admin access to resources in the assignment's value scope.",
+    // TODO: add "{module}_user" if the user audience needs a separate read scope.
   },
   events: {
     publishes: [
@@ -25,8 +29,12 @@ const app = createApi<AppEnv>({
   },
 });
 
-// TODO: mount routes
-// import { routes } from "./routes/index";
-// app.route("/{module}", routes);
+app.route("/admin", adminRoutes);
+app.route("/user", userRoutes);
+
+// Add `enableAip136Actions` to the import from `@s/shared/http` and
+// uncomment this call when the module adopts Google AIP-136 custom
+// actions such as POST /{module}/admin/resources/{id}:archive.
+// enableAip136Actions(app);
 
 export default app;

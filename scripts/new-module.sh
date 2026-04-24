@@ -3,6 +3,7 @@
 # Scaffold a new module from templates/s-module/.
 #
 # Usage: bun run new-module s-notifications
+#        bun run new-module notifications
 #
 # Creates:
 #   packages/s-{name}/  (core, functions, tests)
@@ -13,18 +14,30 @@
 
 set -euo pipefail
 
-NAME="${1:-}"
+RAW_NAME="${1:-}"
 
-if [ -z "$NAME" ]; then
+if [ -z "$RAW_NAME" ]; then
   echo "Usage: bun run new-module s-{name}"
+  echo "   or: bun run new-module {name}"
   echo "Example: bun run new-module s-notifications"
+  echo "Example: bun run new-module notifications"
   exit 1
 fi
 
-if [[ ! "$NAME" =~ ^s-[a-z][a-z0-9-]*$ ]]; then
-  echo "Error: module name must match ^s-[a-z][a-z0-9-]*$"
+if [[ "$RAW_NAME" == s-* ]]; then
+  NAME="$RAW_NAME"
+  SHORT="${NAME#s-}"
+else
+  SHORT="$RAW_NAME"
+  NAME="s-${SHORT}"
+fi
+
+if [[ ! "$SHORT" =~ ^[a-z][a-z0-9-]*$ ]]; then
+  echo "Error: module name must match ^s-[a-z][a-z0-9-]*$ or ^[a-z][a-z0-9-]*$"
   exit 1
 fi
+
+MODULE_PASCAL="$(printf '%s' "$SHORT" | awk -F- '{ for (i = 1; i <= NF; i++) printf toupper(substr($i, 1, 1)) substr($i, 2) }')"
 
 MODULE_DIR="packages/${NAME}"
 INFRA_FILE="infra/${NAME}.ts"
@@ -39,17 +52,27 @@ echo "===> Scaffolding ${NAME}"
 # Copy template directory
 cp -r templates/s-module "$MODULE_DIR"
 
-# Replace {module} placeholder in all files
-# e.g. s-notifications → "notifications" (no prefix) in import paths and names
-SHORT="${NAME#s-}"
-
-# macOS sed requires '' after -i
+# Replace placeholders in all files:
+#   s-notifications → {module-name}
+#   notifications   → {module}
+#   Notifications   → {Module}
 find "$MODULE_DIR" -type f \( -name "*.ts" -o -name "*.json" -o -name "*.md" \) -exec \
-  sed -i '' "s/{module}/${SHORT}/g; s/{module-name}/${NAME}/g" {} +
+  perl -pi -e "s/\\{module\\}/${SHORT}/g; s/\\{module-name\\}/${NAME}/g; s/\\{Module\\}/${MODULE_PASCAL}/g" {} +
+
+# Rename files/directories containing placeholders, e.g. schemas/{module}.schema.ts.
+while IFS= read -r path; do
+  target="${path//\{module-name\}/$NAME}"
+  target="${target//\{module\}/$SHORT}"
+  target="${target//\{Module\}/$MODULE_PASCAL}"
+  if [ "$path" != "$target" ]; then
+    mv "$path" "$target"
+  fi
+done < <(find "$MODULE_DIR" -depth \( -name "*{module}*" -o -name "*{module-name}*" -o -name "*{Module}*" \))
 
 # Create infra stack file from template
+mkdir -p "$(dirname "$INFRA_FILE")"
 cp templates/s-module/infra.ts.template "$INFRA_FILE"
-sed -i '' "s/{module}/${SHORT}/g; s/{module-name}/${NAME}/g" "$INFRA_FILE"
+perl -pi -e "s/\\{module\\}/${SHORT}/g; s/\\{module-name\\}/${NAME}/g; s/\\{Module\\}/${MODULE_PASCAL}/g" "$INFRA_FILE"
 rm -f "${MODULE_DIR}/infra.ts.template"
 
 # Add CODEOWNERS entry

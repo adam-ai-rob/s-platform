@@ -1,11 +1,11 @@
-# s-{module-name}
+# {module-name}
 
 TODO: one-paragraph description of the module's bounded context.
 
 ## Structure
 
 ```
-s-{module-name}/
+{module-name}/
 ├── CLAUDE.md              # Agent rules (read first)
 ├── core/                  # Domain logic — no HTTP concepts
 │   └── src/
