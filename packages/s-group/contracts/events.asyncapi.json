@@ -216,10 +216,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "groupId",
-          "name"
-        ],
+        "required": ["groupId", "name"],
         "additionalProperties": false,
         "$schema": "http://json-schema.org/draft-07/schema#"
       },
@@ -233,10 +230,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "groupId",
-          "name"
-        ],
+        "required": ["groupId", "name"],
         "additionalProperties": false,
         "$schema": "http://json-schema.org/draft-07/schema#"
       },
@@ -250,10 +244,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "groupId",
-          "name"
-        ],
+        "required": ["groupId", "name"],
         "additionalProperties": false,
         "$schema": "http://json-schema.org/draft-07/schema#"
       },
@@ -268,19 +259,10 @@
           },
           "rel": {
             "type": "string",
-            "enum": [
-              "owner",
-              "manual",
-              "domain",
-              "group"
-            ]
+            "enum": ["owner", "manual", "domain", "group"]
           }
         },
-        "required": [
-          "userId",
-          "groupId",
-          "rel"
-        ],
+        "required": ["userId", "groupId", "rel"],
         "additionalProperties": false,
         "$schema": "http://json-schema.org/draft-07/schema#"
       },
@@ -295,19 +277,10 @@
           },
           "rel": {
             "type": "string",
-            "enum": [
-              "owner",
-              "manual",
-              "domain",
-              "group"
-            ]
+            "enum": ["owner", "manual", "domain", "group"]
           }
         },
-        "required": [
-          "userId",
-          "groupId",
-          "rel"
-        ],
+        "required": ["userId", "groupId", "rel"],
         "additionalProperties": false,
         "$schema": "http://json-schema.org/draft-07/schema#"
       }
