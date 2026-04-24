@@ -26,7 +26,20 @@ user.openapi(
   async (c) => {
     const caller = c.get("user");
     const memberships = await listGroupsForUser(caller.userId);
-    return c.json({ data: memberships }, 200);
+    return c.json(
+      {
+        data: memberships,
+        meta: {
+          page: 1,
+          perPage: memberships.length,
+          found: memberships.length,
+          outOf: memberships.length,
+          searchTimeMs: 0,
+        },
+        metadata: {},
+      },
+      200,
+    );
   },
 );
 

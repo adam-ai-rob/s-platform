@@ -1,4 +1,5 @@
 import { z } from "@hono/zod-openapi";
+import { ListMetaSchema } from "@s/shared/types";
 
 export const GroupSchema = z
   .object({
@@ -39,5 +40,9 @@ export const MembershipSchema = z
   .openapi("Membership");
 
 export const MembershipListResponse = z
-  .object({ data: z.array(MembershipSchema) })
+  .object({
+    data: z.array(MembershipSchema),
+    meta: ListMetaSchema,
+    metadata: z.object({ nextToken: z.string().optional() }).optional(),
+  })
   .openapi("MembershipListResponse");

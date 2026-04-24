@@ -139,4 +139,93 @@ describe("s-authn auth flow (integration)", () => {
     expect(refreshRes.status).toBe(200);
     expect(refreshRes.body.data.accessToken.split(".")).toHaveLength(3);
   });
+
+  test("v1 user routes change password and revoke sessions", async () => {
+    const email = `session+${Date.now()}@example.com`;
+    const password = "Sup3rSecret!pw";
+    const rotated = "Sup3rSecret!rotated";
+
+    const regRes = await invoke<{
+      data: { accessToken: string; refreshToken: string };
+    }>(app, "/authn/auth/register", {
+      method: "POST",
+      body: { email, password },
+    });
+    expect(regRes.status).toBe(201);
+
+    const accessToken = regRes.body.data.accessToken;
+    const refreshToken = regRes.body.data.refreshToken;
+
+    const changed = await invoke(app, "/authn/user/users/me/password", {
+      method: "PATCH",
+      token: accessToken,
+      body: { currentPassword: password, newPassword: rotated },
+    });
+    expect(changed.status).toBe(204);
+
+    const loginRes = await invoke<{
+      data: { accessToken: string };
+    }>(app, "/authn/auth/login", {
+      method: "POST",
+      body: { email, password: rotated },
+    });
+    expect(loginRes.status).toBe(200);
+
+    const payload = JSON.parse(Buffer.from(refreshToken.split(".")[1], "base64url").toString());
+    const tokenId = typeof payload.jti === "string" ? payload.jti : "";
+    const revoked = await invoke(app, "/authn/user/sessions:revoke", {
+      method: "POST",
+      token: accessToken,
+      headers: { "x-refresh-jti": tokenId },
+    });
+    expect(revoked.status).toBe(204);
+
+    const rejectedRefresh = await invoke(app, "/authn/auth/token/refresh", {
+      method: "POST",
+      body: { refreshToken },
+    });
+    expect(rejectedRefresh.status).toBe(401);
+  });
+
+  test("legacy user routes work with deprecation headers", async () => {
+    const email = `legacy+${Date.now()}@example.com`;
+    const password = "Sup3rSecret!pw";
+    const rotated = "Sup3rSecret!legacy";
+
+    const regRes = await invoke<{
+      data: { accessToken: string; refreshToken: string };
+    }>(app, "/authn/auth/register", {
+      method: "POST",
+      body: { email, password },
+    });
+
+    const changed = await invoke(app, "/authn/user/me/password", {
+      method: "PATCH",
+      token: regRes.body.data.accessToken,
+      body: { currentPassword: password, newPassword: rotated },
+    });
+    expect(changed.status).toBe(204);
+    expect(changed.headers.get("deprecation")).toBe("true");
+    expect(changed.headers.get("sunset")).toBe("Fri, 01 May 2026 00:00:00 GMT");
+
+    const payload = JSON.parse(
+      Buffer.from(regRes.body.data.refreshToken.split(".")[1], "base64url").toString(),
+    );
+    const tokenId = typeof payload.jti === "string" ? payload.jti : "";
+    const logout = await invoke(app, "/authn/user/me/logout", {
+      method: "POST",
+      token: regRes.body.data.accessToken,
+      headers: { "x-refresh-jti": tokenId },
+    });
+    expect(logout.status).toBe(204);
+    expect(logout.headers.get("deprecation")).toBe("true");
+    expect(logout.headers.get("sunset")).toBe("Fri, 01 May 2026 00:00:00 GMT");
+  });
+
+  test("internal sessions _actions path is not publicly routable", async () => {
+    const res = await invoke(app, "/authn/user/sessions/_actions/revoke", {
+      method: "POST",
+    });
+    expect(res.status).toBe(404);
+  });
 });

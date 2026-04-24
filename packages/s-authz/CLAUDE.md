@@ -83,5 +83,6 @@ System roles (`system: true`) can't be deleted via API. They're idempotently see
 | `building-admin` | `[{ id: "building_admin", value: [] }]` (scope-required) |
 | `building-manager` | `[{ id: "building_manager", value: [] }]` |
 | `building-user` | `[{ id: "building_user", value: [] }]` |
+| `user-superadmin` | `[{ id: "user_superadmin" }]` (global) |
 
 Extend by appending to `packages/s-authz/core/src/seeds/system-roles.ts`'s `SYSTEM_ROLES` array. Redeploying + re-invoking `AuthzSeeds` picks up additions.

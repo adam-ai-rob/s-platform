@@ -9,7 +9,7 @@ type AuthzRole = import("../core/src/roles/roles.entity").AuthzRole;
 
 const rolesRepoModule = await import("../core/src/roles/roles.repository");
 const seedsModule = await import("../core/src/seeds/system-roles");
-const { BUILDING_SYSTEM_ROLES, SYSTEM_ROLES, seedSystemRoles } = seedsModule;
+const { BUILDING_SYSTEM_ROLES, SYSTEM_ROLES, USER_SYSTEM_ROLES, seedSystemRoles } = seedsModule;
 
 const originalFindByName = rolesRepoModule.authzRolesRepository.findByName.bind(
   rolesRepoModule.authzRolesRepository,
@@ -62,6 +62,17 @@ describe("seedSystemRoles", () => {
     for (const spec of BUILDING_SYSTEM_ROLES) {
       expect(SYSTEM_ROLES.some((r) => r.name === spec.name)).toBe(true);
     }
+  });
+
+  test("exports the user superadmin system role", () => {
+    expect(USER_SYSTEM_ROLES).toEqual([
+      {
+        name: "user-superadmin",
+        description: "Full access to every user profile. Global, unscoped.",
+        permissions: [{ id: "user_superadmin" }],
+      },
+    ]);
+    expect(SYSTEM_ROLES.some((r) => r.name === "user-superadmin")).toBe(true);
   });
 
   test("first run creates every role; second run skips them all (idempotent)", async () => {

@@ -53,9 +53,68 @@
             "items": {
               "$ref": "#/components/schemas/Membership"
             }
+          },
+          "meta": {
+            "type": "object",
+            "properties": {
+              "page": {
+                "type": "integer"
+              },
+              "perPage": {
+                "type": "integer"
+              },
+              "found": {
+                "type": "integer"
+              },
+              "outOf": {
+                "type": "integer"
+              },
+              "searchTimeMs": {
+                "type": "integer"
+              },
+              "nextCursor": {
+                "type": "string"
+              },
+              "facets": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "field": {
+                      "type": "string"
+                    },
+                    "counts": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "value": {
+                            "type": "string"
+                          },
+                          "count": {
+                            "type": "integer"
+                          }
+                        },
+                        "required": ["value", "count"]
+                      }
+                    }
+                  },
+                  "required": ["field", "counts"]
+                }
+              }
+            },
+            "required": ["page", "perPage", "found", "outOf", "searchTimeMs"]
+          },
+          "metadata": {
+            "type": "object",
+            "properties": {
+              "nextToken": {
+                "type": "string"
+              }
+            }
           }
         },
-        "required": ["data"]
+        "required": ["data", "meta"]
       },
       "Group": {
         "type": "object",

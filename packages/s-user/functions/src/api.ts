@@ -12,7 +12,7 @@ const app = createApi<AppEnv>({
   version: "1.0.0",
   basePath: "/user",
   permissions: {
-    user_admin: "Read/update any user's profile (Phase 2)",
+    user_superadmin: "Full access to every user profile. Global, unscoped.",
   },
   events: {
     publishes: ["user.profile.created", "user.profile.updated", "user.profile.deleted"],
@@ -27,9 +27,9 @@ const app = createApi<AppEnv>({
 });
 
 // basePath already provides /user; mount user routes at the base.
-// Order matters: the user-search routes MUST be mounted before the
-// parameterised `GET /user/{id}` route, otherwise `/user/search` is
-// captured as an {id} lookup and 404s.
+// Order matters: search routes stay before the legacy parameterised
+// `GET /user/{id}` route, otherwise `/user/search` would be captured
+// as an {id} lookup and 404.
 app.route("/", userSearchRoutes);
 app.route("/", userRoutes);
 

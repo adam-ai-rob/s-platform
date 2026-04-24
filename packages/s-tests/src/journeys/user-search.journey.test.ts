@@ -5,7 +5,7 @@ import "../setup";
 
 /**
  * User search journey — end-to-end against the Typesense-backed
- * `GET /user/search` endpoint.
+ * `GET /user/search` compatibility endpoint.
  *
  * Flow:
  *   1. Register a user (via s-authn) → profile auto-provisioned (s-user
@@ -13,7 +13,7 @@ import "../setup";
  *   2. /user/info reports typesense probe up.
  *   3. Wait for the search indexer to consume `user.profile.created`
  *      and upsert the document.
- *   4. Update the profile (PATCH /user/me) → search reflects the new
+ *   4. Update the profile (PATCH /user/user/users/me) → search reflects the new
  *      first name.
  *   5. Page-based pagination works; cursor is returned when a page is
  *      full.
@@ -75,22 +75,27 @@ describe("user search journey", () => {
       async () => {
         const res = await client.request<{
           hits: Array<{ id: string }>;
+          data: Array<{ id: string }>;
+          meta: { found: number };
+          metadata?: { nextToken?: string };
           found: number;
         }>("GET", "/user/search?per_page=100");
         expect(res.hits.some((h) => h.id === callerId)).toBe(true);
+        expect(res.data.some((h) => h.id === callerId)).toBe(true);
+        expect(res.meta.found).toBe(res.found);
       },
       { timeout: 45_000, interval: 1_000 },
     );
   });
 
-  test("[3] PATCH /user/me → search reflects new first name", async () => {
+  test("[3] PATCH /user/user/users/me → search reflects new first name", async () => {
     const firstName = `Searchable${suffix.slice(0, 6)}`;
     // Even with [2] green, the PATCH can race a re-indexer retry. Retry
     // the PATCH itself briefly if the profile row hasn't been provisioned
     // yet (rare once [2] passed, but not impossible in cold-chain deploys).
     await eventually(
       async () => {
-        await client.request("PATCH", "/user/me", {
+        await client.request("PATCH", "/user/user/users/me", {
           body: { firstName, lastName: "Journey" },
         });
       },
@@ -101,10 +106,14 @@ describe("user search journey", () => {
       async () => {
         const res = await client.request<{
           hits: Array<{ firstName: string }>;
+          data: Array<{ firstName: string }>;
+          meta: { found: number };
           found: number;
         }>("GET", `/user/search?q=${encodeURIComponent(firstName)}&per_page=5`);
         expect(res.found).toBeGreaterThan(0);
         expect(res.hits.some((h) => h.firstName === firstName)).toBe(true);
+        expect(res.data.some((h) => h.firstName === firstName)).toBe(true);
+        expect(res.meta.found).toBe(res.found);
       },
       { timeout: 45_000, interval: 1_000 },
     );
@@ -113,6 +122,8 @@ describe("user search journey", () => {
   test("[4] page-based pagination returns consistent totals", async () => {
     const page1 = await client.request<{
       hits: unknown[];
+      data: unknown[];
+      meta: { page: number; perPage: number; found: number };
       page: number;
       per_page: number;
       found: number;
@@ -121,18 +132,26 @@ describe("user search journey", () => {
     expect(page1.page).toBe(1);
     expect(page1.per_page).toBe(1);
     expect(page1.hits.length).toBeLessThanOrEqual(1);
+    expect(page1.meta.page).toBe(1);
+    expect(page1.meta.perPage).toBe(1);
+    expect(page1.data.length).toBe(page1.hits.length);
     expect(page1.found).toBeGreaterThanOrEqual(1);
   });
 
   test("[5] next_cursor present when more results follow", async () => {
     const res = await client.request<{
       hits: unknown[];
+      data: unknown[];
+      meta: { nextCursor?: string };
+      metadata?: { nextToken?: string };
       next_cursor?: string;
       found: number;
     }>("GET", "/user/search?per_page=1");
 
     if (res.found > 1) {
       expect(typeof res.next_cursor).toBe("string");
+      expect(res.meta.nextCursor).toBe(res.next_cursor);
+      expect(res.metadata?.nextToken).toBe(res.next_cursor);
     }
   });
 

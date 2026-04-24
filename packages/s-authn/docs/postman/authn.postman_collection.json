@@ -1,0 +1,108 @@
+{
+  "info": {
+    "_postman_id": "s-authn-v1",
+    "name": "s-authn — auth API",
+    "description": "Authentication, token refresh, JWKS, session revocation, and password change routes. Legacy `/authn/user/me/logout` and `/authn/user/me/password` remain for one release with `Deprecation` and `Sunset` headers.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }]
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "https://dev.s-api.smartiqi.com" },
+    { "key": "email", "value": "alice@example.com" },
+    { "key": "password", "value": "Initial1234!" },
+    { "key": "newPassword", "value": "Rotated9876!" },
+    { "key": "refreshJti", "value": "01HXREFRESH00000000000000" }
+  ],
+  "item": [
+    {
+      "name": "Register",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"{{email}}\",\n  \"password\": \"{{password}}\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/authn/auth/register",
+          "host": ["{{baseUrl}}"],
+          "path": ["authn", "auth", "register"]
+        }
+      }
+    },
+    {
+      "name": "Login",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"{{email}}\",\n  \"password\": \"{{password}}\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/authn/auth/login",
+          "host": ["{{baseUrl}}"],
+          "path": ["authn", "auth", "login"]
+        }
+      }
+    },
+    {
+      "name": "Refresh access token",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/authn/auth/token/refresh",
+          "host": ["{{baseUrl}}"],
+          "path": ["authn", "auth", "token", "refresh"]
+        }
+      }
+    },
+    {
+      "name": "Change password",
+      "request": {
+        "method": "PATCH",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"currentPassword\": \"{{password}}\",\n  \"newPassword\": \"{{newPassword}}\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/authn/user/users/me/password",
+          "host": ["{{baseUrl}}"],
+          "path": ["authn", "user", "users", "me", "password"]
+        }
+      }
+    },
+    {
+      "name": "Revoke session",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "X-Refresh-JTI", "value": "{{refreshJti}}" }],
+        "url": {
+          "raw": "{{baseUrl}}/authn/user/sessions:revoke",
+          "host": ["{{baseUrl}}"],
+          "path": ["authn", "user", "sessions:revoke"]
+        }
+      }
+    },
+    {
+      "name": "JWKS",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{baseUrl}}/authn/auth/jwks",
+          "host": ["{{baseUrl}}"],
+          "path": ["authn", "auth", "jwks"]
+        }
+      }
+    }
+  ]
+}

@@ -29,9 +29,28 @@ export type UserContext = z.infer<typeof UserContextSchema>;
  */
 export const SingleResponse = <T extends z.ZodTypeAny>(data: T) => z.object({ data });
 
+export const ListMetaSchema = z.object({
+  page: z.number().int(),
+  perPage: z.number().int(),
+  found: z.number().int(),
+  outOf: z.number().int(),
+  searchTimeMs: z.number().int(),
+  nextCursor: z.string().optional(),
+  facets: z
+    .array(
+      z.object({
+        field: z.string(),
+        counts: z.array(z.object({ value: z.string(), count: z.number().int() })),
+      }),
+    )
+    .optional(),
+});
+export type ListMeta = z.infer<typeof ListMetaSchema>;
+
 export const ListResponse = <T extends z.ZodTypeAny>(item: T) =>
   z.object({
     data: z.array(item),
+    meta: ListMetaSchema,
     metadata: z
       .object({
         nextToken: z.string().optional(),

@@ -1,52 +1,55 @@
 import { OpenAPIHono, createRoute } from "@hono/zod-openapi";
 import { changePassword, logout } from "@s-authn/core/auth/auth.service";
 import { authMiddleware } from "@s/shared/auth";
+import { ValidationError } from "@s/shared/errors";
+import type { Context } from "hono";
 import { ChangePasswordBody } from "../schemas/auth.schema";
 import type { AppEnv } from "../types";
 
 const user = new OpenAPIHono<AppEnv>();
+const LEGACY_SUNSET = "Fri, 01 May 2026 00:00:00 GMT";
 
 // All /user routes require auth
 // biome-ignore lint/suspicious/noExplicitAny: generic middleware adapter
 user.use("*", authMiddleware() as any);
 
-// POST /user/me/logout
+function markLegacy(c: Context<AppEnv>): void {
+  c.header("Deprecation", "true");
+  c.header("Sunset", LEGACY_SUNSET);
+}
+
+async function revokeCallerSession(c: Context<AppEnv>): Promise<Response> {
+  const caller = c.get("user");
+  const tokenId = c.req.header("x-refresh-jti");
+  if (!tokenId) {
+    throw new ValidationError("X-Refresh-JTI header required for logout");
+  }
+  await logout({ userId: caller.userId, tokenId });
+  return c.body(null, 204);
+}
+
+// POST /authn/user/sessions:revoke
 user.openapi(
   createRoute({
     method: "post",
-    path: "/me/logout",
+    path: "/sessions/_actions/revoke",
     tags: ["User"],
     summary: "Revoke the caller's refresh token",
+    description:
+      "Public URL: `POST /authn/user/sessions:revoke`. The `_actions/` segment is a transport workaround.",
     security: [{ Bearer: [] }],
     responses: {
       204: { description: "Logged out" },
     },
   }),
-  async (c) => {
-    const caller = c.get("user");
-    // Client sends refresh token jti via header to avoid needing it in the body
-    const tokenId = c.req.header("x-refresh-jti");
-    if (!tokenId) {
-      return c.json(
-        {
-          error: {
-            code: "MISSING_REFRESH_JTI",
-            message: "X-Refresh-JTI header required for logout",
-          },
-        },
-        400,
-      );
-    }
-    await logout({ userId: caller.userId, tokenId });
-    return c.body(null, 204);
-  },
+  revokeCallerSession,
 );
 
-// PATCH /user/me/password
+// PATCH /authn/user/users/me/password
 user.openapi(
   createRoute({
     method: "patch",
-    path: "/me/password",
+    path: "/users/me/password",
     tags: ["User"],
     summary: "Change the caller's password",
     security: [{ Bearer: [] }],
@@ -62,6 +65,57 @@ user.openapi(
     },
   }),
   async (c) => {
+    const caller = c.get("user");
+    const body = c.req.valid("json");
+    await changePassword({
+      userId: caller.userId,
+      currentPassword: body.currentPassword,
+      newPassword: body.newPassword,
+    });
+    return c.body(null, 204);
+  },
+);
+
+// Legacy POST /authn/user/me/logout
+user.openapi(
+  createRoute({
+    method: "post",
+    path: "/me/logout",
+    tags: ["User Legacy"],
+    summary: "Revoke the caller's refresh token (deprecated)",
+    security: [{ Bearer: [] }],
+    responses: {
+      204: { description: "Logged out" },
+      400: { description: "Missing X-Refresh-JTI header" },
+    },
+  }),
+  async (c) => {
+    markLegacy(c);
+    return revokeCallerSession(c);
+  },
+);
+
+// Legacy PATCH /authn/user/me/password
+user.openapi(
+  createRoute({
+    method: "patch",
+    path: "/me/password",
+    tags: ["User Legacy"],
+    summary: "Change the caller's password (deprecated)",
+    security: [{ Bearer: [] }],
+    request: {
+      body: {
+        content: { "application/json": { schema: ChangePasswordBody } },
+        required: true,
+      },
+    },
+    responses: {
+      204: { description: "Password changed" },
+      401: { description: "Current password incorrect" },
+    },
+  }),
+  async (c) => {
+    markLegacy(c);
     const caller = c.get("user");
     const body = c.req.valid("json");
     await changePassword({

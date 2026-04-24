@@ -10,8 +10,8 @@ See [`CLAUDE.md`](./CLAUDE.md) for agent rules and [platform architecture docs](
 - Register / login with email+password (argon2id)
 - Access + refresh token issuance via AWS KMS (RS256)
 - Refresh token rotation + revocation
-- Logout
-- Password change
+- Session revocation via `POST /authn/user/sessions:revoke`
+- Password change via `PATCH /authn/user/users/me/password`
 - JWKS endpoint for other modules to verify tokens
 - `user.registered`, `user.enabled`, `user.disabled`, `user.password.changed` events via DDB Streams
 

@@ -1,65 +1,100 @@
-import { OpenAPIHono, createRoute, z } from "@hono/zod-openapi";
+import { OpenAPIHono, createRoute } from "@hono/zod-openapi";
 import { searchUsers } from "@s-user/core/search/users.search";
 import { authMiddleware } from "@s/shared/auth";
+import { ForbiddenError } from "@s/shared/errors";
+import type { Context } from "hono";
+import {
+  LegacyUserSearchResponse,
+  UserSearchListResponse,
+  UserSearchQuery,
+} from "../schemas/profile.schema";
 import type { AppEnv } from "../types";
 
 const search = new OpenAPIHono<AppEnv>();
+const LEGACY_SUNSET = "Fri, 01 May 2026 00:00:00 GMT";
 
 // biome-ignore lint/suspicious/noExplicitAny: generic middleware adapter
 search.use("*", authMiddleware() as any);
 
-const UserHit = z
-  .object({
-    id: z.string(),
-    firstName: z.string(),
-    lastName: z.string(),
-    displayName: z.string(),
-    avatarUrl: z.string().optional(),
-    createdAtMs: z.number(),
-    updatedAtMs: z.number(),
-    highlights: z.record(z.unknown()).optional(),
-  })
-  .openapi("UserSearchHit");
+function markLegacy(c: Context<AppEnv>): void {
+  c.header("Deprecation", "true");
+  c.header("Sunset", LEGACY_SUNSET);
+}
 
-const UserSearchResponse = z
-  .object({
-    hits: z.array(UserHit),
-    page: z.number().int(),
-    per_page: z.number().int(),
-    found: z.number().int(),
-    out_of: z.number().int(),
-    search_time_ms: z.number().int(),
-    next_cursor: z.string().optional(),
-  })
-  .openapi("UserSearchResponse");
+function requireUserSuperadmin(c: Context<AppEnv>): void {
+  const caller = c.get("user");
+  const allowed =
+    caller.system === true || caller.permissions.some((p) => p.id === "user_superadmin");
+  if (!allowed) throw new ForbiddenError("Missing permission: user_superadmin");
+}
 
-const UserSearchQuery = z.object({
-  q: z.string().optional(),
-  filter_by: z.string().optional(),
-  sort_by: z.string().optional(),
-  page: z.coerce.number().int().positive().optional(),
-  per_page: z.coerce.number().int().positive().optional(),
-  cursor: z.string().optional(),
-});
+search.openapi(
+  createRoute({
+    method: "get",
+    path: "/admin/users",
+    tags: ["User Admin"],
+    security: [{ Bearer: [] }],
+    summary: "Search user profiles",
+    description: "Typesense-backed list over user profiles. Requires `user_superadmin`.",
+    request: { query: UserSearchQuery },
+    responses: {
+      200: {
+        content: { "application/json": { schema: UserSearchListResponse } },
+        description: "Search results",
+      },
+      403: { description: "Missing permission" },
+    },
+  }),
+  async (c) => {
+    requireUserSuperadmin(c);
+    const qp = c.req.valid("query");
+    const result = await searchUsers({
+      q: qp.q,
+      filterBy: qp.filter_by,
+      sortBy: qp.sort_by,
+      page: qp.page,
+      perPage: qp.per_page,
+      cursor: qp.cursor,
+    });
+    return c.json(
+      {
+        data: result.hits,
+        meta: {
+          page: result.page,
+          perPage: result.perPage,
+          found: result.found,
+          outOf: result.outOf,
+          searchTimeMs: result.searchTimeMs,
+          ...(result.nextCursor ? { nextCursor: result.nextCursor } : {}),
+        },
+        metadata: {
+          ...(result.nextCursor ? { nextToken: result.nextCursor } : {}),
+        },
+      },
+      200,
+    );
+  },
+);
 
 search.openapi(
   createRoute({
     method: "get",
     path: "/search",
-    tags: ["User"],
+    tags: ["User Legacy"],
     security: [{ Bearer: [] }],
-    summary: "Search user profiles",
+    summary: "Search user profiles (deprecated)",
     description:
-      "Linear-style list over the users collection: full-text search + whitelisted filter/sort, page-based pagination with an opt-in opaque keyset cursor for deep scroll.",
+      "Deprecated legacy list shape. Use `GET /user/admin/users` and read `{ data, meta }`.",
     request: { query: UserSearchQuery },
     responses: {
       200: {
-        content: { "application/json": { schema: UserSearchResponse } },
+        content: { "application/json": { schema: LegacyUserSearchResponse } },
         description: "Search results",
       },
     },
   }),
   async (c) => {
+    markLegacy(c);
     const qp = c.req.valid("query");
     const result = await searchUsers({
       q: qp.q,
@@ -72,6 +107,18 @@ search.openapi(
     return c.json(
       {
         hits: result.hits,
+        data: result.hits,
+        meta: {
+          page: result.page,
+          perPage: result.perPage,
+          found: result.found,
+          outOf: result.outOf,
+          searchTimeMs: result.searchTimeMs,
+          ...(result.nextCursor ? { nextCursor: result.nextCursor } : {}),
+        },
+        metadata: {
+          ...(result.nextCursor ? { nextToken: result.nextCursor } : {}),
+        },
         page: result.page,
         per_page: result.perPage,
         found: result.found,

@@ -13,6 +13,7 @@ import {
 const USER_PROFILES_TABLE = "UserProfiles-test";
 const AUTHZ_VIEW_TABLE = "AuthzView-test";
 const TEST_USER_ID = "01HXTESTUSER000000000000000";
+const ADMIN_USER_ID = "01HXADMINUSER00000000000000";
 
 let dynamo: LocalDynamo;
 let jwt: JwtStub;
@@ -49,6 +50,7 @@ beforeAll(async () => {
 
   // Seed the caller's authz view so authMiddleware can load permissions.
   await seedAuthzViewEntry(AUTHZ_VIEW_TABLE, TEST_USER_ID, []);
+  await seedAuthzViewEntry(AUTHZ_VIEW_TABLE, ADMIN_USER_ID, [{ id: "user_superadmin" }]);
 
   // Dynamic imports AFTER env vars set, so the repository singleton reads
   // the table name at construction time.
@@ -75,39 +77,61 @@ describe("s-user profile CRUD (integration)", () => {
     expect(res.body).toEqual({ status: "ok" });
   });
 
-  test("GET /user/me returns the caller's profile", async () => {
+  test("GET /user/user/users/me returns the caller's profile", async () => {
     const token = await jwt.sign({ sub: TEST_USER_ID });
-    const res = await invoke<{ data: { userId: string; firstName: string } }>(app, "/user/me", {
-      token,
-    });
+    const res = await invoke<{ data: { userId: string; firstName: string } }>(
+      app,
+      "/user/user/users/me",
+      { token },
+    );
     expect(res.status).toBe(200);
     expect(res.body.data.userId).toBe(TEST_USER_ID);
     expect(res.body.data.firstName).toBe("");
   });
 
-  test("GET /user/me without bearer → 401", async () => {
-    const res = await invoke(app, "/user/me");
+  test("GET /user/user/users/me without bearer → 401", async () => {
+    const res = await invoke(app, "/user/user/users/me");
     expect(res.status).toBe(401);
   });
 
-  test("PATCH /user/me updates fields and returns the merged profile", async () => {
+  test("PATCH /user/user/users/me updates fields and returns the merged profile", async () => {
     const token = await jwt.sign({ sub: TEST_USER_ID });
-    const res = await invoke<{ data: { firstName: string; lastName: string } }>(app, "/user/me", {
-      method: "PATCH",
-      token,
-      body: { firstName: "Ada", lastName: "Lovelace" },
-    });
+    const res = await invoke<{ data: { firstName: string; lastName: string } }>(
+      app,
+      "/user/user/users/me",
+      {
+        method: "PATCH",
+        token,
+        body: { firstName: "Ada", lastName: "Lovelace" },
+      },
+    );
     expect(res.status).toBe(200);
     expect(res.body.data.firstName).toBe("Ada");
     expect(res.body.data.lastName).toBe("Lovelace");
   });
 
-  test("GET /user/{id} returns a different user's profile", async () => {
+  test("GET /user/admin/users/{id} requires user_superadmin", async () => {
     const otherId = "01HXOTHER000000000000000000";
     await handleUserRegistered({ userId: otherId, email: "other@example.com" });
+
     const token = await jwt.sign({ sub: TEST_USER_ID });
-    const res = await invoke<{ data: { userId: string } }>(app, `/user/${otherId}`, { token });
+    const denied = await invoke(app, `/user/admin/users/${otherId}`, { token });
+    expect(denied.status).toBe(403);
+
+    const adminToken = await jwt.sign({ sub: ADMIN_USER_ID });
+    const res = await invoke<{ data: { userId: string } }>(app, `/user/admin/users/${otherId}`, {
+      token: adminToken,
+    });
     expect(res.status).toBe(200);
     expect(res.body.data.userId).toBe(otherId);
+  });
+
+  test("legacy /user/me still works with deprecation headers", async () => {
+    const token = await jwt.sign({ sub: TEST_USER_ID });
+    const res = await invoke<{ data: { userId: string } }>(app, "/user/me", { token });
+    expect(res.status).toBe(200);
+    expect(res.body.data.userId).toBe(TEST_USER_ID);
+    expect(res.headers.get("deprecation")).toBe("true");
+    expect(res.headers.get("sunset")).toBe("Fri, 01 May 2026 00:00:00 GMT");
   });
 });

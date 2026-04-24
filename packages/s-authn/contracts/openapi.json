@@ -256,10 +256,11 @@
         }
       }
     },
-    "/authn/user/me/logout": {
+    "/authn/user/sessions:revoke": {
       "post": {
         "tags": ["User"],
         "summary": "Revoke the caller's refresh token",
+        "description": "Public URL: `POST /authn/user/sessions:revoke`. The `_actions/` segment is a transport workaround.",
         "security": [
           {
             "Bearer": []
@@ -272,10 +273,58 @@
         }
       }
     },
-    "/authn/user/me/password": {
+    "/authn/user/users/me/password": {
       "patch": {
         "tags": ["User"],
         "summary": "Change the caller's password",
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChangePasswordBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Password changed"
+          },
+          "401": {
+            "description": "Current password incorrect"
+          }
+        }
+      }
+    },
+    "/authn/user/me/logout": {
+      "post": {
+        "tags": ["User Legacy"],
+        "summary": "Revoke the caller's refresh token (deprecated)",
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Logged out"
+          },
+          "400": {
+            "description": "Missing X-Refresh-JTI header"
+          }
+        }
+      }
+    },
+    "/authn/user/me/password": {
+      "patch": {
+        "tags": ["User Legacy"],
+        "summary": "Change the caller's password (deprecated)",
         "security": [
           {
             "Bearer": []

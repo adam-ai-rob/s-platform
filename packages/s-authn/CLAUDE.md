@@ -4,7 +4,7 @@ Authentication service: identity, credentials, JWT issuance, JWKS, refresh token
 
 Read [monorepo CLAUDE.md](../../CLAUDE.md) and [architecture docs](../../docs/architecture/README.md) first.
 
-**REST conventions:** see [`docs/architecture/09-api-conventions.md`](../../docs/architecture/09-api-conventions.md). New endpoints MUST conform; non-conforming legacy paths are tracked for retrofit and MUST NOT be copied into new code.
+**REST conventions:** see [`docs/architecture/09-api-conventions.md`](../../docs/architecture/09-api-conventions.md). New endpoints MUST conform. Legacy `/authn/user/me/logout` and `/authn/user/me/password` routes are served only for the #73 deprecation window with `Deprecation` / `Sunset` headers.
 
 ## Bounded Context
 
@@ -78,7 +78,9 @@ None currently.
 
 - `GET /authn/info` — platform standard (service metadata)
 - `POST /authn/auth/logout` — revoke the caller's refresh token
-- `PATCH /authn/user/me/password` — change password
+- `POST /authn/user/sessions:revoke` — revoke the caller's refresh token by `X-Refresh-JTI`
+- `PATCH /authn/user/users/me/password` — change password
+- Deprecated for one release: `POST /authn/user/me/logout`, `PATCH /authn/user/me/password`
 
 ### Phase 2 (not in this port)
 

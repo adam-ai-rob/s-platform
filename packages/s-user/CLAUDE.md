@@ -4,7 +4,7 @@ User profile data: names, avatar, preferences, metadata. Profile records share t
 
 Read [monorepo CLAUDE.md](../../CLAUDE.md) and [architecture docs](../../docs/architecture/README.md) first.
 
-**REST conventions:** see [`docs/architecture/09-api-conventions.md`](../../docs/architecture/09-api-conventions.md). This module's current `GET /user/me`, `PATCH /user/me`, `GET /user/{id}` are non-conforming and tracked for retrofit in [#73](https://github.com/adam-ai-rob/s-platform/issues/73). **Do not add new endpoints in the old shape** — any new s-user endpoint must follow the v1 convention (plural `/users`, explicit `admin`/`user` audience).
+**REST conventions:** see [`docs/architecture/09-api-conventions.md`](../../docs/architecture/09-api-conventions.md). New endpoints MUST follow the v1 convention (plural `/users`, explicit `admin`/`user` audience). Legacy `/user/me`, `/user/{id}`, and `/user/search` routes are served only for the #73 deprecation window with `Deprecation` / `Sunset` headers.
 
 ## Bounded Context
 
@@ -41,10 +41,18 @@ Read [monorepo CLAUDE.md](../../CLAUDE.md) and [architecture docs](../../docs/ar
 
 ## API Surface
 
-- `GET /user/me` — caller's profile (authenticated)
-- `PATCH /user/me` — update caller's profile
-- `GET /user/{id}` — any profile (authenticated, admin-permissioned in future)
+- `GET /user/user/users/me` — caller's profile (authenticated)
+- `PATCH /user/user/users/me` — update caller's profile
+- `GET /user/admin/users/{id}` — any profile, requires `user_superadmin`
+- `GET /user/admin/users` — Typesense-backed profile list/search, requires `user_superadmin`
+- Deprecated for one release: `GET/PATCH /user/me`, `GET /user/{id}`, `GET /user/search`
 - Plus platform-standard `/user/health`, `/info`, `/openapi.json`, `/docs`
+
+## Permissions
+
+| Permission | Scope | Purpose |
+|---|---|---|
+| `user_superadmin` | global | Full access to every user profile and the admin search surface |
 
 ## Change Rules
 

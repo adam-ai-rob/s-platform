@@ -1,0 +1,87 @@
+{
+  "info": {
+    "_postman_id": "s-user-v1",
+    "name": "s-user — profile API",
+    "description": "User profile self-service and `user_superadmin` admin search/read routes. Legacy `/user/me`, `/user/{id}`, and `/user/search` routes remain for one release with `Deprecation` and `Sunset` headers.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }]
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "https://dev.s-api.smartiqi.com" },
+    { "key": "userId", "value": "01HXUSER000000000000000000" }
+  ],
+  "item": [
+    {
+      "name": "Get my profile",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{baseUrl}}/user/user/users/me",
+          "host": ["{{baseUrl}}"],
+          "path": ["user", "user", "users", "me"]
+        }
+      }
+    },
+    {
+      "name": "Update my profile",
+      "request": {
+        "method": "PATCH",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"firstName\": \"Alice\",\n  \"lastName\": \"Example\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/user/user/users/me",
+          "host": ["{{baseUrl}}"],
+          "path": ["user", "user", "users", "me"]
+        }
+      }
+    },
+    {
+      "name": "Admin · List users",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{baseUrl}}/user/admin/users?per_page=20",
+          "host": ["{{baseUrl}}"],
+          "path": ["user", "admin", "users"],
+          "query": [
+            { "key": "per_page", "value": "20" },
+            { "key": "q", "value": "alice", "disabled": true },
+            { "key": "sort_by", "value": "createdAtMs:desc", "disabled": true }
+          ]
+        },
+        "description": "Requires `user_superadmin`."
+      }
+    },
+    {
+      "name": "Admin · Get user profile",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{baseUrl}}/user/admin/users/{{userId}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["user", "admin", "users", "{{userId}}"]
+        },
+        "description": "Requires `user_superadmin`."
+      }
+    },
+    {
+      "name": "Legacy · Search users",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{baseUrl}}/user/search?per_page=20",
+          "host": ["{{baseUrl}}"],
+          "path": ["user", "search"],
+          "query": [{ "key": "per_page", "value": "20" }]
+        },
+        "description": "Deprecated compatibility path. Response includes legacy flat fields plus v1 `data`/`meta` during the migration window."
+      }
+    }
+  ]
+}
