@@ -11,4 +11,5 @@ export {
   requireSystem,
   type AuthEnv,
 } from "./middleware";
+export { collectScopeValues, hasPermission, scopedAccess, type ScopedAccessOptions } from "./scope";
 export { fetchPermissions } from "./view-lookup";
