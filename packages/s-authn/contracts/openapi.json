@@ -13,6 +13,145 @@
       }
     },
     "schemas": {
+      "TokenResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": {
+              "accessToken": {
+                "type": "string"
+              },
+              "refreshToken": {
+                "type": "string"
+              },
+              "expiresIn": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "accessToken",
+              "refreshToken",
+              "expiresIn"
+            ]
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
+      "RegisterBody": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "example": "alice@example.com"
+          },
+          "password": {
+            "type": "string",
+            "minLength": 8,
+            "maxLength": 128,
+            "example": "Test1234!"
+          }
+        },
+        "required": [
+          "email",
+          "password"
+        ]
+      },
+      "LoginBody": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "password": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "email",
+          "password"
+        ]
+      },
+      "AccessTokenResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": {
+              "accessToken": {
+                "type": "string"
+              },
+              "expiresIn": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "accessToken",
+              "expiresIn"
+            ]
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
+      "RefreshTokenBody": {
+        "type": "object",
+        "properties": {
+          "refreshToken": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "refreshToken"
+        ]
+      },
+      "JwksResponse": {
+        "type": "object",
+        "properties": {
+          "keys": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "kid": {
+                  "type": "string"
+                },
+                "kty": {
+                  "type": "string"
+                },
+                "alg": {
+                  "type": "string"
+                },
+                "use": {
+                  "type": "string"
+                },
+                "n": {
+                  "type": "string"
+                },
+                "e": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "kid",
+                "kty",
+                "alg",
+                "use",
+                "n",
+                "e"
+              ]
+            }
+          }
+        },
+        "required": [
+          "keys"
+        ]
+      },
       "ChangePasswordBody": {
         "type": "object",
         "properties": {
@@ -25,15 +164,142 @@
             "maxLength": 128
           }
         },
-        "required": ["currentPassword", "newPassword"]
+        "required": [
+          "currentPassword",
+          "newPassword"
+        ]
       }
     },
     "parameters": {}
   },
   "paths": {
+    "/authn/auth/register": {
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Register a new user",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Registered",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TokenResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Email already exists"
+          }
+        }
+      }
+    },
+    "/authn/auth/login": {
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Log in with email and password",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Logged in",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TokenResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid credentials"
+          },
+          "403": {
+            "description": "Account disabled or password expired"
+          }
+        }
+      }
+    },
+    "/authn/auth/token/refresh": {
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Exchange refresh token for a new access token",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RefreshTokenBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Token refreshed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccessTokenResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Refresh token invalid or expired"
+          }
+        }
+      }
+    },
+    "/authn/auth/jwks": {
+      "get": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Public JWKS for verifying JWTs issued by this service",
+        "responses": {
+          "200": {
+            "description": "JWKS",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JwksResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/authn/auth/sessions:revoke": {
       "post": {
-        "tags": ["Session"],
+        "tags": [
+          "Session"
+        ],
         "summary": "Revoke refresh tokens (AIP-136 custom action)",
         "description": "Revoke refresh tokens for the caller. The public URL is `POST /authn/user/sessions:revoke`.\nThis uses the AIP-136 workaround where colon-prefixed actions are rewritten to `/_actions/{verb}`.",
         "security": [
@@ -73,7 +339,9 @@
     },
     "/authn/user/users/me/password": {
       "patch": {
-        "tags": ["User"],
+        "tags": [
+          "User"
+        ],
         "summary": "Change the caller's password",
         "security": [
           {
@@ -102,7 +370,9 @@
     },
     "/authn/user/users/{id}/password": {
       "patch": {
-        "tags": ["User Admin"],
+        "tags": [
+          "User Admin"
+        ],
         "summary": "Change any user's password (admin)",
         "description": "Requires `user_superadmin` permission.",
         "security": [
@@ -132,7 +402,9 @@
                     "minLength": 1
                   }
                 },
-                "required": ["newPassword"]
+                "required": [
+                  "newPassword"
+                ]
               }
             }
           }
@@ -152,7 +424,9 @@
     },
     "/authn/auth/me/logout": {
       "post": {
-        "tags": ["User (DEPRECATED)"],
+        "tags": [
+          "User (DEPRECATED)"
+        ],
         "summary": "Revoke the caller's refresh token (DEPRECATED)",
         "description": "Legacy endpoint. Deprecated and will be removed in the next release.\nUse `POST /authn/user/sessions:revoke` instead.",
         "security": [
@@ -169,7 +443,9 @@
     },
     "/authn/user/me/password": {
       "patch": {
-        "tags": ["User (DEPRECATED)"],
+        "tags": [
+          "User (DEPRECATED)"
+        ],
         "summary": "Change the caller's password (DEPRECATED)",
         "description": "Legacy endpoint. Deprecated and will be removed in the next release.\nUse `PATCH /authn/user/users/me/password` instead.",
         "security": [

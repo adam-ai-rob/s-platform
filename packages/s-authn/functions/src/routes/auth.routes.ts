@@ -1,13 +1,123 @@
 import { OpenAPIHono, createRoute, z } from "@hono/zod-openapi";
-import { logout } from "@s-authn/core/auth/auth.service";
+import { changePassword, login, logout, refresh, register } from "@s-authn/core/auth/auth.service";
+import { getJwks } from "@s-authn/core/tokens/token.service";
 import { authMiddleware } from "@s/shared/auth";
+import {
+  AccessTokenResponse,
+  JwksResponse,
+  LoginBody,
+  RefreshTokenBody,
+  RegisterBody,
+  TokenResponse,
+} from "../schemas/auth.schema";
 import type { AppEnv } from "../types";
 
 const auth = new OpenAPIHono<AppEnv>();
 
-// All routes require auth
-// biome-ignore lint/suspicious/noExplicitAny: generic middleware adapter
-auth.use("*", authMiddleware() as any);
+// POST /register - Register a new user
+auth.openapi(
+  createRoute({
+    method: "post",
+    path: "/register",
+    tags: ["Auth"],
+    summary: "Register a new user",
+    request: {
+      body: { content: { "application/json": { schema: RegisterBody } }, required: true },
+    },
+    responses: {
+      201: {
+        content: { "application/json": { schema: TokenResponse } },
+        description: "Registered",
+      },
+      409: { description: "Email already exists" },
+    },
+  }),
+  async (c) => {
+    const body = c.req.valid("json");
+    const result = await register(body);
+    return c.json({ data: result }, 201);
+  },
+);
+
+// POST /login - Log in with email and password
+auth.openapi(
+  createRoute({
+    method: "post",
+    path: "/login",
+    tags: ["Auth"],
+    summary: "Log in with email and password",
+    request: {
+      body: { content: { "application/json": { schema: LoginBody } }, required: true },
+    },
+    responses: {
+      200: { content: { "application/json": { schema: TokenResponse } }, description: "Logged in" },
+      401: { description: "Invalid credentials" },
+      403: { description: "Account disabled or password expired" },
+    },
+  }),
+  async (c) => {
+    const body = c.req.valid("json");
+    const result = await login(body);
+    return c.json({ data: result }, 200);
+  },
+);
+
+// POST /token/refresh - Exchange refresh token for a new access token
+auth.openapi(
+  createRoute({
+    method: "post",
+    path: "/token/refresh",
+    tags: ["Auth"],
+    summary: "Exchange refresh token for a new access token",
+    request: {
+      body: { content: { "application/json": { schema: RefreshTokenBody } }, required: true },
+    },
+    responses: {
+      200: {
+        content: { "application/json": { schema: AccessTokenResponse } },
+        description: "Token refreshed",
+      },
+      401: { description: "Refresh token invalid or expired" },
+    },
+  }),
+  async (c) => {
+    const { refreshToken: rawToken } = c.req.valid("json");
+    const parts = rawToken.split(".");
+    if (parts.length !== 3) {
+      return c.json({ error: { code: "INVALID_FORMAT", message: "Malformed token" } }, 401);
+    }
+    const payload = JSON.parse(Buffer.from(parts[1] ?? "", "base64url").toString()) as {
+      sub?: string;
+      jti?: string;
+    };
+    if (!payload.sub || !payload.jti) {
+      return c.json({ error: { code: "INVALID_FORMAT", message: "Missing sub or jti" } }, 401);
+    }
+    const result = await refresh({
+      userId: payload.sub,
+      tokenId: payload.jti,
+      rawToken,
+    });
+    return c.json({ data: result }, 200);
+  },
+);
+
+// GET /jwks - Public JWKS for verifying JWTs
+auth.openapi(
+  createRoute({
+    method: "get",
+    path: "/jwks",
+    tags: ["Auth"],
+    summary: "Public JWKS for verifying JWTs issued by this service",
+    responses: {
+      200: { content: { "application/json": { schema: JwksResponse } }, description: "JWKS" },
+    },
+  }),
+  async (c) => {
+    const jwks = await getJwks();
+    return c.json(jwks, 200);
+  },
+);
 
 // POST /sessions:revoke - Revoke a refresh token (AIP-136 custom action)
 // The public URL is POST /authn/user/sessions:revoke
@@ -43,12 +153,9 @@ auth.openapi(
     const caller = c.get("user");
     const body = c.req.valid("json");
 
-    // If 'all' is true, we need to revoke all tokens for this user
-    // For now, we'll accept thetokenId from header as before but also support tokenIds in body
     let tokenId = c.req.header("x-refresh-jti");
 
     if (body.all) {
-      // TODO: Implement bulk revoke
       return c.json(
         {
           error: {
@@ -127,6 +234,8 @@ deprecatedAuth.openapi(
     return c.body(null, 204);
   },
 );
+
+// Helper functions from core/auth/auth.service - imported above
 
 export default auth;
 export { deprecatedAuth };
