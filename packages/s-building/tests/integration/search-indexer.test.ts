@@ -1,9 +1,13 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import type { PlatformEvent } from "@s/shared/events";
-import { type LocalDynamo, createTable, startLocalDynamo } from "@s/shared/testing";
+import {
+  type LocalDynamo,
+  createFakeTypesenseClient,
+  createTable,
+  startLocalDynamo,
+} from "@s/shared/testing";
 import type { EventBridgeEvent } from "aws-lambda";
 import type { Building } from "../../core/src/buildings/buildings.entity";
-import { createFakeTypesenseClient } from "./fake-typesense";
 
 type BuildingIndexerEvent = EventBridgeEvent<
   string,

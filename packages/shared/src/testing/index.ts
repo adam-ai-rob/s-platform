@@ -3,3 +3,4 @@ export { createTable, deleteTableIfExists, type TableSchema } from "./table-fact
 export { createStubAuthzView, seedAuthzViewEntry } from "./authz-stub";
 export { startJwtStub, type JwtStub, type SignOptions } from "./jwt-stub";
 export { invoke, type InvokeOptions, type InvokeResult } from "./app-invoker";
+export { createFakeTypesenseClient, type FakeTypesenseHandle } from "./fake-typesense";

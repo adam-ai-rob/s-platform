@@ -1,7 +1,11 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
-import { type LocalDynamo, createTable, startLocalDynamo } from "@s/shared/testing";
+import {
+  type LocalDynamo,
+  createFakeTypesenseClient,
+  createTable,
+  startLocalDynamo,
+} from "@s/shared/testing";
 import type { EventBridgeEvent } from "aws-lambda";
-import { createFakeTypesenseClient } from "./fake-typesense";
 
 /**
  * Integration test for the search indexer Lambda handler.

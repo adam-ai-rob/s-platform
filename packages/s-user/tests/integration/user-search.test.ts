@@ -2,6 +2,7 @@ import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import {
   type JwtStub,
   type LocalDynamo,
+  createFakeTypesenseClient,
   createStubAuthzView,
   createTable,
   invoke,
@@ -9,7 +10,6 @@ import {
   startJwtStub,
   startLocalDynamo,
 } from "@s/shared/testing";
-import { createFakeTypesenseClient } from "./fake-typesense";
 
 /**
  * End-to-end integration test for the Typesense-backed search path —

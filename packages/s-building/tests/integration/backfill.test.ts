@@ -1,7 +1,11 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
-import { type LocalDynamo, createTable, startLocalDynamo } from "@s/shared/testing";
+import {
+  type LocalDynamo,
+  createFakeTypesenseClient,
+  createTable,
+  startLocalDynamo,
+} from "@s/shared/testing";
 import type { Building } from "../../core/src/buildings/buildings.entity";
-import { createFakeTypesenseClient } from "./fake-typesense";
 
 /**
  * Backfill Lambda integration — seeds a real local DDB with N rows,
