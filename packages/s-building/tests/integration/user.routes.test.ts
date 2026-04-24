@@ -2,6 +2,7 @@ import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import {
   type JwtStub,
   type LocalDynamo,
+  createFakeTypesenseClient,
   createStubAuthzView,
   createTable,
   invoke,
@@ -11,7 +12,6 @@ import {
 } from "@s/shared/testing";
 import type { Permission } from "@s/shared/types";
 import type { Hono } from "hono";
-import { createFakeTypesenseClient } from "./fake-typesense";
 
 /**
  * Consumer audience. Two rules the test suite pins down:
