@@ -25,10 +25,7 @@
             "maxLength": 128
           }
         },
-        "required": [
-          "currentPassword",
-          "newPassword"
-        ]
+        "required": ["currentPassword", "newPassword"]
       }
     },
     "parameters": {}
@@ -36,9 +33,7 @@
   "paths": {
     "/authn/auth/sessions:revoke": {
       "post": {
-        "tags": [
-          "Session"
-        ],
+        "tags": ["Session"],
         "summary": "Revoke refresh tokens (AIP-136 custom action)",
         "description": "Revoke refresh tokens for the caller. The public URL is `POST /authn/user/sessions:revoke`.\nThis uses the AIP-136 workaround where colon-prefixed actions are rewritten to `/_actions/{verb}`.",
         "security": [
@@ -78,9 +73,7 @@
     },
     "/authn/user/users/me/password": {
       "patch": {
-        "tags": [
-          "User"
-        ],
+        "tags": ["User"],
         "summary": "Change the caller's password",
         "security": [
           {
@@ -109,9 +102,7 @@
     },
     "/authn/user/users/{id}/password": {
       "patch": {
-        "tags": [
-          "User Admin"
-        ],
+        "tags": ["User Admin"],
         "summary": "Change any user's password (admin)",
         "description": "Requires `user_superadmin` permission.",
         "security": [
@@ -141,9 +132,7 @@
                     "minLength": 1
                   }
                 },
-                "required": [
-                  "newPassword"
-                ]
+                "required": ["newPassword"]
               }
             }
           }
@@ -163,9 +152,7 @@
     },
     "/authn/auth/me/logout": {
       "post": {
-        "tags": [
-          "User (DEPRECATED)"
-        ],
+        "tags": ["User (DEPRECATED)"],
         "summary": "Revoke the caller's refresh token (DEPRECATED)",
         "description": "Legacy endpoint. Deprecated and will be removed in the next release.\nUse `POST /authn/user/sessions:revoke` instead.",
         "security": [
@@ -182,9 +169,7 @@
     },
     "/authn/user/me/password": {
       "patch": {
-        "tags": [
-          "User (DEPRECATED)"
-        ],
+        "tags": ["User (DEPRECATED)"],
         "summary": "Change the caller's password (DEPRECATED)",
         "description": "Legacy endpoint. Deprecated and will be removed in the next release.\nUse `PATCH /authn/user/users/me/password` instead.",
         "security": [
