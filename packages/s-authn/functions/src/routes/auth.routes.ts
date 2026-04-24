@@ -1,7 +1,6 @@
 import { OpenAPIHono, createRoute, z } from "@hono/zod-openapi";
-import { changePassword, login, logout, refresh, register } from "@s-authn/core/auth/auth.service";
+import { login, logout, refresh, register } from "@s-authn/core/auth/auth.service";
 import { getJwks } from "@s-authn/core/tokens/token.service";
-import { authMiddleware } from "@s/shared/auth";
 import {
   AccessTokenResponse,
   JwksResponse,

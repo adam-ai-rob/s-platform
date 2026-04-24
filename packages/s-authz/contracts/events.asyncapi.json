@@ -176,7 +176,10 @@
             "type": "string"
           }
         },
-        "required": ["roleId", "name"],
+        "required": [
+          "roleId",
+          "name"
+        ],
         "additionalProperties": false,
         "$schema": "http://json-schema.org/draft-07/schema#"
       },
@@ -190,7 +193,10 @@
             "type": "string"
           }
         },
-        "required": ["roleId", "name"],
+        "required": [
+          "roleId",
+          "name"
+        ],
         "additionalProperties": false,
         "$schema": "http://json-schema.org/draft-07/schema#"
       },
@@ -204,7 +210,10 @@
             "type": "string"
           }
         },
-        "required": ["roleId", "name"],
+        "required": [
+          "roleId",
+          "name"
+        ],
         "additionalProperties": false,
         "$schema": "http://json-schema.org/draft-07/schema#"
       },
@@ -219,7 +228,10 @@
             "minimum": 0
           }
         },
-        "required": ["userId", "permissionCount"],
+        "required": [
+          "userId",
+          "permissionCount"
+        ],
         "additionalProperties": false,
         "$schema": "http://json-schema.org/draft-07/schema#"
       }
