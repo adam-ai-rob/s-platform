@@ -5,6 +5,7 @@ Versioning: **CalVer** (`vYYYY.MM.N`). Releases cut on merge to `stage/prod`.
 ## Unreleased
 
 ### Changes
+- **Fix**: Port the module scaffold template to the post-s-building admin/user route, schema, AIP-136, and scoped-access patterns. (Issue #90)
 - **Fix**: Move generic scoped-permission helpers into `@s/shared/auth` and keep `s-building` on thin module-specific wrappers. (Issue #89)
 - **Fix**: Move the in-memory Typesense integration-test fake into `@s/shared/testing` with combined filter support for user and building tests. (Issue #88)
 - **Fix**: Lift AIP-136 custom-action routing into `@s/shared/http` so modules can share one `:verb` rewrite/OpenAPI helper without changing public contracts. (Issue #87)

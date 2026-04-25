@@ -1,5 +1,5 @@
 /**
- * Infrastructure for s-{module-name}.
+ * Infrastructure for {module-name}.
  *
  * - Defines DynamoDB tables
  * - Defines API Lambda
@@ -16,7 +16,7 @@ import { gateway, platformEventBus } from "./shared";
 // ─── DynamoDB Tables ──────────────────────────────────────────────────────────
 
 // TODO: define tables this module owns
-// export const {module}Table = new sst.aws.Dynamo("{Module}Items", {
+// export const {Module}Table = new sst.aws.Dynamo("{Module}Items", {
 //   fields: { id: "string" },
 //   primaryIndex: { hashKey: "id" },
 //   stream: "new-and-old-images",
@@ -28,9 +28,9 @@ export const api = new sst.aws.Function("{Module}Api", {
   link: [platformEventBus /* TODO: add tables to link */],
   environment: {
     STAGE: $app.stage,
-    SERVICE_NAME: "s-{module-name}",
+    SERVICE_NAME: "{module-name}",
   },
-  handler: "packages/s-{module-name}/functions/src/handler.handler",
+  handler: "packages/{module-name}/functions/src/handler.handler",
 });
 
 // Attach routes to the shared API Gateway
@@ -40,9 +40,9 @@ gateway.route("ANY /{module}/{proxy+}", api.arn);
 
 // TODO: uncomment once tables exist
 // export const streamHandler = new sst.aws.Function("{Module}StreamHandler", {
-//   link: [{module}Table, platformEventBus],
-//   environment: { STAGE: $app.stage, SERVICE_NAME: "s-{module-name}" },
-//   handler: "packages/s-{module-name}/functions/src/stream-handler.handler",
+//   link: [{Module}Table, platformEventBus],
+//   environment: { STAGE: $app.stage, SERVICE_NAME: "{module-name}" },
+//   handler: "packages/{module-name}/functions/src/stream-handler.handler",
 // });
 
 // ─── Event Handler (EventBridge → side effects) ───────────────────────────────
@@ -50,8 +50,8 @@ gateway.route("ANY /{module}/{proxy+}", api.arn);
 // TODO: uncomment once subscribed events are defined
 // export const eventHandler = new sst.aws.Function("{Module}EventHandler", {
 //   link: [/* tables this handler writes to */],
-//   environment: { STAGE: $app.stage, SERVICE_NAME: "s-{module-name}" },
-//   handler: "packages/s-{module-name}/functions/src/event-handler.handler",
+//   environment: { STAGE: $app.stage, SERVICE_NAME: "{module-name}" },
+//   handler: "packages/{module-name}/functions/src/event-handler.handler",
 // });
 //
 // new aws.cloudwatch.EventRule("{Module}OnUserRegistered", {
