@@ -6,6 +6,7 @@ Versioning: **CalVer** (`vYYYY.MM.N`). Releases cut on merge to `stage/prod`.
 
 ### Changes
 - **Fix**: Tie off the s-user/authn retrofit tail: refresh stale s-user docs, remove unimplemented authn Phase 2 permissions from `/authn/info`, and add deployed journey coverage for `POST /authn/user/sessions:revoke`. (Issue #91)
+- **Docs**: Document the `.envrc`/`direnv exec .` requirement for `gh` and `git` commands so project-local GitHub identity is used consistently. (PR #99)
 - **Fix**: Port the module scaffold template to the post-s-building admin/user route, schema, AIP-136, and scoped-access patterns. (Issue #90)
 - **Fix**: Move generic scoped-permission helpers into `@s/shared/auth` and keep `s-building` on thin module-specific wrappers. (Issue #89)
 - **Fix**: Move the in-memory Typesense integration-test fake into `@s/shared/testing` with combined filter support for user and building tests. (Issue #88)

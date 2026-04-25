@@ -85,6 +85,18 @@ Existing non-conforming endpoints (s-user singular paths, list `metadata` envelo
 
 ## Workflow Rules
 
+### GitHub and git environment
+
+This repo has `.envrc` to select the correct project-local GitHub/git identity. Always run every `gh` and `git` command through `direnv exec .`, for example:
+
+```bash
+direnv exec . gh pr view 123
+direnv exec . git status --short --branch
+direnv exec . gh api user --jq .login   # verify expected identity
+```
+
+Prefer the `gh` and `git` CLIs over GitHub MCP tools for identity-sensitive GitHub/Git operations (PR creation/merge, labels, reviews, branch operations, commits, pushes, deploy branch promotion). Non-interactive shells do not reliably run the direnv shell hook automatically, and MCP servers are started outside the repo-specific direnv context, so this keeps GitHub user and git configuration project-local.
+
 ### Branching & PRs
 
 Unless explicitly told otherwise:
