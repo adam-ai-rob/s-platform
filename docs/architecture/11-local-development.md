@@ -228,6 +228,12 @@ bun test packages/s-authn/core/src/auth/auth.service.test.ts
 - Test files co-located with source: `auth.service.ts` + `auth.service.test.ts`
 - Use `bun:test` (`describe`, `it`, `expect`, `mock`)
 - Mock external deps (DDB, KMS, EventBridge) at the module level
+- Module integration tests that use repository singletons must share one table
+  name across every integration file in that module. The singleton reads
+  `*_TABLE_NAME` at import time, so mixed names can race under Bun's parallel
+  runner and surface as `ResourceNotFoundException` for a table another file
+  expected. Use the `Buildings-test` and `UserProfiles-test` patterns as the
+  reference.
 
 ```typescript
 // packages/s-authn/core/src/auth/auth.service.test.ts
