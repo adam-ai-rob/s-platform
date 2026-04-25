@@ -1,6 +1,5 @@
 import { OpenAPIHono, createRoute } from "@hono/zod-openapi";
 import { authMiddleware } from "@s/shared/auth";
-import { NotFoundError } from "@s/shared/errors";
 import { ResourceIdParam, ResourceResponse } from "../schemas/{module}.schema";
 import type { AppEnv } from "../types";
 
@@ -37,13 +36,10 @@ user.openapi(
     //   4. Throw NotFoundError if missing or not user-visible.
     //
     // Example:
+    // import { NotFoundError } from "@s/shared/errors";
     // if (!resourceAccess(c.get("user"), id, ["{module}_user"])) {
     //   throw new NotFoundError(`Resource ${id} not found`);
     // }
-
-    if (id === "hidden") {
-      throw new NotFoundError(`Resource ${id} not found`);
-    }
 
     return c.json(
       {

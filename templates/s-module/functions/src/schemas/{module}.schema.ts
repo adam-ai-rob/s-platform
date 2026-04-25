@@ -21,6 +21,8 @@ export const Resource = z
 
 export const ResourceResponse = SingleResponse(Resource).openapi("{Module}Response");
 
+// Forward-compatible scaffold exports. Wire these into routes when this
+// module adds a list endpoint.
 export const ResourceListResponse = ListResponse(Resource).openapi("{Module}ListResponse");
 
 export const CreateResourceBody = z

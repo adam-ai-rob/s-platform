@@ -1,4 +1,4 @@
-import { createApi } from "@s/shared/http";
+import { createApi /* , enableAip136Actions */ } from "@s/shared/http";
 import adminRoutes from "./routes/admin.routes";
 import userRoutes from "./routes/user.routes";
 import type { AppEnv } from "./types";
@@ -32,9 +32,8 @@ const app = createApi<AppEnv>({
 app.route("/admin", adminRoutes);
 app.route("/user", userRoutes);
 
-// Add `enableAip136Actions` to the import from `@s/shared/http` and
-// uncomment this call when the module adopts Google AIP-136 custom
-// actions such as POST /{module}/admin/resources/{id}:archive.
+// Uncomment when this module adopts Google AIP-136 custom actions such
+// as POST /{module}/admin/resources/{id}:archive.
 // enableAip136Actions(app);
 
 export default app;
