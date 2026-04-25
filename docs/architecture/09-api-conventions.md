@@ -142,7 +142,7 @@ Any list endpoint backed by Typesense MUST accept this exact query envelope:
 
 ### Why pass Typesense syntax through
 
-- Builds on [#59](https://github.com/adam-ai-rob/s-platform/issues/59), which shipped `q`, `filter_by`, `sort_by`, `page`, `per_page`, `cursor` on `GET /user/search`. v1 standardises those across every list endpoint and **adds `facet_by`** (not shipped in #59) as part of the canonical envelope. The `SORT_FIELDS` / `FILTER_FIELDS` whitelist pattern also originates from #59.
+- Builds on [#59](https://github.com/adam-ai-rob/s-platform/issues/59), which shipped `q`, `filter_by`, `sort_by`, `page`, `per_page`, `cursor` on `GET /user/admin/users`. v1 standardises those across every list endpoint and **adds `facet_by`** (not shipped in #59) as part of the canonical envelope. The `SORT_FIELDS` / `FILTER_FIELDS` whitelist pattern also originates from #59.
 - Covers boolean, range, `IN`, negation — enough for every list endpoint we have.
 - Field whitelist neutralises the injection risk; same approach Algolia + Typesense recommend.
 

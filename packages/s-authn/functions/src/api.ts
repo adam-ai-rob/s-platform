@@ -9,10 +9,8 @@ const app = createApi<AppEnv>({
   description: "Platform identity, credentials, JWT issuance, JWKS, and refresh-token management.",
   version: "1.0.0",
   basePath: "/authn",
-  permissions: {
-    authn_admin: "Full CRUD on AuthnUsers, view audit logs (Phase 2)",
-    authn_read: "Read-only access to AuthnUser records (Phase 2)",
-  },
+  // Phase 2 permissions (audit log, admin user CRUD) will be added here when the endpoints land.
+  permissions: {},
   events: {
     publishes: ["user.registered", "user.enabled", "user.disabled", "user.password.changed"],
     subscribes: [],

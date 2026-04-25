@@ -57,10 +57,12 @@ None currently.
 
 ## Permissions
 
-| Permission | Scope | Purpose |
-|---|---|---|
-| `authn_admin` | global | Full CRUD on AuthnUsers via `/authn/admin/*` |
-| `authn_read` | global | Read-only access to auth user data |
+No permissions are advertised by `/authn/info` in Phase 1 because no authn route enforces module-specific permissions yet.
+
+Phase 2 permissions will be added when their endpoints land:
+
+- `authn_admin` — full CRUD on AuthnUsers and audit-log access.
+- `authn_read` — read-only access to auth user data.
 
 ## API Surface
 
@@ -86,7 +88,7 @@ None currently.
 - Password reset: `POST /authn/auth/forgot-password`, `POST /authn/auth/reset-password`
 - Email verification: `POST /authn/auth/send-verification`, `POST /authn/auth/verify-email`
 - Admin: `GET/POST/PATCH/DELETE /authn/admin/users`
-- Sessions: `GET /authn/user/me/sessions`, `DELETE /authn/user/me/sessions/{id}`
+- Sessions: `GET /authn/user/users/me/sessions`, `DELETE /authn/user/users/me/sessions/{id}`
 - Service-to-service: `POST /authn/auth/token/service` (needs AWS IAM SigV4 — design later)
 
 ## KMS Signing

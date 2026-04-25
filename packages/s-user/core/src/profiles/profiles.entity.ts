@@ -3,7 +3,7 @@
  *
  * Creation is triggered by a `user.registered` event, not by HTTP. The
  * profile row starts with empty strings for firstName / lastName —
- * users fill them via PATCH /user/me.
+ * users fill them via PATCH /user/user/users/me.
  */
 export interface UserProfile {
   userId: string; // = AuthnUser.id — partition key

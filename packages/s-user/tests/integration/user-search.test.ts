@@ -19,7 +19,7 @@ import {
  * carry the `deployed-test` label.
  *
  * Seeds the `dev_users` collection in the fake (matches the stage name
- * set via STAGE=dev below), invokes `/user/search`, and asserts the
+ * set via STAGE=dev below), invokes `/user/admin/users`, and asserts the
  * response envelope + behaviour of the validation + pagination paths.
  */
 
