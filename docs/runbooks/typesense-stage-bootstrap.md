@@ -148,8 +148,8 @@ collection is fully seeded. Otherwise, invoke again with
 curl -sS "https://{stage}.s-api.smartiqi.com/user/info" \
   -H "Authorization: Bearer ${JWT}" | jq '.data.probes.typesense'
 
-# 2. /user/search should return (possibly empty) results
-curl -sS "https://{stage}.s-api.smartiqi.com/user/search" \
+# 2. /user/admin/users should return (possibly empty) results
+curl -sS "https://{stage}.s-api.smartiqi.com/user/admin/users" \
   -H "Authorization: Bearer ${JWT}" | jq
 ```
 

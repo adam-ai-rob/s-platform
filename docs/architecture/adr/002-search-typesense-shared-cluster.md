@@ -134,7 +134,7 @@ Ballpark figures for capacity planning against the single shared
 Typesense Cloud cluster (0.5 GB RAM baseline, Typesense Cloud's minimum
 tier):
 
-- **p50 query latency**: <20 ms for `/user/search` on a dataset up to
+- **p50 query latency**: <20 ms for `/user/admin/users` on a dataset up to
   ~50k documents. Dominated by network RTT from Lambda → cluster, not
   engine time.
 - **p99 query latency**: <100 ms with warm Lambda; cold start adds

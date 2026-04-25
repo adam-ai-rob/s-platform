@@ -88,7 +88,7 @@ Phase 2 permissions will be added when their endpoints land:
 - Password reset: `POST /authn/auth/forgot-password`, `POST /authn/auth/reset-password`
 - Email verification: `POST /authn/auth/send-verification`, `POST /authn/auth/verify-email`
 - Admin: `GET/POST/PATCH/DELETE /authn/admin/users`
-- Sessions: `GET /authn/user/me/sessions`, `DELETE /authn/user/me/sessions/{id}`
+- Sessions: `GET /authn/user/users/me/sessions`, `DELETE /authn/user/users/me/sessions/{id}`
 - Service-to-service: `POST /authn/auth/token/service` (needs AWS IAM SigV4 — design later)
 
 ## KMS Signing
