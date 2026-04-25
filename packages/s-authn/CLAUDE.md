@@ -57,10 +57,12 @@ None currently.
 
 ## Permissions
 
-| Permission | Scope | Purpose |
-|---|---|---|
-| `authn_admin` | global | Full CRUD on AuthnUsers via `/authn/admin/*` |
-| `authn_read` | global | Read-only access to auth user data |
+No permissions are advertised by `/authn/info` in Phase 1 because no authn route enforces module-specific permissions yet.
+
+Phase 2 permissions will be added when their endpoints land:
+
+- `authn_admin` — full CRUD on AuthnUsers and audit-log access.
+- `authn_read` — read-only access to auth user data.
 
 ## API Surface
 

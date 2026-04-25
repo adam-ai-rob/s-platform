@@ -1,13 +1,33 @@
-import { afterAll, beforeAll, describe, expect, test } from "bun:test";
+import { afterAll, describe, expect, test } from "bun:test";
 import { TestHttpError, createTestClient } from "../client";
 import { eventually } from "../helpers/eventually";
 import "../setup";
+
+function getJwtJti(token: string): string {
+  const payloadB64 = token.split(".")[1];
+  if (!payloadB64) {
+    throw new Error("refresh token payload missing");
+  }
+
+  const payload: unknown = JSON.parse(Buffer.from(payloadB64, "base64url").toString("utf8"));
+  if (!hasStringJti(payload)) {
+    throw new Error("refresh token jti missing");
+  }
+
+  return payload.jti;
+}
+
+function hasStringJti(value: unknown): value is { jti: string } {
+  return (
+    typeof value === "object" && value !== null && "jti" in value && typeof value.jti === "string"
+  );
+}
 
 /**
  * Auth journey — end-to-end.
  *
  * Exercises the full register → login → protected read → change password
- * → logout → refresh-rejected path. Runs against a deployed stage.
+ * → session revoke → refresh-rejected path. Runs against a deployed stage.
  *
  * Cross-module coverage (event-driven):
  *   - After register, s-user should eventually create an empty profile
@@ -113,6 +133,37 @@ describe("auth journey", () => {
     client.setToken(accessToken);
   });
 
+  test("[7b] sessions:revoke → refresh rejected", async () => {
+    const revokedRefreshToken = refreshToken;
+    const refreshJti = getJwtJti(revokedRefreshToken);
+
+    await client.request("POST", "/authn/user/sessions:revoke", {
+      headers: { "X-Refresh-JTI": refreshJti },
+    });
+
+    try {
+      await client.request("POST", "/authn/auth/token/refresh", {
+        body: { refreshToken: revokedRefreshToken },
+      });
+      throw new Error("expected 401 on revoked refresh token");
+    } catch (err) {
+      if (err instanceof TestHttpError) {
+        expect(err.status).toBe(401);
+      } else {
+        throw err;
+      }
+    }
+
+    const res = await client.request<{
+      data: { accessToken: string; refreshToken: string };
+    }>("POST", "/authn/auth/login", {
+      body: { email, password: password2 },
+    });
+    accessToken = res.data.accessToken;
+    refreshToken = res.data.refreshToken;
+    client.setToken(accessToken);
+  });
+
   test("[8] refresh → new access token", async () => {
     // Keep the old client token briefly aside; refresh endpoint is
     // public but takes the token in the body.
@@ -169,10 +220,5 @@ describe("auth journey", () => {
   // Test users accumulate in dev/test stages; safe to ignore for now.
   afterAll(() => {
     // no-op
-  });
-
-  beforeAll(() => {
-    // Warm-up info: readable test ID for debugging
-    console.log(`  journey email: ${email}`);
   });
 });
