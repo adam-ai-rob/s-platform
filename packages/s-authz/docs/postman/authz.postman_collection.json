@@ -1,0 +1,120 @@
+{
+  "info": {
+    "_postman_id": "s-authz-v1",
+    "name": "s-authz — roles and permissions API",
+    "description": "Authorization roles, user-role assignments, and the caller's effective permission view.\n\n**Setup**\n1. Set `{{baseUrl}}` to the stage you want to hit (default `https://dev.s-api.smartiqi.com`).\n2. `POST /authn/auth/login` (out of scope for this collection) to get a JWT; paste it into `{{accessToken}}`.\n3. Use `{{roleId}}` for role detail/delete and `{{userId}}` for assignment requests. `{{scopeValue}}` is an example resource id for scoped permissions such as `building_admin`.\n\n**Audiences**\n- `/authz/user/*` — authenticated caller audience. Returns the caller's materialized `AuthzView` permissions.\n- `/authz/admin/*` — requires `authz_admin`. Role writes, deletes, and user-role assignments are admin-only.\n\n**Path shape**\n- s-authz still exposes its Phase 1 paths. This collection mirrors the current deployed/OpenAPI contract; do not copy these paths into new modules as REST v1 examples.\n\n**Common error codes**\n- `401` — missing or invalid bearer token.\n- `403` — admin audience without `authz_admin`.\n- `404` — role or assignment not found.\n- `409` — duplicate role name on create, or delete attempted on a system role.\n\nThe role collection path currently supports `POST /authz/admin/roles`; no role-list endpoint is mounted today.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }]
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "https://dev.s-api.smartiqi.com" },
+    { "key": "accessToken", "value": "" },
+    { "key": "roleId", "value": "01HXROLE0000000000000000000" },
+    { "key": "userId", "value": "01HXUSER0000000000000000000" },
+    { "key": "scopeValue", "value": "01HXBUILDING00000000000000" }
+  ],
+  "item": [
+    {
+      "name": "Health",
+      "request": {
+        "method": "GET",
+        "auth": { "type": "noauth" },
+        "url": {
+          "raw": "{{baseUrl}}/authz/health",
+          "host": ["{{baseUrl}}"],
+          "path": ["authz", "health"]
+        }
+      }
+    },
+    {
+      "name": "Info",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{baseUrl}}/authz/info",
+          "host": ["{{baseUrl}}"],
+          "path": ["authz", "info"]
+        }
+      }
+    },
+    {
+      "name": "User · Get my permissions",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{baseUrl}}/authz/user/me/permissions",
+          "host": ["{{baseUrl}}"],
+          "path": ["authz", "user", "me", "permissions"]
+        }
+      }
+    },
+    {
+      "name": "Admin · Create role",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"building-viewer\",\n  \"description\": \"Can read assigned buildings\",\n  \"permissions\": [\n    {\n      \"id\": \"building_user\",\n      \"value\": [\"{{scopeValue}}\"]\n    }\n  ],\n  \"childRoleIds\": []\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/authz/admin/roles",
+          "host": ["{{baseUrl}}"],
+          "path": ["authz", "admin", "roles"]
+        }
+      }
+    },
+    {
+      "name": "Admin · Get role",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{baseUrl}}/authz/admin/roles/{{roleId}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["authz", "admin", "roles", "{{roleId}}"]
+        }
+      }
+    },
+    {
+      "name": "Admin · Delete role",
+      "request": {
+        "method": "DELETE",
+        "url": {
+          "raw": "{{baseUrl}}/authz/admin/roles/{{roleId}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["authz", "admin", "roles", "{{roleId}}"]
+        }
+      }
+    },
+    {
+      "name": "Admin · Assign role to user",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"value\": [\"{{scopeValue}}\"]\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/authz/admin/users/{{userId}}/roles/{{roleId}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["authz", "admin", "users", "{{userId}}", "roles", "{{roleId}}"]
+        }
+      }
+    },
+    {
+      "name": "Admin · Unassign role from user",
+      "request": {
+        "method": "DELETE",
+        "url": {
+          "raw": "{{baseUrl}}/authz/admin/users/{{userId}}/roles/{{roleId}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["authz", "admin", "users", "{{userId}}", "roles", "{{roleId}}"]
+        }
+      }
+    }
+  ]
+}

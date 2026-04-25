@@ -38,13 +38,15 @@ Read [monorepo CLAUDE.md](../../CLAUDE.md) and [architecture docs](../../docs/ar
 ## API Surface
 
 - `GET /authz/user/me/permissions` — caller's current permissions (authenticated)
-- `GET /authz/admin/roles` — list roles (permission `authz_admin`)
 - `POST /authz/admin/roles` — create role
 - `GET /authz/admin/roles/{id}` — get role
 - `DELETE /authz/admin/roles/{id}` — delete role
 - `POST /authz/admin/users/{userId}/roles/{roleId}` — assign
 - `DELETE /authz/admin/users/{userId}/roles/{roleId}` — unassign
 - Plus platform-standard endpoints
+
+There is no mounted `GET /authz/admin/roles` list endpoint today; the repository
+supports listing, but the API has not exposed it yet.
 
 ## Change Rules
 
