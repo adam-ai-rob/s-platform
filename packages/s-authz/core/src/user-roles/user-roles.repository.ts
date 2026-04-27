@@ -1,4 +1,4 @@
-import { BaseRepository } from "@s/shared/ddb";
+import { BaseRepository, type PaginatedResult } from "@s/shared/ddb";
 import type { AuthzUserRole, AuthzUserRoleKeys } from "./user-roles.entity";
 
 function tableName(): string {
@@ -24,18 +24,14 @@ class AuthzUserRolesRepository extends BaseRepository<AuthzUserRole, AuthzUserRo
     return items.find((u) => u.roleId === roleId);
   }
 
-  async listByUser(userId: string): Promise<AuthzUserRole[]> {
-    const results: AuthzUserRole[] = [];
-    let nextToken: string | undefined;
-    do {
-      const res = await this.queryByIndex("ByUserId", "userId", userId, {
-        limit: 100,
-        nextToken,
-      });
-      results.push(...res.items);
-      nextToken = res.nextToken;
-    } while (nextToken);
-    return results;
+  async listByUser(
+    userId: string,
+    options: { limit?: number; nextToken?: string } = {},
+  ): Promise<PaginatedResult<AuthzUserRole>> {
+    return this.queryByIndex("ByUserId", "userId", userId, {
+      limit: 100,
+      ...options,
+    });
   }
 }
 

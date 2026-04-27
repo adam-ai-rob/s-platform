@@ -51,7 +51,8 @@ export async function removeUserFromGroup(params: {
 }
 
 export async function listGroupsForUser(userId: string): Promise<GroupUser[]> {
-  return groupUsersRepository.listByUser(userId);
+  const { items } = await groupUsersRepository.listByUser(userId);
+  return items;
 }
 
 /**

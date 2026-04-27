@@ -81,6 +81,6 @@ export async function unassignRoleFromUser(params: {
 }
 
 export async function listRolesForUser(userId: string): Promise<string[]> {
-  const entries = await authzUserRolesRepository.listByUser(userId);
-  return entries.map((e) => e.roleId);
+  const { items } = await authzUserRolesRepository.listByUser(userId);
+  return items.map((e) => e.roleId);
 }

@@ -1,4 +1,5 @@
 import { BaseRepository, type PaginatedResult } from "@s/shared/ddb";
+import { logger } from "@s/shared/logger";
 import type { Group, GroupKeys } from "./groups.entity";
 
 function tableName(): string {
@@ -40,6 +41,9 @@ class GroupsRepository extends BaseRepository<Group, GroupKeys> {
   async listAutoAssignGroups(): Promise<Group[]> {
     const results: Group[] = [];
     let nextToken: string | undefined;
+    const MAX_PAGES = 10; // Hard limit: 1000 items (10 pages of 100)
+    let pageCount = 0;
+
     do {
       const res = await this.queryByIndex("ByName", "name", "", {
         limit: 100,
@@ -51,6 +55,15 @@ class GroupsRepository extends BaseRepository<Group, GroupKeys> {
         }
       }
       nextToken = res.nextToken;
+      pageCount++;
+
+      if (nextToken && pageCount >= MAX_PAGES) {
+        logger.warn("⚠️ listAutoAssignGroups: reached safety limit, results truncated", {
+          pageCount,
+          resultCount: results.length,
+        });
+        break;
+      }
     } while (nextToken);
     return results;
   }

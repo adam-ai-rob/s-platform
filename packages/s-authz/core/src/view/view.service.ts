@@ -33,7 +33,15 @@ import { authzViewRepository } from "./view.repository";
  *     permission id.
  */
 export async function rebuildViewForUser(userId: string): Promise<Permission[]> {
-  const assignments = await authzUserRolesRepository.listByUser(userId);
+  const { items: assignments, nextToken } = await authzUserRolesRepository.listByUser(userId);
+
+  if (nextToken) {
+    logger.warn("⚠️ User has too many role assignments; view is truncated", {
+      userId,
+      limit: assignments.length,
+    });
+  }
+
   const permissions = await resolvePermissionsForAssignments(assignments);
 
   const entry: AuthzViewEntry = {
