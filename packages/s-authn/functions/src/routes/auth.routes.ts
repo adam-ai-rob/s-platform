@@ -66,7 +66,9 @@ auth.openapi(
     method: "post",
     path: "/token/refresh",
     tags: ["Auth"],
-    summary: "Exchange refresh token for a new access token",
+    summary: "Rotate refresh token and return a new token pair",
+    description:
+      "Accepts a valid refresh token, revokes it, and returns a new access token and refresh token. The old refresh token cannot be reused after a successful rotation.",
     request: {
       body: { content: { "application/json": { schema: RefreshTokenBody } }, required: true },
     },
