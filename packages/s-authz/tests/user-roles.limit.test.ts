@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
-import { type LocalDynamo, createTable, startLocalDynamo } from "@s/shared/testing";
 import { ValidationError } from "@s/shared/errors";
+import { type LocalDynamo, createTable, startLocalDynamo } from "@s/shared/testing";
 
 const ROLES_TABLE = "AuthzRoles-limit-test";
 const USER_ROLES_TABLE = "AuthzUserRoles-limit-test";
