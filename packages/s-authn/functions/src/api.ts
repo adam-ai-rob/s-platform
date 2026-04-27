@@ -25,6 +25,8 @@ const app = createApi<AppEnv>({
     EMAIL_ALREADY_EXISTS: "Registration with duplicate email",
     REFRESH_TOKEN_INVALID: "Refresh token not found or already revoked",
     REFRESH_TOKEN_EXPIRED: "Refresh token past its expiration",
+    REFRESH_TOKEN_MALFORMED: "Refresh token JSON or base64 structure is invalid",
+    MISSING_REFRESH_JTI: "X-Refresh-JTI header missing from session revocation request",
     USER_NOT_FOUND: "No user exists with the given identifier",
   },
 });

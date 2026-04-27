@@ -160,6 +160,51 @@ describe("s-authn auth flow (integration)", () => {
     expect(refreshRes2.body.data.accessToken.split(".")).toHaveLength(3);
     expect(refreshRes2.body.data.refreshToken.split(".")).toHaveLength(3);
   });
+
+  test("POST /authn/auth/token/refresh with malformed tokens", async () => {
+    // 1. Not three parts
+    const res1 = await invoke(app, "/authn/auth/token/refresh", {
+      method: "POST",
+      body: { refreshToken: "not.a.jwt" },
+    });
+    expect(res1.status).toBe(401);
+    expect(res1.body).toEqual({
+      error: {
+        code: "REFRESH_TOKEN_MALFORMED",
+        message: "Refresh token is malformed",
+        details: null,
+      },
+    });
+
+    // 2. Invalid base64/JSON in payload
+    const res2 = await invoke(app, "/authn/auth/token/refresh", {
+      method: "POST",
+      body: { refreshToken: "header.invalid-payload.signature" },
+    });
+    expect(res2.status).toBe(401);
+    expect(res2.body).toEqual({
+      error: {
+        code: "REFRESH_TOKEN_MALFORMED",
+        message: "Refresh token is malformed",
+        details: null,
+      },
+    });
+
+    // 3. Valid JSON but missing required fields
+    const payload = Buffer.from(JSON.stringify({ some: "field" })).toString("base64url");
+    const res3 = await invoke(app, "/authn/auth/token/refresh", {
+      method: "POST",
+      body: { refreshToken: `header.${payload}.signature` },
+    });
+    expect(res3.status).toBe(401);
+    expect(res3.body).toEqual({
+      error: {
+        code: "REFRESH_TOKEN_MALFORMED",
+        message: "Refresh token is malformed",
+        details: null,
+      },
+    });
+  });
 });
 
 describe("/authn/user/sessions:revoke — AIP-136 custom action", () => {
@@ -171,5 +216,31 @@ describe("/authn/user/sessions:revoke — AIP-136 custom action", () => {
       method: "POST",
     });
     expect(res.status).toBe(404);
+  });
+
+  test("POST /authn/user/sessions:revoke missing X-Refresh-JTI returns 400", async () => {
+    // Requires a valid access token to pass middleware
+    const email = `bob+${Date.now()}@example.com`;
+    const regRes = await invoke<{
+      data: { accessToken: string };
+    }>(app, "/authn/auth/register", {
+      method: "POST",
+      body: { email, password: "Password123!" },
+    });
+    const accessToken = regRes.body.data.accessToken;
+
+    const res = await invoke(app, "/authn/user/sessions:revoke", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+
+    expect(res.status).toBe(400);
+    expect(res.body).toEqual({
+      error: {
+        code: "MISSING_REFRESH_JTI",
+        message: "X-Refresh-JTI header required for logout",
+        details: null,
+      },
+    });
   });
 });

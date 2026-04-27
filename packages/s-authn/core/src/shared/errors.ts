@@ -1,4 +1,10 @@
-import { ConflictError, ForbiddenError, NotFoundError, UnauthorizedError } from "@s/shared/errors";
+import {
+  ConflictError,
+  ForbiddenError,
+  NotFoundError,
+  UnauthorizedError,
+  ValidationError,
+} from "@s/shared/errors";
 
 /**
  * s-authn-specific error subclasses.
@@ -47,6 +53,20 @@ export class RefreshTokenExpiredError extends UnauthorizedError {
   override readonly code = "REFRESH_TOKEN_EXPIRED";
   constructor() {
     super("Refresh token has expired");
+  }
+}
+
+export class RefreshTokenMalformedError extends UnauthorizedError {
+  override readonly code = "REFRESH_TOKEN_MALFORMED";
+  constructor() {
+    super("Refresh token is malformed");
+  }
+}
+
+export class MissingRefreshTokenIdError extends ValidationError {
+  override readonly code = "MISSING_REFRESH_JTI";
+  constructor() {
+    super("X-Refresh-JTI header required for logout");
   }
 }
 
