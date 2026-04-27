@@ -13,23 +13,17 @@
       }
     },
     "schemas": {
-      "TokenResponse": {
+      "RegisterResponse": {
         "type": "object",
         "properties": {
           "data": {
             "type": "object",
             "properties": {
-              "accessToken": {
+              "message": {
                 "type": "string"
-              },
-              "refreshToken": {
-                "type": "string"
-              },
-              "expiresIn": {
-                "type": "number"
               }
             },
-            "required": ["accessToken", "refreshToken", "expiresIn"]
+            "required": ["message"]
           }
         },
         "required": ["data"]
@@ -51,17 +45,23 @@
         },
         "required": ["email", "password"]
       },
-      "RegisterResponse": {
+      "TokenResponse": {
         "type": "object",
         "properties": {
           "data": {
             "type": "object",
             "properties": {
-              "message": {
+              "accessToken": {
                 "type": "string"
+              },
+              "refreshToken": {
+                "type": "string"
+              },
+              "expiresIn": {
+                "type": "number"
               }
             },
-            "required": ["message"]
+            "required": ["accessToken", "refreshToken", "expiresIn"]
           }
         },
         "required": ["data"]
