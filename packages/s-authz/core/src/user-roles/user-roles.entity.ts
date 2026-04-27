@@ -18,6 +18,13 @@ import { ulid } from "ulid";
  * the row — see `assignRoleToUser`. Unique values only; order is not
  * preserved.
  */
+
+/**
+ * Maximum number of scope values allowed per assignment.
+ * Helps prevent DynamoDB item size limit issues and view rebuild performance degradation.
+ */
+export const MAX_ASSIGNMENT_VALUES = 1000;
+
 export interface AuthzUserRole {
   id: string; // ULID
   userId: string;

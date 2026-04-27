@@ -1,8 +1,8 @@
-import { NotFoundError } from "@s/shared/errors";
+import { NotFoundError, ValidationError } from "@s/shared/errors";
 import { logger } from "@s/shared/logger";
 import { getRole } from "../roles/roles.service";
 import { rebuildViewForUser } from "../view/view.service";
-import { createAuthzUserRole, uniqueValues } from "./user-roles.entity";
+import { MAX_ASSIGNMENT_VALUES, createAuthzUserRole, uniqueValues } from "./user-roles.entity";
 import { authzUserRolesRepository } from "./user-roles.repository";
 
 /**
@@ -42,6 +42,13 @@ export async function assignRoleToUser(params: {
       return;
     }
     const merged = uniqueValues([...existingValues, ...addedValues]);
+
+    if (merged.length > MAX_ASSIGNMENT_VALUES) {
+      throw new ValidationError(
+        `Assignment for role ${params.roleId} exceeds maximum of ${MAX_ASSIGNMENT_VALUES} scope values (requested ${merged.length})`,
+      );
+    }
+
     await authzUserRolesRepository.insert({
       ...existing,
       value: merged.length > 0 ? merged : undefined,
@@ -53,6 +60,13 @@ export async function assignRoleToUser(params: {
     });
   } else {
     const entry = createAuthzUserRole(params);
+
+    if (entry.value && entry.value.length > MAX_ASSIGNMENT_VALUES) {
+      throw new ValidationError(
+        `Assignment for role ${params.roleId} exceeds maximum of ${MAX_ASSIGNMENT_VALUES} scope values (requested ${entry.value.length})`,
+      );
+    }
+
     await authzUserRolesRepository.insert(entry);
     logger.info("🔒 Role assigned", {
       userId: params.userId,
