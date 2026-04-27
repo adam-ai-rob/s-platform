@@ -64,24 +64,6 @@
         },
         "required": ["email", "password"]
       },
-      "AccessTokenResponse": {
-        "type": "object",
-        "properties": {
-          "data": {
-            "type": "object",
-            "properties": {
-              "accessToken": {
-                "type": "string"
-              },
-              "expiresIn": {
-                "type": "number"
-              }
-            },
-            "required": ["accessToken", "expiresIn"]
-          }
-        },
-        "required": ["data"]
-      },
       "RefreshTokenBody": {
         "type": "object",
         "properties": {
@@ -227,7 +209,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/AccessTokenResponse"
+                  "$ref": "#/components/schemas/TokenResponse"
                 }
               }
             }

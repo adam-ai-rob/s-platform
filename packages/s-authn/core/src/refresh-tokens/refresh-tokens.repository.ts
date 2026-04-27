@@ -1,4 +1,5 @@
-import { BaseRepository, type PaginatedResult } from "@s/shared/ddb";
+import { TransactWriteCommand } from "@aws-sdk/lib-dynamodb";
+import { BaseRepository, type PaginatedResult, getDdbClient } from "@s/shared/ddb";
 import type { AuthnRefreshToken, AuthnRefreshTokenKeys } from "./refresh-tokens.entity";
 
 function tableName(): string {
@@ -30,6 +31,32 @@ class AuthnRefreshTokensRepository extends BaseRepository<
     await this.patch(id, undefined, {
       revokedAt: new Date().toISOString(),
     } as Partial<AuthnRefreshToken>);
+  }
+
+  async rotate(oldTokenId: string, newToken: AuthnRefreshToken): Promise<void> {
+    await getDdbClient().send(
+      new TransactWriteCommand({
+        TransactItems: [
+          {
+            Update: {
+              TableName: this.tableName,
+              Key: { id: oldTokenId },
+              UpdateExpression: "SET #revokedAt = :revokedAt",
+              ExpressionAttributeNames: { "#revokedAt": "revokedAt" },
+              ExpressionAttributeValues: { ":revokedAt": new Date().toISOString() },
+              ConditionExpression: "attribute_exists(id) AND attribute_not_exists(#revokedAt)",
+            },
+          },
+          {
+            Put: {
+              TableName: this.tableName,
+              Item: newToken as unknown as Record<string, unknown>,
+              ConditionExpression: "attribute_not_exists(id)",
+            },
+          },
+        ],
+      }),
+    );
   }
 
   async listActiveForUser(

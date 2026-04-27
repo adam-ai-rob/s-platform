@@ -2,7 +2,6 @@ import { OpenAPIHono, createRoute } from "@hono/zod-openapi";
 import { login, refresh, register } from "@s-authn/core/auth/auth.service";
 import { getJwks } from "@s-authn/core/tokens/token.service";
 import {
-  AccessTokenResponse,
   JwksResponse,
   LoginBody,
   RefreshTokenBody,
@@ -73,7 +72,7 @@ auth.openapi(
     },
     responses: {
       200: {
-        content: { "application/json": { schema: AccessTokenResponse } },
+        content: { "application/json": { schema: TokenResponse } },
         description: "Token refreshed",
       },
       401: { description: "Refresh token invalid or expired" },
