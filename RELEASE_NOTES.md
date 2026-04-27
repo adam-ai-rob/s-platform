@@ -5,6 +5,7 @@ Versioning: **CalVer** (`vYYYY.MM.N`). Releases cut on merge to `stage/prod`.
 ## Unreleased
 
 ### Changes
+- **Docs**: Clarify client-facing endpoint documentation rules and refresh module OpenAPI, README, and Postman text so API consumers see contracted behavior instead of internal routing details. (Issue #118)
 - **Docs**: Add Postman collections for s-authz and s-group and document the shared integration-test table-name convention. (Issue #92)
 - **Fix**: Tie off the s-user/authn retrofit tail: refresh stale s-user docs, remove unimplemented authn Phase 2 permissions from `/authn/info`, and add deployed journey coverage for `POST /authn/user/sessions:revoke`. (Issue #91)
 - **Docs**: Document the `.envrc`/`direnv exec .` requirement for `gh` and `git` commands so project-local GitHub identity is used consistently. (PR #99)

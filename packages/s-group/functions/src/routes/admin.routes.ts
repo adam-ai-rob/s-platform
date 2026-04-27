@@ -19,11 +19,15 @@ admin.openapi(
     tags: ["Group Admin"],
     security: [{ Bearer: [] }],
     summary: "Create a group",
+    description:
+      "Creates a group with a unique name and optional domain-matching configuration. Requires a bearer token with `group_admin`.",
     request: {
       body: { content: { "application/json": { schema: CreateGroupBody } }, required: true },
     },
     responses: {
       201: { content: { "application/json": { schema: GroupResponse } }, description: "Created" },
+      401: { description: "Missing or invalid bearer token" },
+      403: { description: "Missing group_admin permission" },
       409: { description: "Name exists" },
     },
   }),
@@ -41,9 +45,12 @@ admin.openapi(
     tags: ["Group Admin"],
     security: [{ Bearer: [] }],
     summary: "Get a group",
+    description: "Returns one group by id. Requires a bearer token with `group_admin`.",
     request: { params: z.object({ id: z.string() }) },
     responses: {
       200: { content: { "application/json": { schema: GroupResponse } }, description: "Group" },
+      401: { description: "Missing or invalid bearer token" },
+      403: { description: "Missing group_admin permission" },
       404: { description: "Not found" },
     },
   }),
@@ -61,9 +68,13 @@ admin.openapi(
     tags: ["Group Admin"],
     security: [{ Bearer: [] }],
     summary: "Delete a group",
+    description:
+      "Deletes a group by id. Requires a bearer token with `group_admin`; returns 404 when the group does not exist.",
     request: { params: z.object({ id: z.string() }) },
     responses: {
       204: { description: "Deleted" },
+      401: { description: "Missing or invalid bearer token" },
+      403: { description: "Missing group_admin permission" },
       404: { description: "Not found" },
     },
   }),
@@ -81,11 +92,15 @@ admin.openapi(
     tags: ["Group Admin"],
     security: [{ Bearer: [] }],
     summary: "Add a user to a group (rel: manual)",
+    description:
+      "Creates a manual membership between the group and user. Requires `group_admin`; returns 409 if the manual membership already exists.",
     request: {
       params: z.object({ id: z.string(), userId: z.string() }),
     },
     responses: {
       204: { description: "Added" },
+      401: { description: "Missing or invalid bearer token" },
+      403: { description: "Missing group_admin permission" },
       404: { description: "Group not found" },
       409: { description: "Already a member" },
     },
@@ -105,11 +120,15 @@ admin.openapi(
     tags: ["Group Admin"],
     security: [{ Bearer: [] }],
     summary: "Remove a user from a group (rel: manual)",
+    description:
+      "Removes an existing manual membership between the group and user. Requires `group_admin`; returns 404 when the membership does not exist.",
     request: {
       params: z.object({ id: z.string(), userId: z.string() }),
     },
     responses: {
       204: { description: "Removed" },
+      401: { description: "Missing or invalid bearer token" },
+      403: { description: "Missing group_admin permission" },
       404: { description: "Membership not found" },
     },
   }),

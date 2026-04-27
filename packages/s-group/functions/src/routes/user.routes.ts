@@ -16,11 +16,14 @@ user.openapi(
     tags: ["Group"],
     security: [{ Bearer: [] }],
     summary: "List caller's group memberships",
+    description:
+      "Returns the authenticated caller's active group memberships in a `{ data }` envelope.",
     responses: {
       200: {
         content: { "application/json": { schema: MembershipListResponse } },
         description: "Memberships",
       },
+      401: { description: "Missing or invalid bearer token" },
     },
   }),
   async (c) => {

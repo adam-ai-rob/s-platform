@@ -51,15 +51,22 @@ The `/user/*` audience returns **404 instead of 403** on every hidden path — n
 
 Admin audience (`/building/admin/*`):
 
-- `POST /building/admin/buildings` — create (superadmin)
-- `GET /building/admin/buildings` — list (Typesense-backed)
-- `GET/PATCH/DELETE /building/admin/buildings/{id}`
-- `POST /building/admin/buildings/{id}:archive` / `:activate` — custom actions
+| Endpoint | Auth | Description |
+|---|---|---|
+| `POST /building/admin/buildings` | `building_superadmin` | Creates a draft building from the request body. Returns `201`, `{ data: building }`, and a `Location` header for the new resource. |
+| `GET /building/admin/buildings` | superadmin, scoped admin, or scoped manager | Typesense-backed list. Superadmin sees all buildings; scoped admin/manager callers see only buildings in their assignment `value`. Empty scope returns `200` with an empty list. |
+| `GET /building/admin/buildings/{id}` | superadmin, scoped admin, or scoped manager | Returns one building by id. Admin callers outside scope receive `403`; missing buildings return `404`. |
+| `PATCH /building/admin/buildings/{id}` | superadmin, scoped admin, or scoped manager | Partially updates non-status building fields and returns `{ data: building }`. Use `:activate` or `:archive` for lifecycle transitions. |
+| `POST /building/admin/buildings/{id}:archive` | superadmin or scoped admin | Transitions an active building to `archived`. Returns `409` for illegal status transitions. |
+| `POST /building/admin/buildings/{id}:activate` | superadmin or scoped admin | Transitions a draft or archived building to `active`. Returns `409` for illegal status transitions. |
+| `DELETE /building/admin/buildings/{id}` | superadmin or scoped admin | Hard-deletes a building and returns `204`; scoped managers and users receive `403`. |
 
 User audience (`/building/user/*`):
 
-- `GET /building/user/buildings` — active + scoped to caller
-- `GET /building/user/buildings/{id}`
+| Endpoint | Auth | Description |
+|---|---|---|
+| `GET /building/user/buildings` | bearer token with `building_user` scope or superadmin | Lists active buildings visible to the caller. Non-superadmin callers see only scoped buildings; empty scope returns `200` with an empty list. |
+| `GET /building/user/buildings/{id}` | bearer token with `building_user` scope or superadmin | Returns an active building only when visible to the caller. Missing, inactive, archived, or out-of-scope buildings all return `404`. |
 
 Plus `/building/health`, `/info`, `/openapi.json`, `/docs`.
 

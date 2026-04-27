@@ -39,6 +39,8 @@ admin.openapi(
         content: { "application/json": { schema: UserListResponse } },
         description: "List results",
       },
+      401: { description: "Missing or invalid bearer token" },
+      403: { description: "Missing user_superadmin permission" },
     },
   }),
   async (c) => {
@@ -75,9 +77,13 @@ admin.openapi(
     tags: ["User Admin"],
     security: [{ Bearer: [] }],
     summary: "Get any user's profile",
+    description:
+      "Returns one user profile by id. Requires `user_superadmin`; callers without that permission receive 403 before the profile is read.",
     request: { params: UserIdParam },
     responses: {
       200: { content: { "application/json": { schema: ProfileResponse } }, description: "Profile" },
+      401: { description: "Missing or invalid bearer token" },
+      403: { description: "Missing user_superadmin permission" },
       404: { description: "Profile not found" },
     },
   }),

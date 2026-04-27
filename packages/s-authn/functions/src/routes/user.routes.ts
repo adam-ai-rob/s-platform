@@ -12,7 +12,8 @@ user.use("*", authMiddleware() as any);
 
 // POST /authn/user/sessions:revoke
 // Custom action per AIP-136. Routed internally at `/sessions/_actions/revoke`
-// (see api.ts for the rewrite rationale). Public URL is the `:verb` form.
+// (see api.ts for the rewrite rationale). The client-facing endpoint is
+// `POST /authn/user/sessions:revoke`.
 user.openapi(
   createRoute({
     method: "post",
@@ -20,11 +21,12 @@ user.openapi(
     tags: ["User"],
     summary: "Revoke the caller's refresh token",
     description:
-      "Public URL: `POST /authn/user/sessions:revoke`. The `_actions/` segment is a transport workaround — see `api.ts` for the rewrite.",
+      "Revokes the caller's refresh token identified by the `X-Refresh-JTI` header. Requires a valid bearer access token. Returns 204 when the token record has been marked revoked.",
     security: [{ Bearer: [] }],
     responses: {
-      204: { description: "Logged out" },
+      204: { description: "Refresh token revoked" },
       400: { description: "Missing X-Refresh-JTI header" },
+      401: { description: "Missing or invalid bearer token" },
     },
   }),
   async (c) => {
@@ -53,6 +55,8 @@ user.openapi(
     path: "/users/me/password",
     tags: ["User"],
     summary: "Change the caller's password",
+    description:
+      "Changes the authenticated caller's password after verifying `currentPassword`. The request body supplies both the current password and the replacement password.",
     security: [{ Bearer: [] }],
     request: {
       body: {

@@ -19,6 +19,8 @@ auth.openapi(
     path: "/register",
     tags: ["Auth"],
     summary: "Register a new user",
+    description:
+      "Creates a new enabled user identity from an email and password, then returns an access token and refresh token. No bearer token is required. Returns 409 when the email is already registered.",
     request: {
       body: { content: { "application/json": { schema: RegisterBody } }, required: true },
     },
@@ -44,6 +46,8 @@ auth.openapi(
     path: "/login",
     tags: ["Auth"],
     summary: "Log in with email and password",
+    description:
+      "Authenticates an existing enabled user with email and password, then returns an access token and refresh token. No bearer token is required.",
     request: {
       body: { content: { "application/json": { schema: LoginBody } }, required: true },
     },
@@ -75,7 +79,7 @@ auth.openapi(
     responses: {
       200: {
         content: { "application/json": { schema: TokenResponse } },
-        description: "Token refreshed",
+        description: "New access and refresh token pair",
       },
       401: { description: "Refresh token invalid or expired" },
     },
@@ -108,7 +112,9 @@ auth.openapi(
     method: "get",
     path: "/jwks",
     tags: ["Auth"],
-    summary: "Public JWKS for verifying JWTs issued by this service",
+    summary: "JWKS for verifying JWTs issued by this service",
+    description:
+      "Returns the JSON Web Key Set used by clients and platform services to verify JWTs issued by s-authn. Publicly reachable; no authentication is required.",
     responses: {
       200: { content: { "application/json": { schema: JwksResponse } }, description: "JWKS" },
     },

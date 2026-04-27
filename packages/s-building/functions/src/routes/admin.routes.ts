@@ -61,6 +61,7 @@ admin.openapi(
         },
       },
       400: { description: "Validation error" },
+      401: { description: "Missing or invalid bearer token" },
       403: { description: "Missing permission" },
     },
   }),
@@ -92,6 +93,7 @@ admin.openapi(
         content: { "application/json": { schema: BuildingListResponse } },
         description: "List results",
       },
+      401: { description: "Missing or invalid bearer token" },
     },
   }),
   async (c) => {
@@ -175,9 +177,12 @@ admin.openapi(
     tags: ["Building Admin"],
     security: [{ Bearer: [] }],
     summary: "Get a building",
+    description:
+      "Returns one building by id for callers with `building_superadmin`, scoped `building_admin`, or scoped `building_manager`. Admin callers outside the building scope receive 403; missing buildings return 404.",
     request: { params: BuildingIdParam },
     responses: {
       200: { content: { "application/json": { schema: BuildingResponse } }, description: "Ok" },
+      401: { description: "Missing or invalid bearer token" },
       403: { description: "Not in caller's scope" },
       404: { description: "Not found" },
     },
@@ -209,6 +214,7 @@ admin.openapi(
     responses: {
       200: { content: { "application/json": { schema: BuildingResponse } }, description: "Ok" },
       400: { description: "Validation error" },
+      401: { description: "Missing or invalid bearer token" },
       403: { description: "Not in caller's scope" },
       404: { description: "Not found" },
     },
@@ -228,7 +234,7 @@ admin.openapi(
 //
 // Hono's trie router can't parse AIP-136 `:verb` paths (the `:` conflicts
 // with its `:param` prefix syntax — verified across all three router
-// backends). To honour the public convention while keeping the router
+// backends). To honour the client-facing convention while keeping the router
 // happy, the module's `fetch` wrapper rewrites inbound `…:verb` URLs to
 // `…/_actions/verb` before dispatch; OpenAPI docs keep the colon form
 // via a `publicPath` post-processor on the contract (see api.ts).
@@ -240,10 +246,11 @@ admin.openapi(
     security: [{ Bearer: [] }],
     summary: "Archive a building (active → archived)",
     description:
-      "Public URL: `POST /building/admin/buildings/{id}:archive`. The `_actions/` segment is a transport workaround — see the module's api.ts for the rewrite.",
+      "Transitions an active building to `archived`. Requires `building_superadmin` or scoped `building_admin`; scoped managers can read and update but cannot archive. Returns 409 when the building is not in a status that can be archived.",
     request: { params: BuildingIdParam },
     responses: {
       200: { content: { "application/json": { schema: BuildingResponse } }, description: "Ok" },
+      401: { description: "Missing or invalid bearer token" },
       403: { description: "Not in caller's scope (manager can read/update but not archive)" },
       404: { description: "Not found" },
       409: { description: "Illegal status transition" },
@@ -268,10 +275,11 @@ admin.openapi(
     security: [{ Bearer: [] }],
     summary: "Activate a building (draft/archived → active)",
     description:
-      "Public URL: `POST /building/admin/buildings/{id}:activate`. See `:archive` note about the `_actions/` workaround.",
+      "Transitions a draft or archived building to `active`. Requires `building_superadmin` or scoped `building_admin`. Returns 409 when the building is not in a status that can be activated.",
     request: { params: BuildingIdParam },
     responses: {
       200: { content: { "application/json": { schema: BuildingResponse } }, description: "Ok" },
+      401: { description: "Missing or invalid bearer token" },
       403: { description: "Not in caller's scope" },
       404: { description: "Not found" },
       409: { description: "Illegal status transition" },
@@ -295,10 +303,12 @@ admin.openapi(
     tags: ["Building Admin"],
     security: [{ Bearer: [] }],
     summary: "Delete a building",
-    description: "Hard delete. Manager → 403; only superadmin or scoped admin can delete.",
+    description:
+      "Hard-deletes a building. Requires `building_superadmin` or scoped `building_admin`; scoped managers and users receive 403.",
     request: { params: BuildingIdParam },
     responses: {
       204: { description: "Deleted" },
+      401: { description: "Missing or invalid bearer token" },
       403: { description: "Not in caller's scope" },
       404: { description: "Not found" },
     },
