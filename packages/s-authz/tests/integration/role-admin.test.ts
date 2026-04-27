@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { GetCommand } from "@aws-sdk/lib-dynamodb";
+import { ValidationError } from "@s/shared/errors";
 import { getDdbClient } from "@s/shared/ddb";
 import {
   type JwtStub,
@@ -295,5 +296,105 @@ describe("s-authz admin flow (integration)", () => {
     expect(res.status).toBe(200);
     expect(res.body.data.userId).toBe(ADMIN_USER_ID);
     expect(res.body.data.permissions.some((p) => p.id === "authz_admin")).toBe(true);
+  });
+
+  describe("assignRoleToUser limits", () => {
+    test("throws ValidationError when assigning a role with too many values", async () => {
+      const adminToken = await jwt.sign({ sub: ADMIN_USER_ID });
+      const USER_ID = "01HXLIMIT1000000000000LIMIT1";
+
+      const createRes = await invoke<{ data: { id: string } }>(app, "/authz/admin/roles", {
+        method: "POST",
+        token: adminToken,
+        body: {
+          name: "too-many-values-role",
+          permissions: [{ id: "p1", value: [] }],
+        },
+      });
+      expect(createRes.status).toBe(201);
+      const roleId = createRes.body.data.id;
+
+      const { MAX_ASSIGNMENT_VALUES } = await import("../../core/src/user-roles/user-roles.entity");
+      const values = Array.from({ length: MAX_ASSIGNMENT_VALUES + 1 }, (_, i) => `val-${i}`);
+
+      const res = await invoke(app, `/authz/admin/users/${USER_ID}/roles/${roleId}`, {
+        method: "POST",
+        token: adminToken,
+        body: { value: values },
+      });
+
+      expect(res.status).toBe(400);
+      expect(res.body.error.code).toBe("VALIDATION_ERROR");
+      expect(res.body.error.message).toContain("exceeds maximum");
+    });
+
+    test("throws ValidationError when merging results in too many values", async () => {
+      const adminToken = await jwt.sign({ sub: ADMIN_USER_ID });
+      const USER_ID = "01HXLIMIT2000000000000LIMIT2";
+
+      const createRes = await invoke<{ data: { id: string } }>(app, "/authz/admin/roles", {
+        method: "POST",
+        token: adminToken,
+        body: {
+          name: "merge-limit-role",
+          permissions: [{ id: "p1", value: [] }],
+        },
+      });
+      expect(createRes.status).toBe(201);
+      const roleId = createRes.body.data.id;
+
+      const { MAX_ASSIGNMENT_VALUES } = await import("../../core/src/user-roles/user-roles.entity");
+
+      // 1. Assign some values (just below limit)
+      const assign1 = await invoke(app, `/authz/admin/users/${USER_ID}/roles/${roleId}`, {
+        method: "POST",
+        token: adminToken,
+        body: { value: Array.from({ length: MAX_ASSIGNMENT_VALUES - 10 }, (_, i) => `val-${i}`) },
+      });
+      expect(assign1.status).toBe(204);
+
+      // 2. Add more values that exceed the limit
+      const assign2 = await invoke(app, `/authz/admin/users/${USER_ID}/roles/${roleId}`, {
+        method: "POST",
+        token: adminToken,
+        body: { value: Array.from({ length: 20 }, (_, i) => `val-${i + 1000}`) },
+      });
+
+      expect(assign2.status).toBe(400);
+      expect(assign2.body.error.code).toBe("VALIDATION_ERROR");
+    });
+
+    test("allows assigning up to the limit", async () => {
+      const adminToken = await jwt.sign({ sub: ADMIN_USER_ID });
+      const USER_ID = "01HXLIMIT3000000000000LIMIT3";
+
+      const createRes = await invoke<{ data: { id: string } }>(app, "/authz/admin/roles", {
+        method: "POST",
+        token: adminToken,
+        body: {
+          name: "limit-edge-role",
+          permissions: [{ id: "p1", value: [] }],
+        },
+      });
+      expect(createRes.status).toBe(201);
+      const roleId = createRes.body.data.id;
+
+      const { MAX_ASSIGNMENT_VALUES } = await import("../../core/src/user-roles/user-roles.entity");
+      const values = Array.from({ length: MAX_ASSIGNMENT_VALUES }, (_, i) => `val-${i}`);
+
+      const res = await invoke(app, `/authz/admin/users/${USER_ID}/roles/${roleId}`, {
+        method: "POST",
+        token: adminToken,
+        body: { value: values },
+      });
+      expect(res.status).toBe(204);
+
+      // Verify they are actually there
+      const viewRow = await getDdbClient().send(
+        new GetCommand({ TableName: AUTHZ_VIEW_TABLE, Key: { userId: USER_ID } }),
+      );
+      const perms = (viewRow.Item?.permissions ?? []) as { id: string; value?: unknown[] }[];
+      expect(perms[0]?.value).toHaveLength(MAX_ASSIGNMENT_VALUES);
+    });
   });
 });
