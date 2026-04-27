@@ -96,21 +96,23 @@ describe("s-authn auth flow (integration)", () => {
 
     // 1. Register
     const regRes = await invoke<{
-      data: { accessToken: string; refreshToken: string };
+      data: { message: string };
     }>(app, "/authn/auth/register", {
       method: "POST",
       body: { email, password },
     });
     expect(regRes.status).toBe(201);
-    expect(regRes.body.data.accessToken.split(".")).toHaveLength(3);
-    expect(regRes.body.data.refreshToken.split(".")).toHaveLength(3);
+    expect(regRes.body.data.message).toContain("account has been created");
 
-    // 2. Re-register same email → 409
-    const dup = await invoke(app, "/authn/auth/register", {
+    // 2. Re-register same email → 201 (Generic success, no 409)
+    const dup = await invoke<{
+      data: { message: string };
+    }>(app, "/authn/auth/register", {
       method: "POST",
       body: { email, password },
     });
-    expect(dup.status).toBe(409);
+    expect(dup.status).toBe(201);
+    expect(dup.body.data.message).toContain("account has been created");
 
     // 3. Login with correct credentials
     const loginRes = await invoke<{
@@ -130,14 +132,23 @@ describe("s-authn auth flow (integration)", () => {
     });
     expect(badLogin.status).toBe(401);
 
-    // 5. Refresh
-    const refreshRes = await invoke<{ data: { accessToken: string } }>(
+    // 5. Refresh (with rotation)
+    const refreshRes = await invoke<{ data: { accessToken: string; refreshToken: string } }>(
       app,
       "/authn/auth/token/refresh",
       { method: "POST", body: { refreshToken } },
     );
     expect(refreshRes.status).toBe(200);
     expect(refreshRes.body.data.accessToken.split(".")).toHaveLength(3);
+    expect(refreshRes.body.data.refreshToken.split(".")).toHaveLength(3);
+    expect(refreshRes.body.data.refreshToken).not.toBe(refreshToken);
+
+    // 6. Reuse old refresh token → 401
+    const reuseRes = await invoke(app, "/authn/auth/token/refresh", {
+      method: "POST",
+      body: { refreshToken },
+    });
+    expect(reuseRes.status).toBe(401);
   });
 });
 

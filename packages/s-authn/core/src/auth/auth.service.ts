@@ -3,7 +3,6 @@ import { logger } from "@s/shared/logger";
 import type { AuthnRefreshToken } from "../refresh-tokens/refresh-tokens.entity";
 import { authnRefreshTokensRepository } from "../refresh-tokens/refresh-tokens.repository";
 import {
-  EmailAlreadyExistsError,
   InvalidCredentialsError,
   PasswordExpiredError,
   RefreshTokenExpiredError,
@@ -33,6 +32,7 @@ export interface TokenResponse {
 
 export interface AccessTokenResponse {
   accessToken: string;
+  refreshToken: string;
   expiresIn: number;
 }
 
@@ -41,29 +41,21 @@ export interface AccessTokenResponse {
 export async function register(params: {
   email: string;
   password: string;
-}): Promise<TokenResponse> {
+}): Promise<{ message: string }> {
   const existing = await authnUsersRepository.findByEmail(params.email);
   if (existing) {
-    throw new EmailAlreadyExistsError(params.email);
+    // SECURITY: Avoid exposing account existence.
+    logger.info("ℹ️ Registration attempted with existing email", { email: params.email });
+    return { message: "If that email is not already in use, an account has been created." };
   }
 
   const passwordHash = await argon2Hash(params.password);
   const user = createAuthnUser({ email: params.email, passwordHash });
   await authnUsersRepository.insert(user);
 
-  const [accessToken, refresh] = await Promise.all([
-    issueAccessToken(user.id),
-    issueRefreshToken(user.id),
-  ]);
-  await persistRefreshToken(user.id, refresh);
-
   logger.info("✅ User registered", { userId: user.id, email: user.email });
 
-  return {
-    accessToken,
-    refreshToken: refresh.token,
-    expiresIn: 3600,
-  };
+  return { message: "If that email is not already in use, an account has been created." };
 }
 
 // ─── Login ────────────────────────────────────────────────────────────────────
@@ -108,7 +100,7 @@ export async function refresh(params: {
   userId: string; // from verified JWT payload (sub)
   tokenId: string; // JTI (refresh token record id)
   rawToken: string; // raw JWT string, verified against stored hash
-}): Promise<AccessTokenResponse> {
+}): Promise<TokenResponse> {
   const stored = await authnRefreshTokensRepository.findById(params.tokenId);
 
   if (!stored || stored.userId !== params.userId || stored.revokedAt) {
@@ -125,15 +117,28 @@ export async function refresh(params: {
   const user = await authnUsersRepository.findById(params.userId);
   if (!user || !user.enabled) throw new UserDisabledError();
 
-  const accessToken = await issueAccessToken(params.userId);
+  // ROTATION: Revoke old token, issue new pair
+  await authnRefreshTokensRepository.revoke(params.tokenId);
 
-  logger.info("🔒 refresh", {
+  const [accessToken, refresh] = await Promise.all([
+    issueAccessToken(params.userId),
+    issueRefreshToken(params.userId),
+  ]);
+  await persistRefreshToken(params.userId, refresh);
+
+  logger.info("🔒 refresh (rotated)", {
     action: "refresh",
     success: true,
     userId: params.userId,
+    oldTokenId: params.tokenId,
+    newTokenId: refresh.jti,
   });
 
-  return { accessToken, expiresIn: 3600 };
+  return {
+    accessToken,
+    refreshToken: refresh.token,
+    expiresIn: 3600,
+  };
 }
 
 // ─── Logout ───────────────────────────────────────────────────────────────────

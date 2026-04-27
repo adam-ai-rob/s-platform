@@ -51,6 +51,21 @@
         },
         "required": ["email", "password"]
       },
+      "RegisterResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": {
+              "message": {
+                "type": "string"
+              }
+            },
+            "required": ["message"]
+          }
+        },
+        "required": ["data"]
+      },
       "LoginBody": {
         "type": "object",
         "properties": {
@@ -73,11 +88,14 @@
               "accessToken": {
                 "type": "string"
               },
+              "refreshToken": {
+                "type": "string"
+              },
               "expiresIn": {
                 "type": "number"
               }
             },
-            "required": ["accessToken", "expiresIn"]
+            "required": ["accessToken", "refreshToken", "expiresIn"]
           }
         },
         "required": ["data"]
@@ -162,13 +180,10 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/TokenResponse"
+                  "$ref": "#/components/schemas/RegisterResponse"
                 }
               }
             }
-          },
-          "409": {
-            "description": "Email already exists"
           }
         }
       }

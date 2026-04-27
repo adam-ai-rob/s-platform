@@ -7,6 +7,14 @@ export const RegisterBody = z
   })
   .openapi("RegisterBody");
 
+export const RegisterResponse = z
+  .object({
+    data: z.object({
+      message: z.string(),
+    }),
+  })
+  .openapi("RegisterResponse");
+
 export const LoginBody = z
   .object({
     email: z.string().email(),
@@ -41,6 +49,7 @@ export const AccessTokenResponse = z
   .object({
     data: z.object({
       accessToken: z.string(),
+      refreshToken: z.string(),
       expiresIn: z.number(),
     }),
   })

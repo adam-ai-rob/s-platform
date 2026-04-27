@@ -7,6 +7,7 @@ import {
   LoginBody,
   RefreshTokenBody,
   RegisterBody,
+  RegisterResponse,
   TokenResponse,
 } from "../schemas/auth.schema";
 import type { AppEnv } from "../types";
@@ -25,10 +26,9 @@ auth.openapi(
     },
     responses: {
       201: {
-        content: { "application/json": { schema: TokenResponse } },
+        content: { "application/json": { schema: RegisterResponse } },
         description: "Registered",
       },
-      409: { description: "Email already exists" },
     },
   }),
   async (c) => {
