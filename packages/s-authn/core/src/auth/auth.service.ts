@@ -33,6 +33,7 @@ export interface TokenResponse {
 
 export interface AccessTokenResponse {
   accessToken: string;
+  refreshToken: string;
   expiresIn: number;
 }
 
@@ -125,15 +126,31 @@ export async function refresh(params: {
   const user = await authnUsersRepository.findById(params.userId);
   if (!user || !user.enabled) throw new UserDisabledError();
 
-  const accessToken = await issueAccessToken(params.userId);
+  // RTR: Issue new access token and new refresh token
+  const [accessToken, newRefresh] = await Promise.all([
+    issueAccessToken(params.userId),
+    issueRefreshToken(params.userId),
+  ]);
+
+  // RTR: Persist new token and revoke the old one
+  await Promise.all([
+    persistRefreshToken(params.userId, newRefresh),
+    authnRefreshTokensRepository.revoke(params.tokenId),
+  ]);
 
   logger.info("🔒 refresh", {
     action: "refresh",
     success: true,
     userId: params.userId,
+    tokenId: params.tokenId,
+    newTokenId: newRefresh.jti,
   });
 
-  return { accessToken, expiresIn: 3600 };
+  return {
+    accessToken,
+    refreshToken: newRefresh.token,
+    expiresIn: 3600,
+  };
 }
 
 // ─── Logout ───────────────────────────────────────────────────────────────────

@@ -131,13 +131,52 @@ describe("s-authn auth flow (integration)", () => {
     expect(badLogin.status).toBe(401);
 
     // 5. Refresh
-    const refreshRes = await invoke<{ data: { accessToken: string } }>(
-      app,
-      "/authn/auth/token/refresh",
-      { method: "POST", body: { refreshToken } },
-    );
+    const refreshRes = await invoke<{
+      data: { accessToken: string; refreshToken: string };
+    }>(app, "/authn/auth/token/refresh", { method: "POST", body: { refreshToken } });
     expect(refreshRes.status).toBe(200);
     expect(refreshRes.body.data.accessToken.split(".")).toHaveLength(3);
+    expect(refreshRes.body.data.refreshToken.split(".")).toHaveLength(3);
+    expect(refreshRes.body.data.refreshToken).not.toBe(refreshToken);
+  });
+
+  test("refresh token rotation (RTR) prevents reuse", async () => {
+    const email = `bob+${Date.now()}@example.com`;
+    const password = "Sup3rSecret!pw";
+
+    // 1. Register
+    const regRes = await invoke<{
+      data: { accessToken: string; refreshToken: string };
+    }>(app, "/authn/auth/register", {
+      method: "POST",
+      body: { email, password },
+    });
+    const refreshToken = regRes.body.data.refreshToken;
+
+    // 2. First refresh
+    const res1 = await invoke<{
+      data: { accessToken: string; refreshToken: string };
+    }>(app, "/authn/auth/token/refresh", {
+      method: "POST",
+      body: { refreshToken },
+    });
+    expect(res1.status).toBe(200);
+    const newRefreshToken = res1.body.data.refreshToken;
+    expect(newRefreshToken).not.toBe(refreshToken);
+
+    // 3. Second refresh with SAME token (MUST fail after RTR)
+    const res2 = await invoke(app, "/authn/auth/token/refresh", {
+      method: "POST",
+      body: { refreshToken },
+    });
+    expect(res2.status).toBe(401);
+
+    // 4. Refresh with the NEW token (MUST succeed)
+    const res3 = await invoke(app, "/authn/auth/token/refresh", {
+      method: "POST",
+      body: { refreshToken: newRefreshToken },
+    });
+    expect(res3.status).toBe(200);
   });
 });
 

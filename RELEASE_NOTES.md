@@ -5,6 +5,7 @@ Versioning: **CalVer** (`vYYYY.MM.N`). Releases cut on merge to `stage/prod`.
 ## Unreleased
 
 ### Changes
+- **Security**: Implement Refresh Token Rotation (RTR) in `s-authn`. The `refresh` flow now issues a new refresh token and revokes the old one upon use, preventing refresh token reuse and mitigating replay attacks. (PR #101)
 - **Docs**: Add Postman collections for s-authz and s-group and document the shared integration-test table-name convention. (Issue #92)
 - **Fix**: Tie off the s-user/authn retrofit tail: refresh stale s-user docs, remove unimplemented authn Phase 2 permissions from `/authn/info`, and add deployed journey coverage for `POST /authn/user/sessions:revoke`. (Issue #91)
 - **Docs**: Document the `.envrc`/`direnv exec .` requirement for `gh` and `git` commands so project-local GitHub identity is used consistently. (PR #99)
