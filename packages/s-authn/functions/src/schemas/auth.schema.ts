@@ -37,14 +37,6 @@ export const TokenResponse = z
   })
   .openapi("TokenResponse");
 
-export const AccessTokenResponse = z
-  .object({
-    data: z.object({
-      accessToken: z.string(),
-      expiresIn: z.number(),
-    }),
-  })
-  .openapi("AccessTokenResponse");
 
 export const JwksResponse = z
   .object({

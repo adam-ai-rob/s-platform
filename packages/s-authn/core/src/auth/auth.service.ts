@@ -5,6 +5,7 @@ import { authnRefreshTokensRepository } from "../refresh-tokens/refresh-tokens.r
 import {
   EmailAlreadyExistsError,
   InvalidCredentialsError,
+  InvalidTokenFormatError,
   PasswordExpiredError,
   RefreshTokenExpiredError,
   RefreshTokenInvalidError,
@@ -105,13 +106,27 @@ export async function login(params: {
 // ─── Refresh ──────────────────────────────────────────────────────────────────
 
 export async function refresh(params: {
-  userId: string; // from verified JWT payload (sub)
-  tokenId: string; // JTI (refresh token record id)
-  rawToken: string; // raw JWT string, verified against stored hash
-}): Promise<AccessTokenResponse> {
-  const stored = await authnRefreshTokensRepository.findById(params.tokenId);
+  rawToken: string;
+}): Promise<TokenResponse> {
+  const parts = params.rawToken.split(".");
+  if (parts.length !== 3) {
+    throw new InvalidTokenFormatError("Malformed token");
+  }
 
-  if (!stored || stored.userId !== params.userId || stored.revokedAt) {
+  let payload: { sub?: string; jti?: string };
+  try {
+    payload = JSON.parse(Buffer.from(parts[1] ?? "", "base64url").toString());
+  } catch (_err) {
+    throw new InvalidTokenFormatError("Malformed token payload");
+  }
+
+  if (!payload.sub || !payload.jti) {
+    throw new InvalidTokenFormatError("Missing sub or jti");
+  }
+
+  const stored = await authnRefreshTokensRepository.findById(payload.jti);
+
+  if (!stored || stored.userId !== payload.sub || stored.revokedAt) {
     throw new RefreshTokenInvalidError();
   }
 
@@ -122,18 +137,31 @@ export async function refresh(params: {
   const hashOk = await argon2Verify(stored.tokenHash, params.rawToken);
   if (!hashOk) throw new RefreshTokenInvalidError();
 
-  const user = await authnUsersRepository.findById(params.userId);
+  const user = await authnUsersRepository.findById(payload.sub);
   if (!user || !user.enabled) throw new UserDisabledError();
 
-  const accessToken = await issueAccessToken(params.userId);
+  // Rotation: revoke old, issue new pair
+  await authnRefreshTokensRepository.revoke(payload.jti);
+
+  const [accessToken, newRefresh] = await Promise.all([
+    issueAccessToken(payload.sub),
+    issueRefreshToken(payload.sub),
+  ]);
+  await persistRefreshToken(payload.sub, newRefresh);
 
   logger.info("🔒 refresh", {
     action: "refresh",
     success: true,
-    userId: params.userId,
+    userId: payload.sub,
+    oldTokenId: payload.jti,
+    newTokenId: newRefresh.jti,
   });
 
-  return { accessToken, expiresIn: 3600 };
+  return {
+    accessToken,
+    refreshToken: newRefresh.token,
+    expiresIn: 3600,
+  };
 }
 
 // ─── Logout ───────────────────────────────────────────────────────────────────

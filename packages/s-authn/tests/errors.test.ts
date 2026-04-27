@@ -11,6 +11,7 @@ import {
   InvalidCredentialsError,
   PasswordExpiredError,
   RefreshTokenExpiredError,
+  InvalidTokenFormatError,
   RefreshTokenInvalidError,
   UserDisabledError,
   UserNotFoundError,
@@ -63,5 +64,12 @@ describe("s-authn errors", () => {
     expect(e.statusCode).toBe(404);
     expect(e.code).toBe("USER_NOT_FOUND");
     expect(e instanceof NotFoundError).toBe(true);
+  });
+
+  test("InvalidTokenFormatError → 401 INVALID_FORMAT", () => {
+    const e = new InvalidTokenFormatError();
+    expect(e.statusCode).toBe(401);
+    expect(e.code).toBe("INVALID_FORMAT");
+    expect(e instanceof UnauthorizedError).toBe(true);
   });
 });

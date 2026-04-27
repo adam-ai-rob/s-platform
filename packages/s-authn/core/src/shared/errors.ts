@@ -56,3 +56,10 @@ export class UserNotFoundError extends NotFoundError {
     super("User not found");
   }
 }
+
+export class InvalidTokenFormatError extends UnauthorizedError {
+  override readonly code = "INVALID_FORMAT";
+  constructor(message = "Malformed token") {
+    super(message);
+  }
+}

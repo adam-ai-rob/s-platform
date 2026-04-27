@@ -2,7 +2,6 @@ import { OpenAPIHono, createRoute } from "@hono/zod-openapi";
 import { login, refresh, register } from "@s-authn/core/auth/auth.service";
 import { getJwks } from "@s-authn/core/tokens/token.service";
 import {
-  AccessTokenResponse,
   JwksResponse,
   LoginBody,
   RefreshTokenBody,
@@ -73,7 +72,7 @@ auth.openapi(
     },
     responses: {
       200: {
-        content: { "application/json": { schema: AccessTokenResponse } },
+        content: { "application/json": { schema: TokenResponse } },
         description: "Token refreshed",
       },
       401: { description: "Refresh token invalid or expired" },
@@ -81,22 +80,7 @@ auth.openapi(
   }),
   async (c) => {
     const { refreshToken: rawToken } = c.req.valid("json");
-    const parts = rawToken.split(".");
-    if (parts.length !== 3) {
-      return c.json({ error: { code: "INVALID_FORMAT", message: "Malformed token" } }, 401);
-    }
-    const payload = JSON.parse(Buffer.from(parts[1] ?? "", "base64url").toString()) as {
-      sub?: string;
-      jti?: string;
-    };
-    if (!payload.sub || !payload.jti) {
-      return c.json({ error: { code: "INVALID_FORMAT", message: "Missing sub or jti" } }, 401);
-    }
-    const result = await refresh({
-      userId: payload.sub,
-      tokenId: payload.jti,
-      rawToken,
-    });
+    const result = await refresh({ rawToken });
     return c.json({ data: result }, 200);
   },
 );

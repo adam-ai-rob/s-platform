@@ -26,6 +26,7 @@ const app = createApi<AppEnv>({
     REFRESH_TOKEN_INVALID: "Refresh token not found or already revoked",
     REFRESH_TOKEN_EXPIRED: "Refresh token past its expiration",
     USER_NOT_FOUND: "No user exists with the given identifier",
+    INVALID_FORMAT: "Malformed token or missing claims",
   },
 });
 
