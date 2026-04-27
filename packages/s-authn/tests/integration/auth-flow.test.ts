@@ -131,13 +131,34 @@ describe("s-authn auth flow (integration)", () => {
     expect(badLogin.status).toBe(401);
 
     // 5. Refresh
-    const refreshRes = await invoke<{ data: { accessToken: string } }>(
+    const refreshRes = await invoke<{ data: { accessToken: string; refreshToken: string } }>(
       app,
       "/authn/auth/token/refresh",
       { method: "POST", body: { refreshToken } },
     );
     expect(refreshRes.status).toBe(200);
     expect(refreshRes.body.data.accessToken.split(".")).toHaveLength(3);
+    expect(refreshRes.body.data.refreshToken.split(".")).toHaveLength(3);
+
+    const refreshToken2 = refreshRes.body.data.refreshToken;
+    expect(refreshToken2).not.toEqual(refreshToken);
+
+    // 6. Refreshing with the old token again should fail
+    const refreshResOld = await invoke(app, "/authn/auth/token/refresh", {
+      method: "POST",
+      body: { refreshToken },
+    });
+    expect(refreshResOld.status).toBe(401);
+
+    // 7. Refreshing with the new token should succeed
+    const refreshRes2 = await invoke<{ data: { accessToken: string; refreshToken: string } }>(
+      app,
+      "/authn/auth/token/refresh",
+      { method: "POST", body: { refreshToken: refreshToken2 } },
+    );
+    expect(refreshRes2.status).toBe(200);
+    expect(refreshRes2.body.data.accessToken.split(".")).toHaveLength(3);
+    expect(refreshRes2.body.data.refreshToken.split(".")).toHaveLength(3);
   });
 });
 

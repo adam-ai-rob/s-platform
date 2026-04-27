@@ -64,24 +64,6 @@
         },
         "required": ["email", "password"]
       },
-      "AccessTokenResponse": {
-        "type": "object",
-        "properties": {
-          "data": {
-            "type": "object",
-            "properties": {
-              "accessToken": {
-                "type": "string"
-              },
-              "expiresIn": {
-                "type": "number"
-              }
-            },
-            "required": ["accessToken", "expiresIn"]
-          }
-        },
-        "required": ["data"]
-      },
       "RefreshTokenBody": {
         "type": "object",
         "properties": {
@@ -212,8 +194,8 @@
     "/authn/auth/token/refresh": {
       "post": {
         "tags": ["Auth"],
-        "summary": "Exchange refresh token for a new access token",
-        "description": "Accepts a refresh token and returns a new access token when the refresh token exists, belongs to the token subject, is not revoked, is not expired, and its hash matches the stored token record.",
+        "summary": "Rotate refresh token and return a new token pair",
+        "description": "Accepts a valid refresh token, revokes it, and returns a new access token and refresh token. The old refresh token cannot be reused after a successful rotation.",
         "requestBody": {
           "required": true,
           "content": {
@@ -226,11 +208,11 @@
         },
         "responses": {
           "200": {
-            "description": "Token refreshed",
+            "description": "New access and refresh token pair",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/AccessTokenResponse"
+                  "$ref": "#/components/schemas/TokenResponse"
                 }
               }
             }

@@ -108,7 +108,7 @@ export async function refresh(params: {
   userId: string; // from verified JWT payload (sub)
   tokenId: string; // JTI (refresh token record id)
   rawToken: string; // raw JWT string, verified against stored hash
-}): Promise<AccessTokenResponse> {
+}): Promise<TokenResponse> {
   const stored = await authnRefreshTokensRepository.findById(params.tokenId);
 
   if (!stored || stored.userId !== params.userId || stored.revokedAt) {
@@ -125,7 +125,33 @@ export async function refresh(params: {
   const user = await authnUsersRepository.findById(params.userId);
   if (!user || !user.enabled) throw new UserDisabledError();
 
-  const accessToken = await issueAccessToken(params.userId);
+  const [accessToken, newRefresh] = await Promise.all([
+    issueAccessToken(user.id),
+    issueRefreshToken(user.id),
+  ]);
+
+  const tokenHash = await argon2Hash(newRefresh.token);
+  const newEntity: AuthnRefreshToken = {
+    id: newRefresh.jti,
+    userId: user.id,
+    tokenHash,
+    createdAt: new Date().toISOString(),
+    expiresAt: newRefresh.expiresAt.toISOString(),
+    expiresAtEpoch: Math.floor(newRefresh.expiresAt.getTime() / 1000),
+  };
+
+  try {
+    await authnRefreshTokensRepository.rotate(params.tokenId, newEntity);
+  } catch (err: unknown) {
+    if (
+      err instanceof Error &&
+      (err.name === "TransactionCanceledException" ||
+        (err as { __type?: string }).__type?.includes("TransactionCanceledException") === true)
+    ) {
+      throw new RefreshTokenInvalidError();
+    }
+    throw err;
+  }
 
   logger.info("🔒 refresh", {
     action: "refresh",
@@ -133,7 +159,7 @@ export async function refresh(params: {
     userId: params.userId,
   });
 
-  return { accessToken, expiresIn: 3600 };
+  return { accessToken, refreshToken: newRefresh.token, expiresIn: 3600 };
 }
 
 // ─── Logout ───────────────────────────────────────────────────────────────────

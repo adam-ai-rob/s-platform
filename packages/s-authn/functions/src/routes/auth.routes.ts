@@ -2,7 +2,6 @@ import { OpenAPIHono, createRoute } from "@hono/zod-openapi";
 import { login, refresh, register } from "@s-authn/core/auth/auth.service";
 import { getJwks } from "@s-authn/core/tokens/token.service";
 import {
-  AccessTokenResponse,
   JwksResponse,
   LoginBody,
   RefreshTokenBody,
@@ -71,16 +70,16 @@ auth.openapi(
     method: "post",
     path: "/token/refresh",
     tags: ["Auth"],
-    summary: "Exchange refresh token for a new access token",
+    summary: "Rotate refresh token and return a new token pair",
     description:
-      "Accepts a refresh token and returns a new access token when the refresh token exists, belongs to the token subject, is not revoked, is not expired, and its hash matches the stored token record.",
+      "Accepts a valid refresh token, revokes it, and returns a new access token and refresh token. The old refresh token cannot be reused after a successful rotation.",
     request: {
       body: { content: { "application/json": { schema: RefreshTokenBody } }, required: true },
     },
     responses: {
       200: {
-        content: { "application/json": { schema: AccessTokenResponse } },
-        description: "Token refreshed",
+        content: { "application/json": { schema: TokenResponse } },
+        description: "New access and refresh token pair",
       },
       401: { description: "Refresh token invalid or expired" },
     },
