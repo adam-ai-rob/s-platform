@@ -46,11 +46,19 @@ export function __resetJwksForTests(): void {
   jwks = null;
 }
 
-export async function verifyAccessToken(token: string): Promise<AccessTokenPayload> {
+export interface VerifyOptions {
+  issuer: string;
+  audience: string;
+}
+
+export async function verifyAccessToken(
+  token: string,
+  options: VerifyOptions,
+): Promise<AccessTokenPayload> {
   try {
     const { payload } = await jwtVerify(token, getJwks(), {
-      issuer: process.env.JWT_ISSUER ?? "s-authn",
-      audience: process.env.JWT_AUDIENCE ?? "s-platform",
+      issuer: options.issuer,
+      audience: options.audience,
     });
 
     if (!payload.sub) {

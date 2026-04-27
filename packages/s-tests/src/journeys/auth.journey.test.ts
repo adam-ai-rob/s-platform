@@ -164,15 +164,17 @@ describe("auth journey", () => {
     client.setToken(accessToken);
   });
 
-  test("[8] refresh → new access token", async () => {
+  test("[8] refresh → new token pair", async () => {
     // Keep the old client token briefly aside; refresh endpoint is
     // public but takes the token in the body.
     const res = await client.request<{
-      data: { accessToken: string; expiresIn: number };
+      data: { accessToken: string; refreshToken: string; expiresIn: number };
     }>("POST", "/authn/auth/token/refresh", {
       body: { refreshToken },
     });
     expect(res.data.accessToken).toBeDefined();
+    expect(res.data.refreshToken).toBeDefined();
+    expect(res.data.refreshToken).not.toBe(refreshToken);
     expect(res.data.expiresIn).toBe(3600);
   });
 

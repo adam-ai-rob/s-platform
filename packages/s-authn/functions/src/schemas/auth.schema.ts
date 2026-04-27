@@ -41,6 +41,7 @@ export const AccessTokenResponse = z
   .object({
     data: z.object({
       accessToken: z.string(),
+      refreshToken: z.string(),
       expiresIn: z.number(),
     }),
   })

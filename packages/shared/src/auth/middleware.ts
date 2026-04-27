@@ -49,7 +49,14 @@ export function authMiddleware(): MiddlewareHandler<AuthEnv> {
       return;
     }
 
-    const payload = await verifyAccessToken(token);
+    const issuer = process.env.JWT_ISSUER;
+    const audience = process.env.JWT_AUDIENCE;
+
+    if (!issuer || !audience) {
+      throw new Error("JWT_ISSUER or JWT_AUDIENCE env var not set");
+    }
+
+    const payload = await verifyAccessToken(token, { issuer, audience });
 
     // Load permissions from AuthzView (owned by s-authz).
     // System tokens bypass the lookup — they carry their own authority.

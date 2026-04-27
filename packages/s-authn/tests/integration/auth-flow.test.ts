@@ -131,13 +131,23 @@ describe("s-authn auth flow (integration)", () => {
     expect(badLogin.status).toBe(401);
 
     // 5. Refresh
-    const refreshRes = await invoke<{ data: { accessToken: string } }>(
-      app,
-      "/authn/auth/token/refresh",
-      { method: "POST", body: { refreshToken } },
-    );
+    const refreshRes = await invoke<{
+      data: { accessToken: string; refreshToken: string };
+    }>(app, "/authn/auth/token/refresh", {
+      method: "POST",
+      body: { refreshToken },
+    });
     expect(refreshRes.status).toBe(200);
     expect(refreshRes.body.data.accessToken.split(".")).toHaveLength(3);
+    expect(refreshRes.body.data.refreshToken.split(".")).toHaveLength(3);
+    expect(refreshRes.body.data.refreshToken).not.toBe(refreshToken);
+
+    // 6. Old refresh token should now be invalid (rotated out)
+    const secondRefreshRes = await invoke(app, "/authn/auth/token/refresh", {
+      method: "POST",
+      body: { refreshToken },
+    });
+    expect(secondRefreshRes.status).toBe(401);
   });
 });
 
