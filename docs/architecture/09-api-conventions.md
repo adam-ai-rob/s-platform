@@ -365,6 +365,22 @@ admin.openapi(createBuildingRoute, async (c) => {
 });
 ```
 
+### Client-facing route documentation
+
+OpenAPI summaries, descriptions, response descriptions, README endpoint tables, and Postman collection text are client-facing documentation. Write them for an API consumer who does not know this repository's implementation.
+
+Document the API contract:
+
+- HTTP method and contracted path.
+- Required auth and permissions.
+- Required headers, path parameters, query parameters, and request body.
+- Response envelope and important status codes.
+- Side effects and domain semantics, including whether hidden resources return `404` instead of `403`.
+
+Do not document internal routing, storage, framework, or transport details in client-facing text. In particular, AIP-136 custom actions are documented only by their contracted `:verb` path, such as `POST /building/admin/buildings/{id}:archive`. Internal `/_actions/{verb}` route segments are a Hono transport workaround; keep those details in code comments or contributor docs, not in OpenAPI descriptions, Postman descriptions, or API-user README sections.
+
+Avoid ambiguous wording like "public URL" for authenticated endpoints. Prefer "endpoint", "client-facing endpoint", "contract path", or "documented path". Describe exact behavior: "Revokes the caller's refresh token identified by `X-Refresh-JTI`" is clearer than "Logs out" when the endpoint only revokes one refresh token.
+
 ### Route split
 
 Each module mounts exactly two audience sub-routers:

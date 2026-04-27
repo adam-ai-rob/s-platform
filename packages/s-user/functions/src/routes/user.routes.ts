@@ -22,8 +22,11 @@ user.openapi(
     tags: ["User"],
     security: [{ Bearer: [] }],
     summary: "Get the caller's profile",
+    description:
+      "Returns the authenticated caller's own profile. The profile is created asynchronously from the `user.registered` event; callers may receive 404 before provisioning has completed.",
     responses: {
       200: { content: { "application/json": { schema: ProfileResponse } }, description: "Profile" },
+      401: { description: "Missing or invalid bearer token" },
       404: { description: "Profile not yet provisioned" },
     },
   }),
@@ -41,6 +44,8 @@ user.openapi(
     tags: ["User"],
     security: [{ Bearer: [] }],
     summary: "Update the caller's profile (partial)",
+    description:
+      "Partially updates the authenticated caller's own profile fields and returns the updated profile in a `{ data }` envelope.",
     request: {
       body: { content: { "application/json": { schema: UpdateProfileBody } }, required: true },
     },
@@ -49,6 +54,7 @@ user.openapi(
         content: { "application/json": { schema: ProfileResponse } },
         description: "Updated profile",
       },
+      401: { description: "Missing or invalid bearer token" },
       404: { description: "Profile not found" },
     },
   }),

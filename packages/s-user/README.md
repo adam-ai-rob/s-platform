@@ -39,13 +39,17 @@ Access matrix enforced by this module's route layer:
 
 User audience (`/user/user/*`):
 
-- `GET /user/user/users/me` — caller's own profile
-- `PATCH /user/user/users/me` — update caller's own profile
+| Endpoint | Auth | Description |
+|---|---|---|
+| `GET /user/user/users/me` | bearer token | Returns `{ data: profile }` for the authenticated caller. Returns `404` if profile provisioning from `user.registered` has not completed yet. |
+| `PATCH /user/user/users/me` | bearer token | Partially updates the caller's profile and returns `{ data: profile }`. Returns `404` if the profile does not exist. |
 
 Admin audience (`/user/admin/*`):
 
-- `GET /user/admin/users` — Typesense-backed list (requires `user_superadmin`)
-- `GET /user/admin/users/{id}` — read any profile (requires `user_superadmin`)
+| Endpoint | Auth | Description |
+|---|---|---|
+| `GET /user/admin/users` | `user_superadmin` | Typesense-backed list over profiles. Supports `q`, `filter_by`, `sort_by`, `page`, `per_page`, and `cursor`; returns `{ data, meta }`. |
+| `GET /user/admin/users/{id}` | `user_superadmin` | Returns `{ data: profile }` for any user id, or `404` if the profile does not exist. |
 
 Plus `/user/health`, `/info`, `/openapi.json`, `/docs`.
 

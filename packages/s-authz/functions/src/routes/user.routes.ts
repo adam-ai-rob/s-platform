@@ -16,11 +16,14 @@ user.openapi(
     tags: ["Authz"],
     security: [{ Bearer: [] }],
     summary: "Get the caller's effective permissions",
+    description:
+      "Returns the authenticated caller's materialized permission view. Permissions may include scoped `value` arrays for resource-scoped roles.",
     responses: {
       200: {
         content: { "application/json": { schema: PermissionsResponse } },
         description: "Permissions",
       },
+      401: { description: "Missing or invalid bearer token" },
     },
   }),
   async (c) => {

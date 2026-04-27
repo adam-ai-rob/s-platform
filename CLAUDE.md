@@ -59,6 +59,7 @@ Every new endpoint MUST follow [`docs/architecture/09-api-conventions.md`](./doc
 - **Lists:** Typesense passthrough — `q`, `filter_by`, `sort_by`, `facet_by`, `page`, `per_page` (≤100), optional `cursor`. Fields whitelisted server-side.
 - **Envelope:** single → `{ data }`; list → `{ data, meta: { page, perPage, found, outOf, searchTimeMs, nextCursor?, facets? } }`; errors → `{ error: { code, message, details? } }` in 4xx/5xx only. **Errors never travel with `data`.**
 - **JSON:** camelCase, ISO 8601 UTC timestamps paired with `*Ms` int64 epochs for Typesense sort. No URL versioning (`/v1/…` forbidden).
+- **Docs:** OpenAPI, Postman, and README endpoint text are client-facing contract docs. Do not mention internal transport workarounds such as `/_actions/`; document AIP-136 actions only as their contracted `:verb` endpoints and avoid ambiguous "public URL" wording on authenticated routes.
 
 Existing non-conforming endpoints (s-user singular paths, list `metadata` envelope) are tracked for retrofit in [#73](https://github.com/adam-ai-rob/s-platform/issues/73). New code MUST NOT copy them.
 

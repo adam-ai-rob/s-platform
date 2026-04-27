@@ -249,6 +249,12 @@
                 }
               }
             }
+          },
+          "401": {
+            "description": "Missing or invalid bearer token"
+          },
+          "403": {
+            "description": "Missing user_superadmin permission"
           }
         }
       }
@@ -262,6 +268,7 @@
           }
         ],
         "summary": "Get any user's profile",
+        "description": "Returns one user profile by id. Requires `user_superadmin`; callers without that permission receive 403 before the profile is read.",
         "parameters": [
           {
             "schema": {
@@ -284,6 +291,12 @@
               }
             }
           },
+          "401": {
+            "description": "Missing or invalid bearer token"
+          },
+          "403": {
+            "description": "Missing user_superadmin permission"
+          },
           "404": {
             "description": "Profile not found"
           }
@@ -299,6 +312,7 @@
           }
         ],
         "summary": "Get the caller's profile",
+        "description": "Returns the authenticated caller's own profile. The profile is created asynchronously from the `user.registered` event; callers may receive 404 before provisioning has completed.",
         "responses": {
           "200": {
             "description": "Profile",
@@ -309,6 +323,9 @@
                 }
               }
             }
+          },
+          "401": {
+            "description": "Missing or invalid bearer token"
           },
           "404": {
             "description": "Profile not yet provisioned"
@@ -323,6 +340,7 @@
           }
         ],
         "summary": "Update the caller's profile (partial)",
+        "description": "Partially updates the authenticated caller's own profile fields and returns the updated profile in a `{ data }` envelope.",
         "requestBody": {
           "required": true,
           "content": {
@@ -343,6 +361,9 @@
                 }
               }
             }
+          },
+          "401": {
+            "description": "Missing or invalid bearer token"
           },
           "404": {
             "description": "Profile not found"
