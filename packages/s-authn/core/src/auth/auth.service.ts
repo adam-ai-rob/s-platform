@@ -115,7 +115,11 @@ export async function refresh(params: {
 
   let payload: { sub?: string; jti?: string };
   try {
-    payload = JSON.parse(Buffer.from(parts[1] ?? "", "base64url").toString());
+    const rawPayload = JSON.parse(Buffer.from(parts[1] ?? "", "base64url").toString());
+    if (!rawPayload || typeof rawPayload !== "object") {
+      throw new Error("Payload is not an object");
+    }
+    payload = rawPayload;
   } catch (_err) {
     throw new InvalidTokenFormatError("Malformed token payload");
   }

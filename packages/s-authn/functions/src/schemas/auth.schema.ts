@@ -37,7 +37,6 @@ export const TokenResponse = z
   })
   .openapi("TokenResponse");
 
-
 export const JwksResponse = z
   .object({
     keys: z.array(

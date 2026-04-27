@@ -9,9 +9,9 @@ import {
 import {
   EmailAlreadyExistsError,
   InvalidCredentialsError,
+  InvalidTokenFormatError,
   PasswordExpiredError,
   RefreshTokenExpiredError,
-  InvalidTokenFormatError,
   RefreshTokenInvalidError,
   UserDisabledError,
   UserNotFoundError,
