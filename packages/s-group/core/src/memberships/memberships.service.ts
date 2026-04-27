@@ -51,7 +51,15 @@ export async function removeUserFromGroup(params: {
 }
 
 export async function listGroupsForUser(userId: string): Promise<GroupUser[]> {
-  const { items } = await groupUsersRepository.listByUser(userId);
+  const { items, nextToken } = await groupUsersRepository.listByUser(userId);
+
+  if (nextToken) {
+    logger.warn("⚠️ User has too many group memberships; list is truncated", {
+      userId,
+      limit: items.length,
+    });
+  }
+
   return items;
 }
 

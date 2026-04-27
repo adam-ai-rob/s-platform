@@ -81,6 +81,14 @@ export async function unassignRoleFromUser(params: {
 }
 
 export async function listRolesForUser(userId: string): Promise<string[]> {
-  const { items } = await authzUserRolesRepository.listByUser(userId);
+  const { items, nextToken } = await authzUserRolesRepository.listByUser(userId);
+
+  if (nextToken) {
+    logger.warn("⚠️ User has too many role assignments; list is truncated", {
+      userId,
+      limit: items.length,
+    });
+  }
+
   return items.map((e) => e.roleId);
 }

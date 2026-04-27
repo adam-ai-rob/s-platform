@@ -73,11 +73,14 @@
               "accessToken": {
                 "type": "string"
               },
+              "refreshToken": {
+                "type": "string"
+              },
               "expiresIn": {
                 "type": "number"
               }
             },
-            "required": ["accessToken", "expiresIn"]
+            "required": ["accessToken", "refreshToken", "expiresIn"]
           }
         },
         "required": ["data"]
