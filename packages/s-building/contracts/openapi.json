@@ -526,6 +526,9 @@
           "400": {
             "description": "Validation error"
           },
+          "401": {
+            "description": "Missing or invalid bearer token"
+          },
           "403": {
             "description": "Missing permission"
           }
@@ -613,6 +616,9 @@
                 }
               }
             }
+          },
+          "401": {
+            "description": "Missing or invalid bearer token"
           }
         }
       }
@@ -626,6 +632,7 @@
           }
         ],
         "summary": "Get a building",
+        "description": "Returns one building by id for callers with `building_superadmin`, scoped `building_admin`, or scoped `building_manager`. Admin callers outside the building scope receive 403; missing buildings return 404.",
         "parameters": [
           {
             "schema": {
@@ -647,6 +654,9 @@
                 }
               }
             }
+          },
+          "401": {
+            "description": "Missing or invalid bearer token"
           },
           "403": {
             "description": "Not in caller's scope"
@@ -700,6 +710,9 @@
           "400": {
             "description": "Validation error"
           },
+          "401": {
+            "description": "Missing or invalid bearer token"
+          },
           "403": {
             "description": "Not in caller's scope"
           },
@@ -716,7 +729,7 @@
           }
         ],
         "summary": "Delete a building",
-        "description": "Hard delete. Manager → 403; only superadmin or scoped admin can delete.",
+        "description": "Hard-deletes a building. Requires `building_superadmin` or scoped `building_admin`; scoped managers and users receive 403.",
         "parameters": [
           {
             "schema": {
@@ -731,6 +744,9 @@
         "responses": {
           "204": {
             "description": "Deleted"
+          },
+          "401": {
+            "description": "Missing or invalid bearer token"
           },
           "403": {
             "description": "Not in caller's scope"
@@ -750,7 +766,7 @@
           }
         ],
         "summary": "Archive a building (active → archived)",
-        "description": "Public URL: `POST /building/admin/buildings/{id}:archive`. The `_actions/` segment is a transport workaround — see the module's api.ts for the rewrite.",
+        "description": "Transitions an active building to `archived`. Requires `building_superadmin` or scoped `building_admin`; scoped managers can read and update but cannot archive. Returns 409 when the building is not in a status that can be archived.",
         "parameters": [
           {
             "schema": {
@@ -772,6 +788,9 @@
                 }
               }
             }
+          },
+          "401": {
+            "description": "Missing or invalid bearer token"
           },
           "403": {
             "description": "Not in caller's scope (manager can read/update but not archive)"
@@ -794,7 +813,7 @@
           }
         ],
         "summary": "Activate a building (draft/archived → active)",
-        "description": "Public URL: `POST /building/admin/buildings/{id}:activate`. See `:archive` note about the `_actions/` workaround.",
+        "description": "Transitions a draft or archived building to `active`. Requires `building_superadmin` or scoped `building_admin`. Returns 409 when the building is not in a status that can be activated.",
         "parameters": [
           {
             "schema": {
@@ -816,6 +835,9 @@
                 }
               }
             }
+          },
+          "401": {
+            "description": "Missing or invalid bearer token"
           },
           "403": {
             "description": "Not in caller's scope"
@@ -912,6 +934,9 @@
                 }
               }
             }
+          },
+          "401": {
+            "description": "Missing or invalid bearer token"
           }
         }
       }
@@ -947,6 +972,9 @@
                 }
               }
             }
+          },
+          "401": {
+            "description": "Missing or invalid bearer token"
           },
           "404": {
             "description": "Not found, or not visible to the caller"

@@ -146,6 +146,7 @@
       "post": {
         "tags": ["Auth"],
         "summary": "Register a new user",
+        "description": "Creates a new enabled user identity from an email and password, then returns an access token and refresh token. No bearer token is required. Returns 409 when the email is already registered.",
         "requestBody": {
           "required": true,
           "content": {
@@ -177,6 +178,7 @@
       "post": {
         "tags": ["Auth"],
         "summary": "Log in with email and password",
+        "description": "Authenticates an existing enabled user with email and password, then returns an access token and refresh token. No bearer token is required.",
         "requestBody": {
           "required": true,
           "content": {
@@ -211,6 +213,7 @@
       "post": {
         "tags": ["Auth"],
         "summary": "Exchange refresh token for a new access token",
+        "description": "Accepts a refresh token and returns a new access token when the refresh token exists, belongs to the token subject, is not revoked, is not expired, and its hash matches the stored token record.",
         "requestBody": {
           "required": true,
           "content": {
@@ -241,7 +244,8 @@
     "/authn/auth/jwks": {
       "get": {
         "tags": ["Auth"],
-        "summary": "Public JWKS for verifying JWTs issued by this service",
+        "summary": "JWKS for verifying JWTs issued by this service",
+        "description": "Returns the JSON Web Key Set used by clients and platform services to verify JWTs issued by s-authn. Publicly reachable; no authentication is required.",
         "responses": {
           "200": {
             "description": "JWKS",
@@ -260,7 +264,7 @@
       "post": {
         "tags": ["User"],
         "summary": "Revoke the caller's refresh token",
-        "description": "Public URL: `POST /authn/user/sessions:revoke`. The `_actions/` segment is a transport workaround — see `api.ts` for the rewrite.",
+        "description": "Revokes the caller's refresh token identified by the `X-Refresh-JTI` header. Requires a valid bearer access token. Returns 204 when the token record has been marked revoked.",
         "security": [
           {
             "Bearer": []
@@ -268,10 +272,13 @@
         ],
         "responses": {
           "204": {
-            "description": "Logged out"
+            "description": "Refresh token revoked"
           },
           "400": {
             "description": "Missing X-Refresh-JTI header"
+          },
+          "401": {
+            "description": "Missing or invalid bearer token"
           }
         }
       }
@@ -280,6 +287,7 @@
       "patch": {
         "tags": ["User"],
         "summary": "Change the caller's password",
+        "description": "Changes the authenticated caller's password after verifying `currentPassword`. The request body supplies both the current password and the replacement password.",
         "security": [
           {
             "Bearer": []

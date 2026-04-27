@@ -150,6 +150,7 @@
           }
         ],
         "summary": "List caller's group memberships",
+        "description": "Returns the authenticated caller's active group memberships in a `{ data }` envelope.",
         "responses": {
           "200": {
             "description": "Memberships",
@@ -160,6 +161,9 @@
                 }
               }
             }
+          },
+          "401": {
+            "description": "Missing or invalid bearer token"
           }
         }
       }
@@ -173,6 +177,7 @@
           }
         ],
         "summary": "Create a group",
+        "description": "Creates a group with a unique name and optional domain-matching configuration. Requires a bearer token with `group_admin`.",
         "requestBody": {
           "required": true,
           "content": {
@@ -194,6 +199,12 @@
               }
             }
           },
+          "401": {
+            "description": "Missing or invalid bearer token"
+          },
+          "403": {
+            "description": "Missing group_admin permission"
+          },
           "409": {
             "description": "Name exists"
           }
@@ -209,6 +220,7 @@
           }
         ],
         "summary": "Get a group",
+        "description": "Returns one group by id. Requires a bearer token with `group_admin`.",
         "parameters": [
           {
             "schema": {
@@ -230,6 +242,12 @@
               }
             }
           },
+          "401": {
+            "description": "Missing or invalid bearer token"
+          },
+          "403": {
+            "description": "Missing group_admin permission"
+          },
           "404": {
             "description": "Not found"
           }
@@ -243,6 +261,7 @@
           }
         ],
         "summary": "Delete a group",
+        "description": "Deletes a group by id. Requires a bearer token with `group_admin`; returns 404 when the group does not exist.",
         "parameters": [
           {
             "schema": {
@@ -256,6 +275,12 @@
         "responses": {
           "204": {
             "description": "Deleted"
+          },
+          "401": {
+            "description": "Missing or invalid bearer token"
+          },
+          "403": {
+            "description": "Missing group_admin permission"
           },
           "404": {
             "description": "Not found"
@@ -272,6 +297,7 @@
           }
         ],
         "summary": "Add a user to a group (rel: manual)",
+        "description": "Creates a manual membership between the group and user. Requires `group_admin`; returns 409 if the manual membership already exists.",
         "parameters": [
           {
             "schema": {
@@ -294,6 +320,12 @@
           "204": {
             "description": "Added"
           },
+          "401": {
+            "description": "Missing or invalid bearer token"
+          },
+          "403": {
+            "description": "Missing group_admin permission"
+          },
           "404": {
             "description": "Group not found"
           },
@@ -310,6 +342,7 @@
           }
         ],
         "summary": "Remove a user from a group (rel: manual)",
+        "description": "Removes an existing manual membership between the group and user. Requires `group_admin`; returns 404 when the membership does not exist.",
         "parameters": [
           {
             "schema": {
@@ -331,6 +364,12 @@
         "responses": {
           "204": {
             "description": "Removed"
+          },
+          "401": {
+            "description": "Missing or invalid bearer token"
+          },
+          "403": {
+            "description": "Missing group_admin permission"
           },
           "404": {
             "description": "Membership not found"

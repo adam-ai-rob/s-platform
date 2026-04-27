@@ -48,6 +48,7 @@ user.openapi(
         content: { "application/json": { schema: BuildingListResponse } },
         description: "List results",
       },
+      401: { description: "Missing or invalid bearer token" },
     },
   }),
   async (c) => {
@@ -164,6 +165,7 @@ user.openapi(
     request: { params: BuildingIdParam },
     responses: {
       200: { content: { "application/json": { schema: BuildingResponse } }, description: "Ok" },
+      401: { description: "Missing or invalid bearer token" },
       404: { description: "Not found, or not visible to the caller" },
     },
   }),

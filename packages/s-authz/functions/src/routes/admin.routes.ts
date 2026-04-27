@@ -23,11 +23,15 @@ admin.openapi(
     tags: ["Authz Admin"],
     security: [{ Bearer: [] }],
     summary: "Create a role",
+    description:
+      "Creates an authorization role from a unique name and permission templates. Requires a bearer token with `authz_admin`.",
     request: {
       body: { content: { "application/json": { schema: CreateRoleBody } }, required: true },
     },
     responses: {
       201: { content: { "application/json": { schema: RoleResponse } }, description: "Created" },
+      401: { description: "Missing or invalid bearer token" },
+      403: { description: "Missing authz_admin permission" },
       409: { description: "Role name already exists" },
     },
   }),
@@ -46,9 +50,12 @@ admin.openapi(
     tags: ["Authz Admin"],
     security: [{ Bearer: [] }],
     summary: "Get a role",
+    description: "Returns one role by id. Requires a bearer token with `authz_admin`.",
     request: { params: z.object({ id: z.string() }) },
     responses: {
       200: { content: { "application/json": { schema: RoleResponse } }, description: "Role" },
+      401: { description: "Missing or invalid bearer token" },
+      403: { description: "Missing authz_admin permission" },
       404: { description: "Not found" },
     },
   }),
@@ -67,9 +74,13 @@ admin.openapi(
     tags: ["Authz Admin"],
     security: [{ Bearer: [] }],
     summary: "Delete a role",
+    description:
+      "Deletes a non-system role by id. Requires a bearer token with `authz_admin`; system roles cannot be deleted and return 409.",
     request: { params: z.object({ id: z.string() }) },
     responses: {
       204: { description: "Deleted" },
+      401: { description: "Missing or invalid bearer token" },
+      403: { description: "Missing authz_admin permission" },
       404: { description: "Not found" },
       409: { description: "System roles cannot be deleted" },
     },
@@ -90,7 +101,7 @@ admin.openapi(
     security: [{ Bearer: [] }],
     summary: "Assign a role to a user (optionally with a scope value)",
     description:
-      "Assigns `roleId` to `userId`. The optional `value` array is the per-assignment scope for scope-requiring permissions (e.g. building UUIDs for the `building-admin` role). Idempotent: re-assigning the same role unions the incoming `value` with any existing scope on the row — no 409.",
+      "Assigns `roleId` to `userId`. The optional `value` array is the per-assignment scope for scope-requiring permissions (for example building ids for the `building-admin` role). Idempotent: re-assigning the same role unions the incoming `value` with any existing scope on the row — no 409.",
     request: {
       params: z.object({ userId: z.string(), roleId: z.string() }),
       body: {
@@ -100,6 +111,8 @@ admin.openapi(
     },
     responses: {
       204: { description: "Assigned (or scope extended)" },
+      401: { description: "Missing or invalid bearer token" },
+      403: { description: "Missing authz_admin permission" },
       404: { description: "Role not found" },
     },
   }),
@@ -128,11 +141,15 @@ admin.openapi(
     tags: ["Authz Admin"],
     security: [{ Bearer: [] }],
     summary: "Unassign a role from a user",
+    description:
+      "Removes the role assignment for `userId` and `roleId`. Requires a bearer token with `authz_admin`; returns 404 when the assignment does not exist.",
     request: {
       params: z.object({ userId: z.string(), roleId: z.string() }),
     },
     responses: {
       204: { description: "Unassigned" },
+      401: { description: "Missing or invalid bearer token" },
+      403: { description: "Missing authz_admin permission" },
       404: { description: "Assignment not found" },
     },
   }),
