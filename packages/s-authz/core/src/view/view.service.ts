@@ -64,10 +64,14 @@ export async function rebuildViewForUser(userId: string): Promise<Permission[]> 
 export async function resolvePermissionsForAssignments(
   assignments: AuthzUserRole[],
 ): Promise<Permission[]> {
+  const roleIds = Array.from(new Set(assignments.map((a) => a.roleId)));
+  const roles = await authzRolesRepository.batchGetByIds(roleIds);
+  const rolesById = new Map(roles.map((r) => [r.id, r]));
+
   const byId = new Map<string, Permission>();
 
   for (const assignment of assignments) {
-    const role = await authzRolesRepository.findById(assignment.roleId);
+    const role = rolesById.get(assignment.roleId);
     if (!role) continue;
 
     for (const templatePerm of role.permissions) {

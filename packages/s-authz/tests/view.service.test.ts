@@ -18,17 +18,25 @@ const { resolvePermissionsForAssignments } = viewService;
 const originalFindById = rolesModule.authzRolesRepository.findById.bind(
   rolesModule.authzRolesRepository,
 );
+const originalBatchGetByIds = rolesModule.authzRolesRepository.batchGetByIds.bind(
+  rolesModule.authzRolesRepository,
+);
 
 function stubRoles(roles: AuthzRole[]): void {
   const byId = new Map(roles.map((r) => [r.id, r]));
   // biome-ignore lint/suspicious/noExplicitAny: test-local stub
   (rolesModule.authzRolesRepository as any).findById = async (id: string) =>
     byId.get(id) ?? undefined;
+  // biome-ignore lint/suspicious/noExplicitAny: test-local stub
+  (rolesModule.authzRolesRepository as any).batchGetByIds = async (ids: string[]) =>
+    ids.map((id) => byId.get(id)).filter((r): r is AuthzRole => !!r);
 }
 
 function restoreRoles(): void {
   // biome-ignore lint/suspicious/noExplicitAny: test-local stub
   (rolesModule.authzRolesRepository as any).findById = originalFindById;
+  // biome-ignore lint/suspicious/noExplicitAny: test-local stub
+  (rolesModule.authzRolesRepository as any).batchGetByIds = originalBatchGetByIds;
 }
 
 function role(
@@ -240,6 +248,33 @@ describe("resolvePermissionsForAssignments", () => {
       for (const p of result) {
         expect(p.value).toEqual(["scope-1"]);
       }
+    } finally {
+      restoreRoles();
+    }
+  });
+
+  test("multiple assignments to different roles are batch-fetched", async () => {
+    let callCount = 0;
+    const byId = new Map([
+      ["r1", role({ id: "r1", permissions: [{ id: "p1" }] })],
+      ["r2", role({ id: "r2", permissions: [{ id: "p2" }] })],
+    ]);
+
+    // biome-ignore lint/suspicious/noExplicitAny: test-local stub
+    (rolesModule.authzRolesRepository as any).batchGetByIds = async (ids: string[]) => {
+      callCount++;
+      return ids.map((id) => byId.get(id)).filter((r): r is AuthzRole => !!r);
+    };
+
+    try {
+      const result = await resolvePermissionsForAssignments([
+        assignment({ roleId: "r1" }),
+        assignment({ roleId: "r2" }),
+        assignment({ roleId: "r1" }), // duplicate roleId in assignments
+      ]);
+
+      expect(result).toHaveLength(2);
+      expect(callCount).toBe(1); // Should only call batchGetByIds once
     } finally {
       restoreRoles();
     }

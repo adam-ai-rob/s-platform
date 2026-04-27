@@ -1,4 +1,5 @@
 import {
+  BatchGetCommand,
   DeleteCommand,
   GetCommand,
   PutCommand,
@@ -79,6 +80,48 @@ export abstract class BaseRepository<TEntity, TKeys extends Record<string, strin
     );
 
     return res.Item as TEntity | undefined;
+  }
+
+  /**
+   * Batch get items by their partition keys.
+   * Handles the 100-item limit per BatchGetItem request.
+   * Returns items in no particular order.
+   */
+  async batchGet(partitionKeys: string[]): Promise<TEntity[]> {
+    if (partitionKeys.length === 0) return [];
+
+    const uniqueKeys = Array.from(new Set(partitionKeys));
+    const results: TEntity[] = [];
+
+    // DynamoDB BatchGetItem has a limit of 100 items per request
+    for (let i = 0; i < uniqueKeys.length; i += 100) {
+      const chunk = uniqueKeys.slice(i, i + 100);
+      let unprocessedKeys = {
+        [this.tableName]: {
+          Keys: chunk.map((pk) => ({ [this.partitionKey]: pk })),
+        },
+      };
+
+      while (
+        unprocessedKeys[this.tableName] &&
+        unprocessedKeys[this.tableName].Keys &&
+        unprocessedKeys[this.tableName].Keys.length > 0
+      ) {
+        const res = await getDdbClient().send(
+          new BatchGetCommand({
+            RequestItems: unprocessedKeys,
+          }),
+        );
+
+        if (res.Responses?.[this.tableName]) {
+          results.push(...(res.Responses[this.tableName] as TEntity[]));
+        }
+
+        unprocessedKeys = (res.UnprocessedKeys ?? {}) as typeof unprocessedKeys;
+      }
+    }
+
+    return results;
   }
 
   /**

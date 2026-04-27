@@ -19,6 +19,10 @@ class AuthzRolesRepository extends BaseRepository<AuthzRole, AuthzRoleKeys> {
     return this.get(id);
   }
 
+  async batchGetByIds(ids: string[]): Promise<AuthzRole[]> {
+    return this.batchGet(ids);
+  }
+
   async findByName(name: string): Promise<AuthzRole | undefined> {
     const { items } = await this.queryByIndex("ByName", "name", name, { limit: 1 });
     return items[0];
