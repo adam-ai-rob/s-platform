@@ -46,14 +46,20 @@ describe("user search journey", () => {
   });
 
   test("[0] register → grant user_superadmin → re-login", async () => {
-    const reg = await client.request<{
-      data: { accessToken: string; refreshToken: string };
-    }>("POST", "/authn/auth/register", {
+    // Since #121, register returns 201 with no body — login is required to
+    // obtain tokens.
+    const registerRes = await client.request("POST", "/authn/auth/register", {
       body: { email, password },
     });
-    expect(reg.data.accessToken).toBeDefined();
+    expect(registerRes).toBeNull();
+
+    const initialLogin = await client.request<{
+      data: { accessToken: string };
+    }>("POST", "/authn/auth/login", { body: { email, password } });
+    expect(initialLogin.data.accessToken).toBeDefined();
+
     // Extract userId from JWT sub so we can seed permissions for it.
-    const payloadB64 = reg.data.accessToken.split(".")[1];
+    const payloadB64 = initialLogin.data.accessToken.split(".")[1];
     const payload = JSON.parse(Buffer.from(payloadB64, "base64url").toString("utf8")) as {
       sub: string;
     };
