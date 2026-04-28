@@ -86,13 +86,14 @@ admin.openapi(
     security: [{ Bearer: [] }],
     summary: "List buildings",
     description:
-      "Typesense-backed list. Superadmin sees every building; scoped admin/manager callers see only buildings in their assignment's `value[]`. A scoped caller with an empty scope gets a 200 with an empty data array (no 403).",
+      "Typesense-backed list. Superadmin sees every building and may use the full whitelisted Typesense filter DSL. Scoped admin/manager callers see only buildings in their assignment's `value[]`; their `filter_by` may only further narrow results with whitelisted simple clauses joined by `&&`. A scoped caller with an empty scope gets a 200 with an empty data array (no 403).",
     request: { query: ListQuery },
     responses: {
       200: {
         content: { "application/json": { schema: BuildingListResponse } },
         description: "List results",
       },
+      400: { description: "Validation error" },
       401: { description: "Missing or invalid bearer token" },
     },
   }),
@@ -105,17 +106,7 @@ admin.openapi(
 
     let filterBy = qp.filter_by;
     if (!isSuper) {
-      // Non-superadmin callers cannot use OR/parens/pipes in `filter_by`
-      // — those can craft a top-level OR that escapes the scope filter
-      // (e.g. `id:=[foo]) || (status:=active` would let a scoped caller
-      // read every active building). We keep the DSL restricted to
-      // simple `field:op value` chains joined by `&&`. Superadmin keeps
-      // the full DSL because there is no scope gate to escape.
-      if (filterBy && /[()|]/.test(filterBy)) {
-        throw new ValidationError(
-          "filter_by cannot contain `(`, `)` or `|` for non-superadmin callers",
-        );
-      }
+      validateScopedAdminFilter(filterBy);
       const scope = callerScopedBuildingIds(user, scopedPermissions);
       if (scope.length === 0) {
         // Empty scope → 200 with empty list. Do NOT call Typesense with
@@ -324,3 +315,77 @@ admin.openapi(
 );
 
 export default admin;
+
+const SCOPED_ADMIN_FILTER_FIELDS = new Set([
+  "status",
+  "countryCode",
+  "locality",
+  "region",
+  "createdAtMs",
+  "updatedAtMs",
+  "id",
+]);
+
+/**
+ * Scoped admin filters are security-sensitive because they are AND-ed
+ * with the server-owned `id:=[...]` scope gate. Keep callers on a small
+ * conjunction-only subset; superadmin keeps the full Typesense DSL.
+ */
+function validateScopedAdminFilter(filterBy: string | undefined): void {
+  if (!filterBy) return;
+
+  if (/[()|$]/.test(filterBy) || filterBy.includes("||")) {
+    throw new ValidationError(
+      "filter_by for scoped admin callers only supports simple clauses joined by `&&`",
+    );
+  }
+
+  const clauses = filterBy.split("&&").map((clause) => clause.trim());
+
+  if (clauses.length === 0 || clauses.some((clause) => clause.length === 0)) {
+    throw new ValidationError("filter_by must contain at least one clause");
+  }
+
+  for (const clause of clauses) {
+    validateScopedAdminFilterClause(clause);
+  }
+}
+
+function validateScopedAdminFilterClause(clause: string): void {
+  const match = clause.match(/^([a-zA-Z_][a-zA-Z0-9_]*)\s*:\s*(=|!=|>=|<=|>|<)\s*(.+)$/);
+  if (!match) {
+    throw new ValidationError(`Invalid scoped filter clause: ${clause}`);
+  }
+
+  const field = match[1];
+  const value = match[3].trim();
+
+  if (!SCOPED_ADMIN_FILTER_FIELDS.has(field)) {
+    throw new ValidationError(`filter_by field not allowed for scoped admin callers: ${field}`);
+  }
+  if (!isSafeScopedFilterValue(value)) {
+    throw new ValidationError(`Invalid scoped filter value for field: ${field}`);
+  }
+}
+
+function isSafeScopedFilterValue(value: string): boolean {
+  if (value.length === 0) return false;
+  if (/[:&|()$]/.test(value)) return false;
+
+  if (value.startsWith("[") || value.endsWith("]")) {
+    const list = value.match(/^\[(.*)\]$/);
+    if (!list) return false;
+    const items = list[1]
+      .split(",")
+      .map((item) => item.trim())
+      .filter(Boolean);
+    return items.length > 0 && items.every(isSafeScopedFilterScalar);
+  }
+
+  return isSafeScopedFilterScalar(value);
+}
+
+function isSafeScopedFilterScalar(value: string): boolean {
+  if (/^`[^`]*`$/.test(value)) return true;
+  return /^[A-Za-z0-9_.@/-]+$/.test(value);
+}

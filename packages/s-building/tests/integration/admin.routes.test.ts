@@ -288,23 +288,7 @@ describe("/building/admin — scoped access matrix", () => {
 
 describe("/building/admin/buildings list — scope filter", () => {
   test("superadmin list returns every building (no scope filter)", async () => {
-    // Seed two buildings in Typesense directly via the fake — simulates
-    // the indexer having already processed upstream events.
-    const col = fakeClient.state.collections.get(COLLECTION);
-    col?.docs.clear();
-    for (const id of [SCOPED_BUILDING, OTHER_BUILDING]) {
-      col?.docs.set(id, {
-        id,
-        name: `Building ${id.slice(-4)}`,
-        status: "draft",
-        countryCode: "CZ",
-        locality: "Praha",
-        createdAtMs: 1,
-        updatedAtMs: 1,
-        areaSqm: 1000,
-        population: 10,
-      });
-    }
+    seedSearchDocs();
 
     const token = await jwt.sign({ sub: SUPER_ID });
     const res = await invoke<{ data: Array<{ id: string }>; meta: { found: number } }>(
@@ -318,12 +302,67 @@ describe("/building/admin/buildings list — scope filter", () => {
   });
 
   test("scoped admin list only sees their building", async () => {
+    seedSearchDocs();
     const token = await jwt.sign({ sub: ADMIN_ID });
     const res = await invoke<{ data: Array<{ id: string }> }>(app, "/building/admin/buildings", {
       token,
     });
     expect(res.status).toBe(200);
     expect(res.body.data.map((d) => d.id)).toEqual([SCOPED_BUILDING]);
+  });
+
+  test("scoped admin q=* does not expand results outside their scope", async () => {
+    seedSearchDocs();
+    const token = await jwt.sign({ sub: ADMIN_ID });
+    const res = await invoke<{ data: Array<{ id: string }> }>(
+      app,
+      "/building/admin/buildings?q=*",
+      { token },
+    );
+    expect(res.status).toBe(200);
+    expect(res.body.data.map((d) => d.id)).toEqual([SCOPED_BUILDING]);
+  });
+
+  test("scoped admin q that looks like filter syntax cannot rewrite filter_by", async () => {
+    seedSearchDocs([
+      { id: SCOPED_BUILDING, name: "status:=draft scoped", status: "draft" },
+      { id: OTHER_BUILDING, name: "status:=draft other", status: "draft" },
+    ]);
+    const token = await jwt.sign({ sub: ADMIN_ID });
+    const res = await invoke<{ data: Array<{ id: string }> }>(
+      app,
+      `/building/admin/buildings?q=${encodeURIComponent("status:=draft")}`,
+      { token },
+    );
+    expect(res.status).toBe(200);
+    expect(res.body.data.map((d) => d.id)).toEqual([SCOPED_BUILDING]);
+  });
+
+  test("scoped admin status filter only narrows within their scope", async () => {
+    seedSearchDocs([
+      { id: SCOPED_BUILDING, name: "Scoped Draft", status: "draft" },
+      { id: OTHER_BUILDING, name: "Other Draft", status: "draft" },
+    ]);
+    const token = await jwt.sign({ sub: ADMIN_ID });
+    const res = await invoke<{ data: Array<{ id: string }> }>(
+      app,
+      "/building/admin/buildings?filter_by=status:=draft",
+      { token },
+    );
+    expect(res.status).toBe(200);
+    expect(res.body.data.map((d) => d.id)).toEqual([SCOPED_BUILDING]);
+  });
+
+  test("scoped admin id inequality cannot widen beyond their scope", async () => {
+    seedSearchDocs();
+    const token = await jwt.sign({ sub: ADMIN_ID });
+    const res = await invoke<{ data: Array<{ id: string }> }>(
+      app,
+      `/building/admin/buildings?filter_by=${encodeURIComponent(`id:!=${SCOPED_BUILDING}`)}`,
+      { token },
+    );
+    expect(res.status).toBe(200);
+    expect(res.body.data).toEqual([]);
   });
 
   test("caller with no building permissions gets a 200 with empty data (no 403)", async () => {
@@ -348,12 +387,65 @@ describe("/building/admin/buildings list — scope filter", () => {
     expect(res.status).toBe(400);
   });
 
+  test("scoped caller supplying Typesense join syntax in filter_by → 400", async () => {
+    const token = await jwt.sign({ sub: ADMIN_ID });
+    const res = await invoke(
+      app,
+      `/building/admin/buildings?filter_by=${encodeURIComponent("$Join(other, id:=buildingId)")}`,
+      { token },
+    );
+    expect(res.status).toBe(400);
+  });
+
+  test("scoped caller supplying top-level OR without parentheses in filter_by → 400", async () => {
+    const token = await jwt.sign({ sub: ADMIN_ID });
+    const res = await invoke(
+      app,
+      `/building/admin/buildings?filter_by=${encodeURIComponent("status:=draft || status:=active")}`,
+      { token },
+    );
+    expect(res.status).toBe(400);
+  });
+
+  test("scoped caller supplying an incomplete conjunction in filter_by → 400", async () => {
+    const token = await jwt.sign({ sub: ADMIN_ID });
+    const res = await invoke(
+      app,
+      `/building/admin/buildings?filter_by=${encodeURIComponent("status:=draft &&")}`,
+      { token },
+    );
+    expect(res.status).toBe(400);
+  });
+
   test("per_page > 100 is rejected by the schema (400)", async () => {
     const token = await jwt.sign({ sub: SUPER_ID });
     const res = await invoke(app, "/building/admin/buildings?per_page=250", { token });
     expect(res.status).toBe(400);
   });
 });
+
+function seedSearchDocs(
+  docs: Array<{ id: string; name: string; status: "draft" | "active" | "archived" }> = [
+    { id: SCOPED_BUILDING, name: "Scoped Building", status: "draft" },
+    { id: OTHER_BUILDING, name: "Other Building", status: "draft" },
+  ],
+): void {
+  const col = fakeClient.state.collections.get(COLLECTION);
+  col?.docs.clear();
+  for (const doc of docs) {
+    col?.docs.set(doc.id, {
+      id: doc.id,
+      name: doc.name,
+      status: doc.status,
+      countryCode: "CZ",
+      locality: "Praha",
+      createdAtMs: 1,
+      updatedAtMs: 1,
+      areaSqm: 1000,
+      population: 10,
+    });
+  }
+}
 
 describe("/_actions/ internal path is not publicly routable", () => {
   test("direct POST to /_actions/archive returns 404", async () => {

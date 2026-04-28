@@ -149,6 +149,7 @@ function applyFilter(
   return docs.filter((doc) => {
     if (!matchesIdList(doc, filter)) return false;
     if (!matchesStringEquality(doc, filter)) return false;
+    if (!matchesStringInequality(doc, filter)) return false;
     if (!matchesNumericFilters(doc, filter)) return false;
     return true;
   });
@@ -168,12 +169,22 @@ function matchesIdList(doc: Record<string, unknown>, filter: string): boolean {
 }
 
 function matchesStringEquality(doc: Record<string, unknown>, filter: string): boolean {
-  const matches = filter.matchAll(/\b([a-zA-Z_]\w*):=(`([^`]*)`|[a-zA-Z_][\w-]*)/g);
+  const matches = filter.matchAll(/\b([a-zA-Z_]\w*):=(`([^`]*)`|[A-Za-z0-9_][\w-]*)/g);
   for (const match of matches) {
     const field = match[1];
     const rawValue = match[3] ?? match[2];
     if (isNumericString(rawValue)) continue;
     if (String(doc[field]) !== rawValue) return false;
+  }
+  return true;
+}
+
+function matchesStringInequality(doc: Record<string, unknown>, filter: string): boolean {
+  const matches = filter.matchAll(/\b([a-zA-Z_]\w*):!=(`([^`]*)`|[A-Za-z0-9_][\w-]*)/g);
+  for (const match of matches) {
+    const field = match[1];
+    const rawValue = match[3] ?? match[2];
+    if (String(doc[field]) === rawValue) return false;
   }
   return true;
 }

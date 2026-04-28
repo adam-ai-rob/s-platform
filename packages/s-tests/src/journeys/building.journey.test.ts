@@ -172,6 +172,43 @@ describe("building journey", () => {
     expect(response?.data.some((b) => b.id === buildingB)).toBe(false);
   });
 
+  test("[6a] admin-user search filters cannot escape scope", async () => {
+    client.setToken(tokens.super);
+    await eventually(
+      async () => {
+        const r = await client.request<{
+          data: Array<{ id: string }>;
+        }>("GET", "/building/admin/buildings");
+        expect(r.data.some((b) => b.id === buildingA)).toBe(true);
+        expect(r.data.some((b) => b.id === buildingB)).toBe(true);
+      },
+      { timeout: 45_000, interval: 1_000 },
+    );
+
+    client.setToken(tokens.admin);
+    const all = await client.request<{ data: Array<{ id: string }> }>(
+      "GET",
+      "/building/admin/buildings?q=*",
+    );
+    expect(all.data.some((b) => b.id === buildingA)).toBe(true);
+    expect(all.data.some((b) => b.id === buildingB)).toBe(false);
+
+    const narrowedAway = await client.request<{ data: Array<{ id: string }> }>(
+      "GET",
+      `/building/admin/buildings?filter_by=${encodeURIComponent(`id:!=${buildingA}`)}`,
+    );
+    expect(narrowedAway.data).toEqual([]);
+
+    await expectHttpError(
+      () =>
+        client.request(
+          "GET",
+          `/building/admin/buildings?filter_by=${encodeURIComponent("status:=draft || status:=active")}`,
+        ),
+      400,
+    );
+  });
+
   test("[7] admin-user GET /{B} → 403 (not in scope)", async () => {
     client.setToken(tokens.admin);
     await expectHttpError(

@@ -76,7 +76,7 @@ Plus `/building/health`, `/info`, `/openapi.json`, `/docs`.
 
 Common error paths:
 - `401` — missing or invalid `Authorization: Bearer <jwt>` header.
-- `400` — zod validation failure on body/query/path. `per_page` cap is `≤ 100`; non-superadmin `filter_by` cannot contain `(`, `)`, or `|`.
+- `400` — zod validation failure on body/query/path. `per_page` cap is `≤ 100`; scoped admin `filter_by` supports only whitelisted simple clauses joined by `&&` so caller filters can narrow, not escape, the server-owned scope filter.
 - `403` — admin audience only: caller lacks the required permission (for that building or globally).
 - `404` — user audience: building does not exist, is not `active`, or is not in caller's scope (all collapsed into one response to avoid leaking existence).
 - `409` — illegal status transition (e.g. `archived → draft`, not permitted).

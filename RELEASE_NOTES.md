@@ -5,6 +5,7 @@ Versioning: **CalVer** (`vYYYY.MM.N`). Releases cut on merge to `stage/prod`.
 ## Unreleased
 
 ### Changes
+- **Security**: Harden `s-building` scoped admin list filtering so non-superadmin `filter_by` values are limited to whitelisted simple clauses joined by `&&`; added regression coverage for `q`, scoped narrowing, `id:!=...`, OR, and join-style escape attempts. (Issue #106)
 - **Docs**: Clarify client-facing endpoint documentation rules and refresh module OpenAPI, README, and Postman text so API consumers see contracted behavior instead of internal routing details. (Issue #118)
 - **Docs**: Add Postman collections for s-authz and s-group and document the shared integration-test table-name convention. (Issue #92)
 - **Fix**: Tie off the s-user/authn retrofit tail: refresh stale s-user docs, remove unimplemented authn Phase 2 permissions from `/authn/info`, and add deployed journey coverage for `POST /authn/user/sessions:revoke`. (Issue #91)
