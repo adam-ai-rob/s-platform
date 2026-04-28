@@ -109,7 +109,7 @@ codex/105-task   -> PR -> main  -> stage/dev  -> stage/test  -> stage/prod
 This repo is being scaffolded. Modules will be added in subsequent PRs:
 
 - [x] Root config (package.json, sst.config.ts, biome.json, turbo.json)
-- [x] GitHub workflows (ci, deploy, pr-stage)
+- [x] GitHub workflows (ci, deploy, pr-deployed-test)
 - [x] `@s/shared` skeleton (errors, logger, trace, HTTP factory)
 - [x] Shared infra (API Gateway, EventBridge bus, KMS)
 - [ ] `templates/s-module/` scaffold

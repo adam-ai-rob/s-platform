@@ -17,7 +17,7 @@ These docs are the single source of truth for how modules are built, deployed, t
 | [Error Handling](07-error-handling.md) | DomainError hierarchy, HTTP status mapping, global error handler |
 | [Data Access Patterns](08-data-access-patterns.md) | DynamoDB single-table design, BaseRepository, GSIs, pagination, TTL |
 | [API Conventions](09-api-conventions.md) | OpenAPIHono, mandatory /health /info /openapi.json /docs, responses, pagination |
-| [Deployment](10-deployment.md) | SST stages, per-PR ephemeral environments, custom domains, canary releases |
+| [Deployment](10-deployment.md) | SST stages, label-driven deployed tests, stage promotion, custom domains, canary releases |
 | [Local Development](11-local-development.md) | Bun, SST dev mode, environment setup, testing |
 | [GPT-Driven SDLC](12-gpt-driven-sdlc.md) | Issue-first GPT workflow, roles, branch naming, PR titles, commit subjects, review, merge, deploy |
 
