@@ -82,7 +82,7 @@ auth.openapi(
         content: { "application/json": { schema: TokenResponse } },
         description: "New access and refresh token pair",
       },
-      401: { description: "Refresh token invalid or expired" },
+      401: { description: "Refresh token invalid, expired, or malformed" },
     },
   }),
   async (c) => {
