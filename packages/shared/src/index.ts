@@ -9,3 +9,4 @@ export * from "./types/index";
 export * from "./auth/index";
 export * from "./events/index";
 export * from "./ddb/index";
+export * from "./ratelimit/index";

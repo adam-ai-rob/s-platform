@@ -13,6 +13,7 @@
     "./auth": "./src/auth/index.ts",
     "./events": "./src/events/index.ts",
     "./ddb": "./src/ddb/index.ts",
+    "./ratelimit": "./src/ratelimit/index.ts",
     "./search": "./src/search/index.ts",
     "./types": "./src/types/index.ts",
     "./testing": "./src/testing/index.ts"

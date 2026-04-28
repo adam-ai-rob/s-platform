@@ -3,7 +3,6 @@ import { logger } from "@s/shared/logger";
 import type { AuthnRefreshToken } from "../refresh-tokens/refresh-tokens.entity";
 import { authnRefreshTokensRepository } from "../refresh-tokens/refresh-tokens.repository";
 import {
-  EmailAlreadyExistsError,
   InvalidCredentialsError,
   PasswordExpiredError,
   RefreshTokenExpiredError,
@@ -41,29 +40,28 @@ export interface AccessTokenResponse {
 export async function register(params: {
   email: string;
   password: string;
-}): Promise<TokenResponse> {
+}): Promise<void> {
+  // 1. Hash the password immediately.
+  // We do this BEFORE the DB check to maintain constant response timing
+  // between new registrations and duplicate attempts.
+  const passwordHash = await argon2Hash(params.password);
+
+  // 2. Check for existence.
   const existing = await authnUsersRepository.findByEmail(params.email);
   if (existing) {
-    throw new EmailAlreadyExistsError(params.email);
+    // Avoid user enumeration: do not throw EmailAlreadyExistsError.
+    // Log internally but return success to the caller.
+    logger.info("ℹ️ Registration attempted with existing email (ignored)", {
+      email: params.email,
+    });
+    return;
   }
 
-  const passwordHash = await argon2Hash(params.password);
+  // 3. Create and insert.
   const user = createAuthnUser({ email: params.email, passwordHash });
   await authnUsersRepository.insert(user);
 
-  const [accessToken, refresh] = await Promise.all([
-    issueAccessToken(user.id),
-    issueRefreshToken(user.id),
-  ]);
-  await persistRefreshToken(user.id, refresh);
-
   logger.info("✅ User registered", { userId: user.id, email: user.email });
-
-  return {
-    accessToken,
-    refreshToken: refresh.token,
-    expiresIn: 3600,
-  };
 }
 
 // ─── Login ────────────────────────────────────────────────────────────────────

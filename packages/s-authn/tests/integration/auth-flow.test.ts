@@ -11,6 +11,7 @@ import {
 
 const AUTHN_USERS_TABLE = "AuthnUsers-test";
 const AUTHN_REFRESH_TOKENS_TABLE = "AuthnRefreshTokens-test";
+const RATE_LIMITS_TABLE = "RateLimits-test";
 const AUTHZ_VIEW_TABLE = "AuthzView-test";
 
 let dynamo: LocalDynamo;
@@ -26,6 +27,7 @@ beforeAll(async () => {
   process.env.AWS_REGION = "local";
   process.env.AUTHN_USERS_TABLE_NAME = AUTHN_USERS_TABLE;
   process.env.AUTHN_REFRESH_TOKENS_TABLE_NAME = AUTHN_REFRESH_TOKENS_TABLE;
+  process.env.RATE_LIMITS_TABLE_NAME = RATE_LIMITS_TABLE;
   process.env.AUTHZ_VIEW_TABLE_NAME = AUTHZ_VIEW_TABLE;
   process.env.AUTHN_URL = jwt.baseUrl;
   process.env.JWT_ISSUER = "s-authn";
@@ -49,6 +51,10 @@ beforeAll(async () => {
         sortKey: "createdAt",
       },
     ],
+  });
+  await createTable(dynamo.endpoint, {
+    tableName: RATE_LIMITS_TABLE,
+    partitionKey: "key",
   });
   await createStubAuthzView(dynamo.endpoint, AUTHZ_VIEW_TABLE);
 
@@ -95,22 +101,21 @@ describe("s-authn auth flow (integration)", () => {
     const password = "Sup3rSecret!pw";
 
     // 1. Register
-    const regRes = await invoke<{
-      data: { accessToken: string; refreshToken: string };
-    }>(app, "/authn/auth/register", {
+    const regRes = await invoke(app, "/authn/auth/register", {
       method: "POST",
       body: { email, password },
     });
     expect(regRes.status).toBe(201);
-    expect(regRes.body.data.accessToken.split(".")).toHaveLength(3);
-    expect(regRes.body.data.refreshToken.split(".")).toHaveLength(3);
+    // Generic success: empty body
+    expect(regRes.body).toBe("");
 
-    // 2. Re-register same email → 409
+    // 2. Re-register same email → still 201 (avoid enumeration)
     const dup = await invoke(app, "/authn/auth/register", {
       method: "POST",
       body: { email, password },
     });
-    expect(dup.status).toBe(409);
+    expect(dup.status).toBe(201);
+    expect(dup.body).toBe("");
 
     // 3. Login with correct credentials
     const loginRes = await invoke<{
@@ -220,6 +225,40 @@ describe("s-authn auth flow (integration)", () => {
       },
     });
   });
+
+  test("register rate limiting", async () => {
+    const email = `ratelimit+${Date.now()}@example.com`;
+    const password = "Password123!";
+    const testIp = `1.2.3.${Date.now() % 255}`;
+
+    // Limit is 5 per minute. First 5 should succeed.
+    for (let i = 0; i < 5; i++) {
+      const res = await invoke(app, "/authn/auth/register", {
+        method: "POST",
+        headers: { "x-forwarded-for": testIp },
+        body: { email: `${i}_${email}`, password },
+      });
+      expect(res.status).toBe(201);
+      expect(res.headers.get("X-RateLimit-Limit")).toBe("5");
+      expect(res.headers.get("X-RateLimit-Remaining")).toBe((4 - i).toString());
+    }
+
+    // 6th should fail with 429
+    const res6 = await invoke(app, "/authn/auth/register", {
+      method: "POST",
+      headers: { "x-forwarded-for": testIp },
+      body: { email: `6_${email}`, password },
+    });
+    expect(res6.status).toBe(429);
+    expect(res6.body).toEqual({
+      error: {
+        code: "RATE_LIMIT_EXCEEDED",
+        message: "Too many requests",
+        details: null,
+      },
+    });
+    expect(res6.headers.get("X-RateLimit-Remaining")).toBe("0");
+  });
 });
 
 describe("/authn/user/sessions:revoke — AIP-136 custom action", () => {
@@ -236,13 +275,19 @@ describe("/authn/user/sessions:revoke — AIP-136 custom action", () => {
   test("POST /authn/user/sessions:revoke missing X-Refresh-JTI returns 400", async () => {
     // Requires a valid access token to pass middleware
     const email = `bob+${Date.now()}@example.com`;
-    const regRes = await invoke<{
-      data: { accessToken: string };
-    }>(app, "/authn/auth/register", {
+    const password = "Password123!";
+    await invoke(app, "/authn/auth/register", {
       method: "POST",
-      body: { email, password: "Password123!" },
+      body: { email, password },
     });
-    const accessToken = regRes.body.data.accessToken;
+
+    const loginRes = await invoke<{
+      data: { accessToken: string };
+    }>(app, "/authn/auth/login", {
+      method: "POST",
+      body: { email, password },
+    });
+    const accessToken = loginRes.body.data.accessToken;
 
     const res = await invoke(app, "/authn/user/sessions:revoke", {
       method: "POST",
