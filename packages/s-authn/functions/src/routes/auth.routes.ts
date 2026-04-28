@@ -2,6 +2,7 @@ import { OpenAPIHono, createRoute } from "@hono/zod-openapi";
 import { login, refresh, register } from "@s-authn/core/auth/auth.service";
 import { RefreshTokenMalformedError } from "@s-authn/core/shared/errors";
 import { getJwks } from "@s-authn/core/tokens/token.service";
+import { rateLimit } from "@s/shared/ratelimit";
 import {
   JwksResponse,
   LoginBody,
@@ -21,22 +22,28 @@ auth.openapi(
     tags: ["Auth"],
     summary: "Register a new user",
     description:
-      "Creates a new enabled user identity from an email and password, then returns an access token and refresh token. No bearer token is required. Returns 409 when the email is already registered.",
+      "Creates a new enabled user identity from an email and password. To avoid user enumeration, this endpoint returns 201 Created regardless of whether the email was already registered, and does not return authentication tokens. No bearer token is required.",
+    middleware: [
+      rateLimit({
+        service: "s-authn",
+        action: "register",
+        windowMs: 60 * 1000,
+        limit: 5,
+      }),
+    ],
     request: {
       body: { content: { "application/json": { schema: RegisterBody } }, required: true },
     },
     responses: {
       201: {
-        content: { "application/json": { schema: TokenResponse } },
-        description: "Registered",
+        description: "Registered (or already exists)",
       },
-      409: { description: "Email already exists" },
     },
   }),
   async (c) => {
     const body = c.req.valid("json");
-    const result = await register(body);
-    return c.json({ data: result }, 201);
+    await register(body);
+    return c.body(null, 201);
   },
 );
 
@@ -49,6 +56,14 @@ auth.openapi(
     summary: "Log in with email and password",
     description:
       "Authenticates an existing enabled user with email and password, then returns an access token and refresh token. No bearer token is required.",
+    middleware: [
+      rateLimit({
+        service: "s-authn",
+        action: "login",
+        windowMs: 60 * 1000,
+        limit: 10,
+      }),
+    ],
     request: {
       body: { content: { "application/json": { schema: LoginBody } }, required: true },
     },
@@ -74,6 +89,14 @@ auth.openapi(
     summary: "Rotate refresh token and return a new token pair",
     description:
       "Accepts a valid refresh token, revokes it, and returns a new access token and refresh token. The old refresh token cannot be reused after a successful rotation.",
+    middleware: [
+      rateLimit({
+        service: "s-authn",
+        action: "refresh",
+        windowMs: 60 * 1000,
+        limit: 20,
+      }),
+    ],
     request: {
       body: { content: { "application/json": { schema: RefreshTokenBody } }, required: true },
     },

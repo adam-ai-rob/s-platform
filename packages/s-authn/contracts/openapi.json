@@ -13,6 +13,23 @@
       }
     },
     "schemas": {
+      "RegisterBody": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "example": "alice@example.com"
+          },
+          "password": {
+            "type": "string",
+            "minLength": 8,
+            "maxLength": 128,
+            "example": "Test1234!"
+          }
+        },
+        "required": ["email", "password"]
+      },
       "TokenResponse": {
         "type": "object",
         "properties": {
@@ -33,23 +50,6 @@
           }
         },
         "required": ["data"]
-      },
-      "RegisterBody": {
-        "type": "object",
-        "properties": {
-          "email": {
-            "type": "string",
-            "format": "email",
-            "example": "alice@example.com"
-          },
-          "password": {
-            "type": "string",
-            "minLength": 8,
-            "maxLength": 128,
-            "example": "Test1234!"
-          }
-        },
-        "required": ["email", "password"]
       },
       "LoginBody": {
         "type": "object",
@@ -128,7 +128,7 @@
       "post": {
         "tags": ["Auth"],
         "summary": "Register a new user",
-        "description": "Creates a new enabled user identity from an email and password, then returns an access token and refresh token. No bearer token is required. Returns 409 when the email is already registered.",
+        "description": "Creates a new enabled user identity from an email and password. To avoid user enumeration, this endpoint returns 201 Created regardless of whether the email was already registered, and does not return authentication tokens. No bearer token is required.",
         "requestBody": {
           "required": true,
           "content": {
@@ -141,17 +141,7 @@
         },
         "responses": {
           "201": {
-            "description": "Registered",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/TokenResponse"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "Email already exists"
+            "description": "Registered (or already exists)"
           }
         }
       }

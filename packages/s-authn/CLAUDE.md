@@ -68,7 +68,7 @@ Phase 2 permissions will be added when their endpoints land:
 
 ### Public (no auth)
 
-- `POST /authn/auth/register` — register a new user, returns tokens
+- `POST /authn/auth/register` — register a new user, returns generic 201 with no tokens
 - `POST /authn/auth/login` — login with email+password, returns tokens
 - `POST /authn/auth/token/refresh` — exchange refresh token for new access token
 - `GET /authn/auth/jwks` — public JWKS for other modules to verify tokens

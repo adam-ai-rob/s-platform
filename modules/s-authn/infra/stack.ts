@@ -70,6 +70,14 @@ export async function buildStack() {
     stream: "new-and-old-images",
   });
 
+  const rateLimitsTable = new sst.aws.Dynamo("RateLimits", {
+    fields: {
+      key: "string",
+    },
+    primaryIndex: { hashKey: "key" },
+    ttl: "expiresAt",
+  });
+
   const authnRefreshTokensTable = new sst.aws.Dynamo("AuthnRefreshTokens", {
     fields: {
       id: "string",
@@ -87,7 +95,7 @@ export async function buildStack() {
   // ─── API Lambda ────────────────────────────────────────────────────────────
 
   const authnApi = new sst.aws.Function("AuthnApi", {
-    link: [authnUsersTable, authnRefreshTokensTable],
+    link: [authnUsersTable, authnRefreshTokensTable, rateLimitsTable],
     environment: {
       STAGE: stage,
       SERVICE_NAME: "s-authn",
@@ -97,6 +105,7 @@ export async function buildStack() {
       AUTHN_URL: gatewayUrl,
       AUTHN_USERS_TABLE_NAME: authnUsersTable.name,
       AUTHN_REFRESH_TOKENS_TABLE_NAME: authnRefreshTokensTable.name,
+      RATE_LIMITS_TABLE_NAME: rateLimitsTable.name,
       AUTHZ_VIEW_TABLE_NAME: authzViewTableName,
       EVENT_BUS_NAME: eventBusName,
     },
@@ -104,6 +113,7 @@ export async function buildStack() {
       { actions: ["kms:Sign", "kms:GetPublicKey"], resources: [jwtSigningKeyArn] },
       { actions: ["events:PutEvents"], resources: [eventBusArn] },
       { actions: ["dynamodb:GetItem"], resources: [authzViewTableArn] },
+      { actions: ["dynamodb:UpdateItem"], resources: [rateLimitsTable.nodes.table.arn] },
     ],
     handler: "../../packages/s-authn/functions/src/handler.handler",
     nodejs: {

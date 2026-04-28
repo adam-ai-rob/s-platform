@@ -46,10 +46,15 @@ describe("auth journey", () => {
   let accessToken: string;
   let refreshToken: string;
 
-  test("[1] register → returns tokens", async () => {
+  test("[1] register → login returns tokens", async () => {
+    const registerRes = await client.request("POST", "/authn/auth/register", {
+      body: { email, password: password1 },
+    });
+    expect(registerRes).toBeNull();
+
     const res = await client.request<{
       data: { accessToken: string; refreshToken: string; expiresIn: number };
-    }>("POST", "/authn/auth/register", {
+    }>("POST", "/authn/auth/login", {
       body: { email, password: password1 },
     });
 
