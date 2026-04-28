@@ -64,9 +64,9 @@ Auth audience (`/authn/auth/*`):
 
 | Endpoint | Auth | Description |
 |---|---|---|
-| `POST /authn/auth/register` | none | Creates a user identity from `email` and `password`, then returns `{ data: { accessToken, refreshToken, tokenType, expiresIn } }`. Returns `409` when the email is already registered. |
-| `POST /authn/auth/login` | none | Authenticates with `email` and `password`, then returns the same token response as registration. Returns `401` for invalid credentials and `403` for disabled or expired-password accounts. |
-| `POST /authn/auth/token/refresh` | none | Exchanges a valid refresh token for `{ data: { accessToken, tokenType, expiresIn } }`. Returns `401` when the refresh token is malformed, expired, revoked, or does not match the stored token hash. |
+| `POST /authn/auth/register` | none | Creates a user identity from `email` and `password`. Returns `201` with no body for both new and already-registered emails to avoid account enumeration; call login afterwards to obtain tokens. |
+| `POST /authn/auth/login` | none | Authenticates with `email` and `password`, then returns `{ data: { accessToken, refreshToken, expiresIn } }`. Returns `401` for invalid credentials and `403` for disabled or expired-password accounts. |
+| `POST /authn/auth/token/refresh` | none | Rotates a valid refresh token and returns `{ data: { accessToken, refreshToken, expiresIn } }`. Returns `401` when the refresh token is malformed, expired, revoked, or does not match the stored token hash. |
 | `GET /authn/auth/jwks` | none | Returns the JWKS used to verify JWTs issued by s-authn. |
 
 User audience (`/authn/user/*`):
@@ -80,10 +80,10 @@ Plus `/authn/health`, `/authn/info`, `/authn/openapi.json`, and `/authn/docs`.
 
 ## Postman
 
-[`docs/postman/authn.postman_collection.json`](./docs/postman/authn.postman_collection.json) includes the authentication and caller-account endpoints with `{{baseUrl}}`, `{{accessToken}}`, `{{refreshToken}}`, and `{{refreshJti}}` variables. Use a stage base URL such as `https://dev.s-api.smartiqi.com`; after register or login, copy the returned tokens into the collection variables.
+[`docs/postman/authn.postman_collection.json`](./docs/postman/authn.postman_collection.json) includes the authentication and caller-account endpoints with `{{baseUrl}}`, `{{accessToken}}`, `{{refreshToken}}`, and `{{refreshJti}}` variables. Use a stage base URL such as `https://dev.s-api.smartiqi.com`; after registration, login and copy the returned tokens into the collection variables.
 
 Common error paths:
 - `400` — request validation failed, such as missing `X-Refresh-JTI` on `sessions:revoke`.
 - `401` — invalid credentials, invalid bearer token, invalid refresh token, or wrong current password.
 - `403` — account is disabled or requires a password reset.
-- `409` — registration email already exists.
+- `429` — registration, login, or refresh rate limit exceeded.

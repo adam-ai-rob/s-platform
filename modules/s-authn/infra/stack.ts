@@ -95,7 +95,7 @@ export async function buildStack() {
   // ─── API Lambda ────────────────────────────────────────────────────────────
 
   const authnApi = new sst.aws.Function("AuthnApi", {
-    link: [authnUsersTable, authnRefreshTokensTable],
+    link: [authnUsersTable, authnRefreshTokensTable, rateLimitsTable],
     environment: {
       STAGE: stage,
       SERVICE_NAME: "s-authn",
@@ -113,6 +113,7 @@ export async function buildStack() {
       { actions: ["kms:Sign", "kms:GetPublicKey"], resources: [jwtSigningKeyArn] },
       { actions: ["events:PutEvents"], resources: [eventBusArn] },
       { actions: ["dynamodb:GetItem"], resources: [authzViewTableArn] },
+      { actions: ["dynamodb:UpdateItem"], resources: [rateLimitsTable.nodes.table.arn] },
     ],
     handler: "../../packages/s-authn/functions/src/handler.handler",
     nodejs: {
