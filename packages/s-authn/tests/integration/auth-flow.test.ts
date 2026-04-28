@@ -204,6 +204,21 @@ describe("s-authn auth flow (integration)", () => {
         details: null,
       },
     });
+
+    // 4. Required fields must be strings, not merely truthy values
+    const nonStringClaims = Buffer.from(JSON.stringify({ sub: {}, jti: [] })).toString("base64url");
+    const res4 = await invoke(app, "/authn/auth/token/refresh", {
+      method: "POST",
+      body: { refreshToken: `header.${nonStringClaims}.signature` },
+    });
+    expect(res4.status).toBe(401);
+    expect(res4.body).toEqual({
+      error: {
+        code: "REFRESH_TOKEN_MALFORMED",
+        message: "Refresh token is malformed",
+        details: null,
+      },
+    });
   });
 });
 

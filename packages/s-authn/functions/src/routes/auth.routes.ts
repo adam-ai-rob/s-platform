@@ -111,7 +111,12 @@ function parseRefreshToken(token: string): { sub: string; jti: string } {
 
   try {
     const payload = JSON.parse(Buffer.from(parts[1] ?? "", "base64url").toString());
-    if (!payload.sub || !payload.jti) {
+    if (
+      typeof payload.sub !== "string" ||
+      payload.sub.length === 0 ||
+      typeof payload.jti !== "string" ||
+      payload.jti.length === 0
+    ) {
       throw new RefreshTokenMalformedError();
     }
     return { sub: payload.sub, jti: payload.jti };
