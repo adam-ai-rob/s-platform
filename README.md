@@ -13,7 +13,7 @@ Serverless, event-driven, DDD-based microservice platform on AWS. Monorepo conta
 | **Domain** | `{stage}.s-api.smartiqi.com` (prod: `s-api.smartiqi.com`) |
 | **Runtime** | Bun 1.x / Node.js 22 |
 | **IaC** | SST v3 |
-| **Stages** | `dev`, `test`, `prod`, plus ephemeral `pr-{N}` |
+| **Stages** | `dev`, `test`, `prod`, plus personal developer stages |
 | **Versioning** | CalVer `vYYYY.MM.N` |
 
 ## Getting Started
@@ -66,6 +66,7 @@ s-platform/
 ├── biome.json
 ├── tsconfig.base.json
 ├── turbo.json
+├── AGENTS.md                  # Agent entrypoint, points to CLAUDE.md rules
 ├── CLAUDE.md                 # Global AI agent rules
 └── README.md
 ```
@@ -87,17 +88,20 @@ bun sst remove --stage $USER      # Tear down your personal stage
 # Never deploy to dev/test/prod from your laptop.
 ```
 
-## Branching & Deploy Workflow
+## GPT-Driven Branching & Deploy Workflow
 
 ```
-feature/task   ── PR ──► main  ──► stage/dev  ──► stage/test  ──► stage/prod
-                           │             │               │              │
-                        CI only     deploy dev      deploy test    deploy prod
-                                                                   (manual approval)
+codex/105-task   -> PR -> main  -> stage/dev  -> stage/test  -> stage/prod
+                              |          |             |             |
+                           CI only  deploy dev   deploy test   deploy prod
+                                                              (manual approval)
 ```
 
 - `stage/*` branches are deployment-only. Never commit directly; only fast-forward merge.
-- Every PR gets an ephemeral `pr-{N}` stage automatically (deployed on open, destroyed on close).
+- Every PR runs CI. Add the `deployed-test` label when a PR needs a real-AWS round trip against the shared `dev` stage.
+- Implementation work starts from a GitHub issue. Branches use `codex/<issue>-<short-slug>`, for example `codex/105-authz-assignment-value-cap`.
+- PR titles and implementation commit subjects include the issue number: `security(s-authz): cap assignment scope values (#105)`.
+- PR bodies include `Closes #<issue>` plus summary, validation, review notes, and deployment status.
 - See [`docs/architecture/10-deployment.md`](./docs/architecture/10-deployment.md).
 
 ## Current Status
@@ -105,7 +109,7 @@ feature/task   ── PR ──► main  ──► stage/dev  ──► stage/te
 This repo is being scaffolded. Modules will be added in subsequent PRs:
 
 - [x] Root config (package.json, sst.config.ts, biome.json, turbo.json)
-- [x] GitHub workflows (ci, deploy, pr-stage)
+- [x] GitHub workflows (ci, deploy, pr-deployed-test)
 - [x] `@s/shared` skeleton (errors, logger, trace, HTTP factory)
 - [x] Shared infra (API Gateway, EventBridge bus, KMS)
 - [ ] `templates/s-module/` scaffold
@@ -119,13 +123,16 @@ This repo is being scaffolded. Modules will be added in subsequent PRs:
 
 ## Contributing
 
-1. Create a feature branch from `main`.
-2. Make changes; run `bun run lint && bun run typecheck && bun run test`.
-3. Open PR to `main`.
-4. PR stage deploys automatically; e2e tests run against it.
-5. Get review (agent + human), iterate until LGTM.
-6. Merge to `main`.
-7. Merge `main` → `stage/dev` (fast-forward) to deploy.
+1. Start from a GitHub issue with clear acceptance criteria.
+2. Create a branch from `main` named `codex/<issue>-<short-slug>`.
+3. Make changes; run the relevant validation (`bun run lint:check`, `bun run typecheck`, `bun run test`, contract checks when applicable).
+4. Commit with `<type>(<scope>): <summary> (#<issue>)`.
+5. Open a PR to `main` with the same title style and `Closes #<issue>` in the body.
+6. Get independent GPT/human review, fix valid findings, and wait for green CI.
+7. Merge to `main` only after approval.
+8. Promote sequentially as requested: fast-forward `main` to `stage/dev`, then `stage/dev` to `stage/test`, then `stage/test` to `stage/prod`; watch each deploy run to completion.
+
+When using `git` or `gh` in this repo, run commands through `direnv exec .` so the project-local identity from `.envrc` is used.
 
 ## License
 

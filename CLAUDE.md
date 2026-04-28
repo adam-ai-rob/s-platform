@@ -4,7 +4,7 @@ This file is read by every AI agent working on any module. Per-module agents als
 
 ## ⚠️ Read First
 
-1. **Platform architecture:** [`./docs/architecture/`](./docs/architecture/README.md) — **read all 11 docs before writing code**.
+1. **Platform architecture:** [`./docs/architecture/`](./docs/architecture/README.md) — **read all 12 docs before writing code**.
 2. Your module's `CLAUDE.md` (in `packages/s-{module}/`) — declares that module's bounded context, DynamoDB tables, events, permissions, and API surface.
 3. [`packages/shared/CLAUDE.md`](./packages/shared/CLAUDE.md) if (and only if) you are touching shared utilities.
 4. `packages/shared/src/index.ts` — utilities available to every module.
@@ -19,7 +19,7 @@ A module-scoped agent needs only these five reading points — it does not need 
 - [`packages/infra-shared/CLAUDE.md`](./packages/infra-shared/CLAUDE.md) — shared DLQ + SSM helpers used by the platform app and every module SST app.
 - [`docs/runbooks/fresh-stage-bootstrap.md`](./docs/runbooks/fresh-stage-bootstrap.md) — deploy order + SSM contract between platform and modules.
 
-There is no root SST app. Every stage (dev, test, prod, pr-{N}, personal) boots `platform/` first, then the 4 module apps in `modules/*`.
+There is no root SST app. Every deployed stage (dev, test, prod, personal, or temporary) boots `platform/` first, then the 4 module apps in `modules/*`.
 
 ## Non-Negotiable Rules
 
@@ -102,13 +102,113 @@ Prefer the `gh` and `git` CLIs over GitHub MCP tools for identity-sensitive GitH
 
 Unless explicitly told otherwise:
 
-1. **Create a feature branch** from `main` (`fix/...`, `feat/...`)
-2. **Commit to the branch**, never directly to `main` or `stage/*`
-3. **Open a PR** targeting `main`
-4. **CI runs** (typecheck, lint, unit, integration, contract, contract backwards-compat). Add the `deployed-test` label if you want a real-AWS round-trip against dev before merging — see the PR labels table below.
-5. **Start review** — spawn reviewer + coder agents
-6. **Report back** — issues found, decisions, LGTM status
-7. **Merge** only after explicit user approval; FF `stage/dev` from main to deploy
+1. **Start from a GitHub issue.** Every implementation task needs an issue number before coding. If no issue exists, create or ask for one unless the task is a trivial documentation-only change.
+2. **Create a feature branch** from `main` using `codex/<issue>-<short-slug>` for Codex work, for example `codex/105-authz-assignment-value-cap`. Use `jules/<issue>-<short-slug>` or another agent prefix only when that agent owns the branch.
+3. **Commit to the branch**, never directly to `main` or `stage/*`
+4. **Open a PR** targeting `main`
+5. **CI runs** (typecheck, lint, unit, integration, contract, contract backwards-compat). Add the `deployed-test` label if you want a real-AWS round-trip against dev before merging; see the PR labels table below.
+6. **Start review** - use an independent reviewer agent or human reviewer. The implementer does not self-approve.
+7. **Report back** - issues found, decisions, LGTM status
+8. **Merge** only after explicit user approval; promote sequentially through `stage/dev`, `stage/test`, and `stage/prod` only when requested
+
+### GPT-driven SDLC naming
+
+Use issue numbers everywhere a human scans history:
+
+| Item | Required format | Example |
+|---|---|---|
+| Branch | `codex/<issue>-<short-slug>` | `codex/105-authz-assignment-value-cap` |
+| PR title | Conventional Commit title with issue suffix | `security(s-authz): cap assignment scope values (#105)` |
+| Commit subject | Same style as PR title; include the issue suffix | `security(s-authz): cap assignment scope values (#105)` |
+| PR body | Must close or reference the issue | `Closes #105` |
+
+If a PR spans multiple issues, list all issue numbers in the PR body and put the primary issue in the title/commit subject. Avoid broad multi-issue PRs unless the issues are tightly coupled.
+
+### GPT-driven SDLC roles
+
+For non-trivial work, split the work into separate roles:
+
+1. **Planner** - reads the issue and codebase, produces current behavior, affected files, implementation plan, test plan, contract/docs impact, and risks. Does not edit files.
+2. **Implementer** - applies the approved plan, keeps scope narrow, updates tests/docs/contracts, opens the PR, and records validation.
+3. **Reviewer** - independently reviews the PR for bugs, security regressions, missing tests, stale docs/contracts, and runtime/deployment risks. Findings are ordered by severity.
+4. **CI investigator** - used only when checks fail; inspects logs first, then proposes or applies the smallest fix.
+5. **Release manager** - merges only after approval and green checks, promotes through the stage chain (`main` to `stage/dev`, `stage/dev` to `stage/test`, `stage/test` to `stage/prod`) as requested, watches deployments to completion, and reports run links.
+
+### Standard GPT prompts
+
+Planning prompt:
+
+```markdown
+Read issue #<issue> and the surrounding code. Do not implement yet.
+
+Produce:
+- current behavior summary
+- affected modules/files
+- implementation plan
+- test plan
+- docs/contracts that must be updated
+- compatibility and deployment risks
+
+Follow existing project patterns. If anything is ambiguous, make the safest assumption and call it out.
+```
+
+Implementation prompt:
+
+```markdown
+Implement issue #<issue> following the approved plan.
+
+Requirements:
+- use branch `codex/<issue>-<short-slug>`
+- use PR title and commit subject format `<type>(<scope>): <summary> (#<issue>)`
+- keep scope narrow and follow existing project patterns
+- update tests, docs, contracts, README, CLAUDE notes, and Postman when client-facing behavior changes
+- run relevant validation
+- create a PR with `Closes #<issue>`, summary, validation, review notes, and deployment status
+- use `direnv exec .` before all `git` and `gh` commands
+```
+
+Review prompt:
+
+```markdown
+Review PR #<pr> as a senior engineer.
+
+Focus on:
+- behavioral bugs
+- security regressions
+- missing validation
+- missing tests
+- stale docs/contracts/OpenAPI/Postman
+- deployment/runtime risks
+
+List findings first, ordered by severity. Use P1/P2/P3 priorities. If there are no actionable issues, say LGTM and mention residual risk.
+```
+
+### PR body template
+
+```markdown
+Closes #<issue>
+
+## Summary
+- ...
+
+## Validation
+- [ ] bun run lint:check
+- [ ] bun run typecheck
+- [ ] bun run test
+- [ ] bun run contracts:build
+- [ ] GitHub CI
+
+## Review Notes
+- Independent GPT/human review status:
+- Findings fixed or intentionally not fixed:
+
+## Deployment
+- Not deployed yet.
+```
+
+### Legacy branch format
+
+Older branches used `fix/...` or `feat/...`. New GPT-driven implementation work uses `codex/<issue>-<short-slug>` unless the user explicitly requests a different prefix.
 
 ### Release notes
 
@@ -118,9 +218,9 @@ Every PR updates `RELEASE_NOTES.md` under `## Unreleased`:
 ## Unreleased
 
 ### Changes
-- **Feature**: Short description (PR #N)
-- **Fix**: Short description (PR #N)
-- **Breaking**: Short description (PR #N) — ⚠️ requires approval
+- **Feature**: Short description (#<issue>, PR #N)
+- **Fix**: Short description (#<issue>, PR #N)
+- **Breaking**: Short description (#<issue>, PR #N) - requires approval
 ```
 
 ### Response schema changes (public API contract)
@@ -188,8 +288,10 @@ bun run deploy:group    -- --stage $USER
 ## Commit Rules
 
 - **Never add `Co-Authored-By`** to commit messages
-- Commit messages: imperative, concise, 50 char subject line
-- Reference PR number when applicable: `feat: add magic-link flow (#12)`
+- Commit messages: imperative, concise subject line
+- Implementation commit subjects must include the GitHub issue number: `<type>(<scope>): <summary> (#<issue>)`
+- Use the same subject style for PR titles so squash merges preserve the issue reference
+- Reference the PR number only when there is no issue number and the PR itself is the durable reference
 
 ## Forbidden
 
