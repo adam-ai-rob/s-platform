@@ -19,7 +19,7 @@ A module-scoped agent needs only these five reading points — it does not need 
 - [`packages/infra-shared/CLAUDE.md`](./packages/infra-shared/CLAUDE.md) — shared DLQ + SSM helpers used by the platform app and every module SST app.
 - [`docs/runbooks/fresh-stage-bootstrap.md`](./docs/runbooks/fresh-stage-bootstrap.md) — deploy order + SSM contract between platform and modules.
 
-There is no root SST app. Every stage (dev, test, prod, pr-{N}, personal) boots `platform/` first, then the 4 module apps in `modules/*`.
+There is no root SST app. Every deployed stage (dev, test, prod, personal, or temporary) boots `platform/` first, then the 4 module apps in `modules/*`.
 
 ## Non-Negotiable Rules
 
@@ -109,7 +109,7 @@ Unless explicitly told otherwise:
 5. **CI runs** (typecheck, lint, unit, integration, contract, contract backwards-compat). Add the `deployed-test` label if you want a real-AWS round-trip against dev before merging; see the PR labels table below.
 6. **Start review** - use an independent reviewer agent or human reviewer. The implementer does not self-approve.
 7. **Report back** - issues found, decisions, LGTM status
-8. **Merge** only after explicit user approval; FF `stage/dev` from main to deploy
+8. **Merge** only after explicit user approval; promote sequentially through `stage/dev`, `stage/test`, and `stage/prod` only when requested
 
 ### GPT-driven SDLC naming
 
@@ -132,7 +132,7 @@ For non-trivial work, split the work into separate roles:
 2. **Implementer** - applies the approved plan, keeps scope narrow, updates tests/docs/contracts, opens the PR, and records validation.
 3. **Reviewer** - independently reviews the PR for bugs, security regressions, missing tests, stale docs/contracts, and runtime/deployment risks. Findings are ordered by severity.
 4. **CI investigator** - used only when checks fail; inspects logs first, then proposes or applies the smallest fix.
-5. **Release manager** - merges only after approval and green checks, promotes `main` to `stage/*`, watches deployments to completion, and reports run links.
+5. **Release manager** - merges only after approval and green checks, promotes through the stage chain (`main` to `stage/dev`, `stage/dev` to `stage/test`, `stage/test` to `stage/prod`) as requested, watches deployments to completion, and reports run links.
 
 ### Standard GPT prompts
 

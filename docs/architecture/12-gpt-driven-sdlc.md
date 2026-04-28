@@ -12,7 +12,7 @@ This repo uses an issue-first GPT workflow. The goal is to make AI-assisted chan
 6. Use an independent reviewer agent or human reviewer.
 7. Fix valid findings and explain intentionally rejected findings.
 8. Merge only after explicit approval and green checks.
-9. Deploy only by fast-forwarding `main` to `stage/*` branches when requested.
+9. Deploy only by sequential fast-forward promotion when requested: `main` to `stage/dev`, `stage/dev` to `stage/test`, then `stage/test` to `stage/prod`.
 10. Watch every deploy workflow to completion and report run links.
 
 ## Naming
@@ -45,7 +45,7 @@ Use separate GPT roles for non-trivial work:
 | Implementer | Applies the plan, keeps scope narrow, updates tests/docs/contracts, opens the PR, and records validation. |
 | Reviewer | Independently reviews for bugs, security regressions, missing validation, stale docs/contracts, missing tests, and deployment risks. |
 | CI investigator | Inspects failing checks and logs before changing code. Applies the smallest valid fix. |
-| Release manager | Merges after approval, promotes `main` to requested `stage/*` branches, watches deploys, and reports status. |
+| Release manager | Merges after approval, promotes through the requested stage chain, watches deploys, and reports status. |
 
 ## Planning Prompt
 
@@ -141,6 +141,6 @@ Rules:
 
 - Never commit directly to `main` or `stage/*`.
 - Merge PRs into `main` only after explicit approval.
-- Promote by fast-forwarding `stage/*` from `main`.
+- Promote sequentially by fast-forwarding `stage/dev` from `main`, `stage/test` from `stage/dev`, and `stage/prod` from `stage/test`.
 - Watch every deploy workflow until it completes.
 - Report each stage with its GitHub Actions run URL.

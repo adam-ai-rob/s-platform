@@ -13,7 +13,7 @@ Serverless, event-driven, DDD-based microservice platform on AWS. Monorepo conta
 | **Domain** | `{stage}.s-api.smartiqi.com` (prod: `s-api.smartiqi.com`) |
 | **Runtime** | Bun 1.x / Node.js 22 |
 | **IaC** | SST v3 |
-| **Stages** | `dev`, `test`, `prod`, plus ephemeral `pr-{N}` |
+| **Stages** | `dev`, `test`, `prod`, plus personal developer stages |
 | **Versioning** | CalVer `vYYYY.MM.N` |
 
 ## Getting Started
@@ -98,7 +98,7 @@ codex/105-task   -> PR -> main  -> stage/dev  -> stage/test  -> stage/prod
 ```
 
 - `stage/*` branches are deployment-only. Never commit directly; only fast-forward merge.
-- Every PR gets an ephemeral `pr-{N}` stage automatically (deployed on open, destroyed on close).
+- Every PR runs CI. Add the `deployed-test` label when a PR needs a real-AWS round trip against the shared `dev` stage.
 - Implementation work starts from a GitHub issue. Branches use `codex/<issue>-<short-slug>`, for example `codex/105-authz-assignment-value-cap`.
 - PR titles and implementation commit subjects include the issue number: `security(s-authz): cap assignment scope values (#105)`.
 - PR bodies include `Closes #<issue>` plus summary, validation, review notes, and deployment status.
@@ -130,7 +130,7 @@ This repo is being scaffolded. Modules will be added in subsequent PRs:
 5. Open a PR to `main` with the same title style and `Closes #<issue>` in the body.
 6. Get independent GPT/human review, fix valid findings, and wait for green CI.
 7. Merge to `main` only after approval.
-8. Fast-forward `main` to `stage/dev`, `stage/test`, and `stage/prod` as requested, then watch deploy runs to completion.
+8. Promote sequentially as requested: fast-forward `main` to `stage/dev`, then `stage/dev` to `stage/test`, then `stage/test` to `stage/prod`; watch each deploy run to completion.
 
 When using `git` or `gh` in this repo, run commands through `direnv exec .` so the project-local identity from `.envrc` is used.
 

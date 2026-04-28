@@ -44,7 +44,7 @@ export function getDomainConfig(): { apiDomain: string } | undefined {
   if (stage === "prod") return { apiDomain: "s-api.smartiqi.com" };
   if (stage === "test") return { apiDomain: "test.s-api.smartiqi.com" };
   if (stage === "dev") return { apiDomain: "dev.s-api.smartiqi.com" };
-  return undefined; // pr-N and personal stages use default API Gateway URL
+  return undefined; // personal and temporary stages use default API Gateway URL
 }
 
 // infra/shared.ts
@@ -63,7 +63,7 @@ export const gateway = new sst.aws.ApiGatewayV2("PlatformGateway", {
 });
 ```
 
-**Per-PR stages** use the default API Gateway URL (`https://{id}.execute-api.eu-west-1.amazonaws.com`) — no custom domain, keeps DNS simple.
+Personal and temporary stages use the default API Gateway URL (`https://{id}.execute-api.eu-west-1.amazonaws.com`) — no custom domain, keeps DNS simple.
 
 ## Stages
 
@@ -72,13 +72,12 @@ export const gateway = new sst.aws.ApiGatewayV2("PlatformGateway", {
 | **dev** | `stage/dev` | itinn-bot | `dev.s-api.smartiqi.com` | Integration testing, agent sandbox |
 | **test** | `stage/test` | itinn-bot | `test.s-api.smartiqi.com` | Pre-prod validation, full e2e suite |
 | **prod** | `stage/prod` | itinn-bot | `s-api.smartiqi.com` | Production |
-| **pr-{N}** | pull request | itinn-bot | default APIGW URL | Ephemeral per-PR validation |
 | **personal** (`{name}`) | N/A | itinn-bot | default APIGW URL | Developer sandbox via `sst dev` |
 
 ## Branching Strategy
 
 ```
-feature/task-name  ── PR ──► main  ──► stage/dev  ──► stage/test  ──► stage/prod
+codex/<issue>-task  ── PR ──► main  ──► stage/dev  ──► stage/test  ──► stage/prod
                               │              │               │              │
                            CI only      deploy dev      deploy test    deploy prod
 ```
@@ -86,18 +85,18 @@ feature/task-name  ── PR ──► main  ──► stage/dev  ──► stag
 | Branch | Auto-deploys | Purpose |
 |---|---|---|
 | `main` | No | Default branch, integration point |
-| `feature/*` | No | Task development |
+| `codex/*`, `jules/*`, `feature/*` | No | Task development |
 | `stage/dev` | Yes | Dev environment |
 | `stage/test` | Yes | Test environment |
 | `stage/prod` | Yes (canary) | Prod environment |
 
 ### Workflow
 
-1. Create `feature/task-name` from `main`.
+1. Create `codex/<issue>-task-name` from `main`.
 2. Develop, commit, push.
 3. Open PR to `main` — CI runs (typecheck, lint, unit tests).
-4. **Per-PR stage** deploys automatically (see below).
-5. Integration tests run against PR stage.
+4. Add the `deployed-test` label only when the PR needs real-AWS verification against the shared `dev` stage.
+5. Integration tests run against deployed `dev` only for labeled PRs.
 6. Review agents iterate until LGTM.
 7. Merge to `main`.
 8. Fast-forward merge `main` → `stage/dev` — auto-deploys to dev.
@@ -393,7 +392,6 @@ Per-stage budget alarms (CloudWatch Billing):
 | dev | $50 |
 | test | $50 |
 | prod | $500 (adjust as traffic grows) |
-| pr-* | — (ephemeral, destroyed at PR close) |
 
 Alert on 80% of budget. Configured in `infra/budgets.ts`.
 
@@ -412,7 +410,7 @@ When adding a new module (`s-{name}`), to be deployable:
 - [ ] RELEASE_NOTES.md updated
 - [ ] Module README.md written
 - [ ] Module CLAUDE.md written (agent instructions)
-- [ ] First PR deployed to pr-{N} stage + e2e passes
+- [ ] First PR verified with the `deployed-test` label when real-AWS validation is needed
 - [ ] Merged to main, promoted through stages
 
 Run `scripts/new-module.sh {name}` to scaffold the above.

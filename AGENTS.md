@@ -23,7 +23,7 @@ Use the GPT-driven SDLC rules from `CLAUDE.md` for implementation work:
 4. Include `Closes #<issue>` in the PR body.
 5. Keep implementation, review, CI investigation, and release/deploy work as separate roles when the task is non-trivial.
 6. Merge only after explicit approval, green checks, and all valid review findings are addressed.
-7. Deploy by fast-forwarding `main` to `stage/*` only when requested, then watch every deployment run to completion.
+7. Deploy only when requested by promoting sequentially: `main` to `stage/dev`, `stage/dev` to `stage/test`, then `stage/test` to `stage/prod`; watch every deployment run to completion.
 
 ## GitHub And Git Identity
 
