@@ -52,13 +52,20 @@ describe("building journey", () => {
   // ─── Setup ─────────────────────────────────────────────────────────────────
 
   test("[0] register three users", async () => {
+    // Since #121, register returns 201 with no body — login is required to
+    // obtain tokens. Userid is extracted from the login token's `sub` claim.
     for (const role of ["super", "admin", "member"] as const) {
-      const res = await client.request<{
-        data: { accessToken: string };
-      }>("POST", "/authn/auth/register", {
+      const registerRes = await client.request("POST", "/authn/auth/register", {
         body: { email: emails[role], password: passwords[role] },
       });
-      const token = res.data.accessToken;
+      expect(registerRes).toBeNull();
+
+      const login = await client.request<{
+        data: { accessToken: string };
+      }>("POST", "/authn/auth/login", {
+        body: { email: emails[role], password: passwords[role] },
+      });
+      const token = login.data.accessToken;
       const payloadB64 = token.split(".")[1];
       const payload = JSON.parse(Buffer.from(payloadB64, "base64url").toString("utf8")) as {
         sub: string;

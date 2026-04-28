@@ -5,6 +5,7 @@ Versioning: **CalVer** (`vYYYY.MM.N`). Releases cut on merge to `stage/prod`.
 ## Unreleased
 
 ### Changes
+- **Test**: Repair `user-search` and `building` deployed-journey tests after #121 changed `POST /authn/auth/register` to return an empty body — both now register, then login, then decode `sub` from the login token. (Issue #127)
 - **Security**: Harden `s-building` scoped admin list filtering so non-superadmin `filter_by` values are limited to whitelisted simple clauses joined by `&&`; added regression coverage for `q`, scoped narrowing, `id:!=...`, OR, and join-style escape attempts. (Issue #106)
 - **Docs**: Clarify client-facing endpoint documentation rules and refresh module OpenAPI, README, and Postman text so API consumers see contracted behavior instead of internal routing details. (Issue #118)
 - **Docs**: Add Postman collections for s-authz and s-group and document the shared integration-test table-name convention. (Issue #92)
