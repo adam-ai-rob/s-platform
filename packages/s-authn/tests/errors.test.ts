@@ -9,9 +9,11 @@ import {
 import {
   EmailAlreadyExistsError,
   InvalidCredentialsError,
+  MissingRefreshTokenIdError,
   PasswordExpiredError,
   RefreshTokenExpiredError,
   RefreshTokenInvalidError,
+  RefreshTokenMalformedError,
   UserDisabledError,
   UserNotFoundError,
 } from "../core/src/shared/errors";
@@ -56,6 +58,18 @@ describe("s-authn errors", () => {
     const e = new RefreshTokenExpiredError();
     expect(e.statusCode).toBe(401);
     expect(e.code).toBe("REFRESH_TOKEN_EXPIRED");
+  });
+
+  test("RefreshTokenMalformedError → 401 REFRESH_TOKEN_MALFORMED", () => {
+    const e = new RefreshTokenMalformedError();
+    expect(e.statusCode).toBe(401);
+    expect(e.code).toBe("REFRESH_TOKEN_MALFORMED");
+  });
+
+  test("MissingRefreshTokenIdError → 400 MISSING_REFRESH_JTI", () => {
+    const e = new MissingRefreshTokenIdError();
+    expect(e.statusCode).toBe(400);
+    expect(e.code).toBe("MISSING_REFRESH_JTI");
   });
 
   test("UserNotFoundError → 404 USER_NOT_FOUND", () => {

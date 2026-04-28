@@ -1,5 +1,6 @@
 import { OpenAPIHono, createRoute } from "@hono/zod-openapi";
 import { login, refresh, register } from "@s-authn/core/auth/auth.service";
+import { RefreshTokenMalformedError } from "@s-authn/core/shared/errors";
 import { getJwks } from "@s-authn/core/tokens/token.service";
 import {
   JwksResponse,
@@ -81,22 +82,13 @@ auth.openapi(
         content: { "application/json": { schema: TokenResponse } },
         description: "New access and refresh token pair",
       },
-      401: { description: "Refresh token invalid or expired" },
+      401: { description: "Refresh token invalid, expired, or malformed" },
     },
   }),
   async (c) => {
     const { refreshToken: rawToken } = c.req.valid("json");
-    const parts = rawToken.split(".");
-    if (parts.length !== 3) {
-      return c.json({ error: { code: "INVALID_FORMAT", message: "Malformed token" } }, 401);
-    }
-    const payload = JSON.parse(Buffer.from(parts[1] ?? "", "base64url").toString()) as {
-      sub?: string;
-      jti?: string;
-    };
-    if (!payload.sub || !payload.jti) {
-      return c.json({ error: { code: "INVALID_FORMAT", message: "Missing sub or jti" } }, 401);
-    }
+    const payload = parseRefreshToken(rawToken);
+
     const result = await refresh({
       userId: payload.sub,
       tokenId: payload.jti,
@@ -105,6 +97,33 @@ auth.openapi(
     return c.json({ data: result }, 200);
   },
 );
+
+/**
+ * Safely parses a refresh token payload without full cryptographic
+ * verification (which is handled by the core service). This route-level
+ * check ensures the token has the required fields to route the request.
+ */
+function parseRefreshToken(token: string): { sub: string; jti: string } {
+  const parts = token.split(".");
+  if (parts.length !== 3) {
+    throw new RefreshTokenMalformedError();
+  }
+
+  try {
+    const payload = JSON.parse(Buffer.from(parts[1] ?? "", "base64url").toString());
+    if (
+      typeof payload.sub !== "string" ||
+      payload.sub.length === 0 ||
+      typeof payload.jti !== "string" ||
+      payload.jti.length === 0
+    ) {
+      throw new RefreshTokenMalformedError();
+    }
+    return { sub: payload.sub, jti: payload.jti };
+  } catch {
+    throw new RefreshTokenMalformedError();
+  }
+}
 
 // GET /jwks
 auth.openapi(

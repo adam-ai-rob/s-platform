@@ -1,5 +1,6 @@
 import { OpenAPIHono, createRoute } from "@hono/zod-openapi";
 import { changePassword, logout } from "@s-authn/core/auth/auth.service";
+import { MissingRefreshTokenIdError } from "@s-authn/core/shared/errors";
 import { authMiddleware } from "@s/shared/auth";
 import { ChangePasswordBody } from "../schemas/auth.schema";
 import type { AppEnv } from "../types";
@@ -33,15 +34,7 @@ user.openapi(
     const caller = c.get("user");
     const tokenId = c.req.header("x-refresh-jti");
     if (!tokenId) {
-      return c.json(
-        {
-          error: {
-            code: "MISSING_REFRESH_JTI",
-            message: "X-Refresh-JTI header required for logout",
-          },
-        },
-        400,
-      );
+      throw new MissingRefreshTokenIdError();
     }
     await logout({ userId: caller.userId, tokenId });
     return c.body(null, 204);
