@@ -13,11 +13,22 @@ const AUTHN_USERS_TABLE = "AuthnUsers-test";
 const AUTHN_REFRESH_TOKENS_TABLE = "AuthnRefreshTokens-test";
 const RATE_LIMITS_TABLE = "RateLimits-test";
 const AUTHZ_VIEW_TABLE = "AuthzView-test";
+const REGISTER_RATE_LIMIT_WINDOW_MS = 60 * 1000;
 
 let dynamo: LocalDynamo;
 let jwt: JwtStub;
 // biome-ignore lint/suspicious/noExplicitAny: dynamic-imported Hono app
 let app: any;
+
+async function avoidRegisterRateLimitWindowBoundary(): Promise<void> {
+  const msIntoWindow = Date.now() % REGISTER_RATE_LIMIT_WINDOW_MS;
+  const boundaryBufferMs = 5_000;
+  if (msIntoWindow < REGISTER_RATE_LIMIT_WINDOW_MS - boundaryBufferMs) return;
+
+  await new Promise((resolve) =>
+    setTimeout(resolve, REGISTER_RATE_LIMIT_WINDOW_MS - msIntoWindow + 100),
+  );
+}
 
 beforeAll(async () => {
   dynamo = await startLocalDynamo();
@@ -227,6 +238,8 @@ describe("s-authn auth flow (integration)", () => {
   });
 
   test("register rate limiting", async () => {
+    await avoidRegisterRateLimitWindowBoundary();
+
     const email = `ratelimit+${Date.now()}@example.com`;
     const password = "Password123!";
     const testIp = `1.2.3.${Date.now() % 255}`;

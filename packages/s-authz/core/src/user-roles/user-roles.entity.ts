@@ -1,4 +1,8 @@
+import { ValidationError } from "@s/shared/errors";
 import { ulid } from "ulid";
+
+export const MAX_ASSIGNMENT_VALUE_COUNT = 500;
+export const MAX_ASSIGNMENT_VALUE_JSON_BYTES = 64 * 1024;
 
 /**
  * AuthzUserRole — an individual user ↔ role assignment.
@@ -35,14 +39,40 @@ export function createAuthzUserRole(params: {
   value?: unknown[];
   createdBy: string;
 }): AuthzUserRole {
+  const value = normalizeAssignmentValue(params.value);
   return {
     id: ulid(),
     userId: params.userId,
     roleId: params.roleId,
-    ...(params.value && params.value.length > 0 ? { value: uniqueValues(params.value) } : {}),
+    ...(value ? { value } : {}),
     createdAt: new Date().toISOString(),
     createdBy: params.createdBy,
   };
+}
+
+export function normalizeAssignmentValue(value?: readonly unknown[]): unknown[] | undefined {
+  if (!value || value.length === 0) return undefined;
+
+  const unique = uniqueValues(value);
+  if (unique.length > MAX_ASSIGNMENT_VALUE_COUNT) {
+    throw new ValidationError(
+      `Role assignment value must contain at most ${MAX_ASSIGNMENT_VALUE_COUNT} unique entries`,
+    );
+  }
+
+  let size: number;
+  try {
+    size = Buffer.byteLength(JSON.stringify(unique), "utf8");
+  } catch {
+    throw new ValidationError("Role assignment value must be JSON serializable");
+  }
+  if (size > MAX_ASSIGNMENT_VALUE_JSON_BYTES) {
+    throw new ValidationError(
+      `Role assignment value must serialize to at most ${MAX_ASSIGNMENT_VALUE_JSON_BYTES} bytes`,
+    );
+  }
+
+  return unique.length > 0 ? unique : undefined;
 }
 
 /**

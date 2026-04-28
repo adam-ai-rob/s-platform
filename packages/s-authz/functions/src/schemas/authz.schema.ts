@@ -1,4 +1,10 @@
 import { z } from "@hono/zod-openapi";
+import {
+  MAX_ASSIGNMENT_VALUE_COUNT,
+  MAX_ASSIGNMENT_VALUE_JSON_BYTES,
+  normalizeAssignmentValue,
+} from "@s-authz/core/user-roles/user-roles.entity";
+import { DomainError } from "@s/shared/errors";
 
 export const PermissionSchema = z
   .object({
@@ -46,10 +52,27 @@ export const PermissionsResponse = z
  * `value` is the per-assignment scope (e.g. building UUIDs for the
  * `building-admin` role). Optional — omitting it preserves legacy
  * behaviour. Re-assigning the same role unions incoming `value` with
- * any existing scope on the row.
+ * any existing scope on the row. The persisted unique scope is capped at
+ * MAX_ASSIGNMENT_VALUE_COUNT entries and MAX_ASSIGNMENT_VALUE_JSON_BYTES
+ * serialized bytes.
  */
 export const AssignRoleBody = z
   .object({
-    value: z.array(z.unknown()).optional(),
+    value: z
+      .array(z.unknown())
+      .superRefine((value, ctx) => {
+        try {
+          normalizeAssignmentValue(value);
+        } catch (err) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: err instanceof DomainError ? err.message : "Invalid assignment value",
+          });
+        }
+      })
+      .optional(),
+  })
+  .openapi({
+    description: `Optional per-assignment scope. The stored unique scope is capped at ${MAX_ASSIGNMENT_VALUE_COUNT} entries and ${MAX_ASSIGNMENT_VALUE_JSON_BYTES} serialized bytes.`,
   })
   .openapi("AssignRoleBody");

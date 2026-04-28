@@ -1,5 +1,9 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { GetCommand } from "@aws-sdk/lib-dynamodb";
+import {
+  MAX_ASSIGNMENT_VALUE_COUNT,
+  MAX_ASSIGNMENT_VALUE_JSON_BYTES,
+} from "@s-authz/core/user-roles/user-roles.entity";
 import { getDdbClient } from "@s/shared/ddb";
 import {
   type JwtStub,
@@ -19,6 +23,8 @@ const AUTHZ_VIEW_TABLE = "AuthzView-test";
 
 const ADMIN_USER_ID = "01HXADMIN00000000000000000A";
 const TARGET_USER_ID = "01HXTARGET0000000000000000T";
+
+type ErrorBody = { error: { code: string; message: string; details: unknown } };
 
 let dynamo: LocalDynamo;
 let jwt: JwtStub;
@@ -181,6 +187,162 @@ describe("s-authz admin flow (integration)", () => {
     const buildingAdmin = perms.filter((p) => p.id === "building_admin");
     expect(buildingAdmin).toHaveLength(1);
     expect(new Set(buildingAdmin[0]?.value)).toEqual(new Set(["bld-A", "bld-B", "bld-C"]));
+  });
+
+  test("assignment value over count cap → 400", async () => {
+    const adminToken = await jwt.sign({ sub: ADMIN_USER_ID });
+    const USER_ID = "01HXVALCAP10000000000000001";
+
+    const createRes = await invoke<{ data: { id: string } }>(app, "/authz/admin/roles", {
+      method: "POST",
+      token: adminToken,
+      body: {
+        name: "building-admin-value-count-cap-test",
+        description: "test-only",
+        permissions: [{ id: "building_admin", value: [] }],
+      },
+    });
+    expect(createRes.status).toBe(201);
+
+    const res = await invoke(app, `/authz/admin/users/${USER_ID}/roles/${createRes.body.data.id}`, {
+      method: "POST",
+      token: adminToken,
+      body: {
+        value: Array.from({ length: MAX_ASSIGNMENT_VALUE_COUNT + 1 }, (_, i) => `bld-${i}`),
+      },
+    });
+
+    expect(res.status).toBe(400);
+  });
+
+  test("duplicate-heavy initial assignment below unique count cap succeeds", async () => {
+    const adminToken = await jwt.sign({ sub: ADMIN_USER_ID });
+    const USER_ID = "01HXVALCAP50000000000000005";
+
+    const createRes = await invoke<{ data: { id: string } }>(app, "/authz/admin/roles", {
+      method: "POST",
+      token: adminToken,
+      body: {
+        name: "building-admin-value-initial-dedupe-cap-test",
+        description: "test-only",
+        permissions: [{ id: "building_admin", value: [] }],
+      },
+    });
+    expect(createRes.status).toBe(201);
+
+    const res = await invoke(app, `/authz/admin/users/${USER_ID}/roles/${createRes.body.data.id}`, {
+      method: "POST",
+      token: adminToken,
+      body: { value: Array.from({ length: MAX_ASSIGNMENT_VALUE_COUNT + 1 }, () => "bld-same") },
+    });
+
+    expect(res.status).toBe(204);
+
+    const viewRow = await getDdbClient().send(
+      new GetCommand({ TableName: AUTHZ_VIEW_TABLE, Key: { userId: USER_ID } }),
+    );
+    const perms = (viewRow.Item?.permissions ?? []) as { id: string; value?: unknown[] }[];
+    expect(perms[0]?.value).toEqual(["bld-same"]);
+  });
+
+  test("assignment merge over count cap → 400", async () => {
+    const adminToken = await jwt.sign({ sub: ADMIN_USER_ID });
+    const USER_ID = "01HXVALCAP20000000000000002";
+
+    const createRes = await invoke<{ data: { id: string } }>(app, "/authz/admin/roles", {
+      method: "POST",
+      token: adminToken,
+      body: {
+        name: "building-admin-value-merge-cap-test",
+        description: "test-only",
+        permissions: [{ id: "building_admin", value: [] }],
+      },
+    });
+    expect(createRes.status).toBe(201);
+    const roleId = createRes.body.data.id;
+
+    const first = await invoke(app, `/authz/admin/users/${USER_ID}/roles/${roleId}`, {
+      method: "POST",
+      token: adminToken,
+      body: {
+        value: Array.from({ length: MAX_ASSIGNMENT_VALUE_COUNT - 1 }, (_, i) => `bld-${i}`),
+      },
+    });
+    expect(first.status).toBe(204);
+
+    const second = await invoke<ErrorBody>(app, `/authz/admin/users/${USER_ID}/roles/${roleId}`, {
+      method: "POST",
+      token: adminToken,
+      body: { value: ["bld-new-1", "bld-new-2"] },
+    });
+
+    expect(second.status).toBe(400);
+    expect(second.body.error.code).toBe("VALIDATION_ERROR");
+  });
+
+  test("duplicate-heavy assignment merge below count cap succeeds", async () => {
+    const adminToken = await jwt.sign({ sub: ADMIN_USER_ID });
+    const USER_ID = "01HXVALCAP30000000000000003";
+
+    const createRes = await invoke<{ data: { id: string } }>(app, "/authz/admin/roles", {
+      method: "POST",
+      token: adminToken,
+      body: {
+        name: "building-admin-value-dedupe-cap-test",
+        description: "test-only",
+        permissions: [{ id: "building_admin", value: [] }],
+      },
+    });
+    expect(createRes.status).toBe(201);
+    const roleId = createRes.body.data.id;
+
+    const firstValues = Array.from(
+      { length: MAX_ASSIGNMENT_VALUE_COUNT - 1 },
+      (_, i) => `bld-${i}`,
+    );
+    const first = await invoke(app, `/authz/admin/users/${USER_ID}/roles/${roleId}`, {
+      method: "POST",
+      token: adminToken,
+      body: { value: firstValues },
+    });
+    expect(first.status).toBe(204);
+
+    const second = await invoke(app, `/authz/admin/users/${USER_ID}/roles/${roleId}`, {
+      method: "POST",
+      token: adminToken,
+      body: { value: ["bld-0", "bld-final"] },
+    });
+    expect(second.status).toBe(204);
+
+    const viewRow = await getDdbClient().send(
+      new GetCommand({ TableName: AUTHZ_VIEW_TABLE, Key: { userId: USER_ID } }),
+    );
+    const perms = (viewRow.Item?.permissions ?? []) as { id: string; value?: unknown[] }[];
+    expect(perms[0]?.value).toHaveLength(MAX_ASSIGNMENT_VALUE_COUNT);
+  });
+
+  test("assignment value over serialized size cap → 400", async () => {
+    const adminToken = await jwt.sign({ sub: ADMIN_USER_ID });
+    const USER_ID = "01HXVALCAP40000000000000004";
+
+    const createRes = await invoke<{ data: { id: string } }>(app, "/authz/admin/roles", {
+      method: "POST",
+      token: adminToken,
+      body: {
+        name: "building-admin-value-size-cap-test",
+        description: "test-only",
+        permissions: [{ id: "building_admin", value: [] }],
+      },
+    });
+    expect(createRes.status).toBe(201);
+
+    const res = await invoke(app, `/authz/admin/users/${USER_ID}/roles/${createRes.body.data.id}`, {
+      method: "POST",
+      token: adminToken,
+      body: { value: ["x".repeat(MAX_ASSIGNMENT_VALUE_JSON_BYTES + 1)] },
+    });
+
+    expect(res.status).toBe(400);
   });
 
   test("identical re-assignment is a no-op (no DDB write, no value change)", async () => {
