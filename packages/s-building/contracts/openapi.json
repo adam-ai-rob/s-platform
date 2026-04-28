@@ -542,7 +542,7 @@
           }
         ],
         "summary": "List buildings",
-        "description": "Typesense-backed list. Superadmin sees every building; scoped admin/manager callers see only buildings in their assignment's `value[]`. A scoped caller with an empty scope gets a 200 with an empty data array (no 403).",
+        "description": "Typesense-backed list. Superadmin sees every building and may use the full whitelisted Typesense filter DSL. Scoped admin/manager callers see only buildings in their assignment's `value[]`; their `filter_by` may only further narrow results with whitelisted simple clauses joined by `&&`. A scoped caller with an empty scope gets a 200 with an empty data array (no 403).",
         "parameters": [
           {
             "schema": {
@@ -616,6 +616,9 @@
                 }
               }
             }
+          },
+          "400": {
+            "description": "Validation error"
           },
           "401": {
             "description": "Missing or invalid bearer token"
