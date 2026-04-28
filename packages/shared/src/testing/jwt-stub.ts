@@ -37,6 +37,16 @@ export interface SignOptions {
   expiresIn?: string;
 }
 
+function requireStubEnv(name: string): string {
+  const value = process.env[name];
+  if (!value) {
+    throw new Error(
+      `${name} env var not set — required for jwt-stub. Set it in the test setup before calling sign().`,
+    );
+  }
+  return value;
+}
+
 async function findFreePort(): Promise<number> {
   return new Promise((resolve, reject) => {
     const server = net.createServer();
@@ -85,8 +95,8 @@ export async function startJwtStub(): Promise<JwtStub> {
       })
         .setProtectedHeader({ alg: "RS256", kid: "test-key-1" })
         .setSubject(sub)
-        .setIssuer(issuer ?? process.env.JWT_ISSUER ?? "s-authn")
-        .setAudience(audience ?? process.env.JWT_AUDIENCE ?? "s-platform")
+        .setIssuer(issuer ?? requireStubEnv("JWT_ISSUER"))
+        .setAudience(audience ?? requireStubEnv("JWT_AUDIENCE"))
         .setIssuedAt()
         .setExpirationTime(expiresIn ?? "5m");
       return jwt.sign(privateKey);
@@ -94,8 +104,8 @@ export async function startJwtStub(): Promise<JwtStub> {
     async signPayload(payload, expiresInSeconds) {
       const jwt = new SignJWT(payload)
         .setProtectedHeader({ alg: "RS256", kid: "test-key-1" })
-        .setIssuer(process.env.JWT_ISSUER ?? "s-authn")
-        .setAudience(process.env.JWT_AUDIENCE ?? "s-platform")
+        .setIssuer(requireStubEnv("JWT_ISSUER"))
+        .setAudience(requireStubEnv("JWT_AUDIENCE"))
         .setIssuedAt()
         .setExpirationTime(`${expiresInSeconds}s`);
       return jwt.sign(privateKey);

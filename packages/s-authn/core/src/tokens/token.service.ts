@@ -25,8 +25,11 @@ function getKmsClient(): KMSClient {
   return kmsClient;
 }
 
-const ISS = process.env.JWT_ISSUER ?? "s-authn";
-const AUD = process.env.JWT_AUDIENCE ?? "s-platform";
+function requireEnv(name: string): string {
+  const value = process.env[name];
+  if (!value) throw new Error(`${name} env var not set`);
+  return value;
+}
 
 function getKeyAlias(): string {
   const alias = process.env.KMS_KEY_ALIAS;
@@ -83,8 +86,8 @@ async function defaultSignJwt(
 
   const now = Math.floor(Date.now() / 1000);
   const claims = {
-    iss: ISS,
-    aud: AUD,
+    iss: requireEnv("JWT_ISSUER"),
+    aud: requireEnv("JWT_AUDIENCE"),
     iat: now,
     exp: now + expiresInSeconds,
     ...payload,

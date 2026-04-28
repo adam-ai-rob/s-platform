@@ -74,6 +74,8 @@ export async function buildStack() {
       STAGE: stage,
       SERVICE_NAME: "s-group",
       AUTHN_URL: gatewayUrl,
+      JWT_ISSUER: "s-authn",
+      JWT_AUDIENCE: "s-platform",
       GROUPS_TABLE_NAME: groupsTable.name,
       GROUP_USERS_TABLE_NAME: groupUsersTable.name,
       AUTHZ_VIEW_TABLE_NAME: authzViewTableName,

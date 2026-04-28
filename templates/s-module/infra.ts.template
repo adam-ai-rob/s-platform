@@ -29,6 +29,11 @@ export const api = new sst.aws.Function("{Module}Api", {
   environment: {
     STAGE: $app.stage,
     SERVICE_NAME: "{module-name}",
+    // Required by @s/shared/auth — no defaults, signer and verifier must agree.
+    // Drop these three only if the module exposes no authenticated routes.
+    AUTHN_URL: gatewayUrl,
+    JWT_ISSUER: "s-authn",
+    JWT_AUDIENCE: "s-platform",
   },
   handler: "packages/{module-name}/functions/src/handler.handler",
 });
