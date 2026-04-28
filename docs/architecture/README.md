@@ -19,6 +19,7 @@ These docs are the single source of truth for how modules are built, deployed, t
 | [API Conventions](09-api-conventions.md) | OpenAPIHono, mandatory /health /info /openapi.json /docs, responses, pagination |
 | [Deployment](10-deployment.md) | SST stages, per-PR ephemeral environments, custom domains, canary releases |
 | [Local Development](11-local-development.md) | Bun, SST dev mode, environment setup, testing |
+| [GPT-Driven SDLC](12-gpt-driven-sdlc.md) | Issue-first GPT workflow, roles, branch naming, PR titles, commit subjects, review, merge, deploy |
 
 One-time setup runbooks live in [`../setup/`](../setup/README.md).
 
