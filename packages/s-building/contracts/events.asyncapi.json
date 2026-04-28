@@ -208,17 +208,10 @@
           },
           "status": {
             "type": "string",
-            "enum": [
-              "draft",
-              "active",
-              "archived"
-            ]
+            "enum": ["draft", "active", "archived"]
           }
         },
-        "required": [
-          "buildingId",
-          "status"
-        ],
+        "required": ["buildingId", "status"],
         "additionalProperties": false,
         "$schema": "http://json-schema.org/draft-07/schema#"
       },
@@ -229,9 +222,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "buildingId"
-        ],
+        "required": ["buildingId"],
         "additionalProperties": false,
         "$schema": "http://json-schema.org/draft-07/schema#"
       },
@@ -242,9 +233,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "buildingId"
-        ],
+        "required": ["buildingId"],
         "additionalProperties": false,
         "$schema": "http://json-schema.org/draft-07/schema#"
       },
@@ -255,9 +244,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "buildingId"
-        ],
+        "required": ["buildingId"],
         "additionalProperties": false,
         "$schema": "http://json-schema.org/draft-07/schema#"
       },
@@ -268,9 +255,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "buildingId"
-        ],
+        "required": ["buildingId"],
         "additionalProperties": false,
         "$schema": "http://json-schema.org/draft-07/schema#"
       }

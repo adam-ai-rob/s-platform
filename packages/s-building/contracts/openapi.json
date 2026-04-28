@@ -76,18 +76,10 @@
                     "maximum": 180
                   }
                 },
-                "required": [
-                  "lat",
-                  "lng"
-                ]
+                "required": ["lat", "lng"]
               }
             },
-            "required": [
-              "formatted",
-              "streetAddress",
-              "locality",
-              "countryCode"
-            ]
+            "required": ["formatted", "streetAddress", "locality", "countryCode"]
           },
           "areaSqm": {
             "type": "number"
@@ -112,11 +104,7 @@
           },
           "status": {
             "type": "string",
-            "enum": [
-              "draft",
-              "active",
-              "archived"
-            ]
+            "enum": ["draft", "active", "archived"]
           },
           "createdAt": {
             "type": "string",
@@ -161,9 +149,7 @@
             "$ref": "#/components/schemas/Building"
           }
         },
-        "required": [
-          "data"
-        ]
+        "required": ["data"]
       },
       "CreateBuildingBody": {
         "type": "object",
@@ -227,18 +213,10 @@
                     "maximum": 180
                   }
                 },
-                "required": [
-                  "lat",
-                  "lng"
-                ]
+                "required": ["lat", "lng"]
               }
             },
-            "required": [
-              "formatted",
-              "streetAddress",
-              "locality",
-              "countryCode"
-            ]
+            "required": ["formatted", "streetAddress", "locality", "countryCode"]
           },
           "areaSqm": {
             "type": "number",
@@ -269,11 +247,7 @@
           },
           "status": {
             "type": "string",
-            "enum": [
-              "draft",
-              "active",
-              "archived"
-            ]
+            "enum": ["draft", "active", "archived"]
           }
         },
         "required": [
@@ -298,11 +272,7 @@
           },
           "status": {
             "type": "string",
-            "enum": [
-              "draft",
-              "active",
-              "archived"
-            ]
+            "enum": ["draft", "active", "archived"]
           },
           "countryCode": {
             "type": "string"
@@ -389,27 +359,15 @@
                         "type": "integer"
                       }
                     },
-                    "required": [
-                      "value",
-                      "count"
-                    ]
+                    "required": ["value", "count"]
                   }
                 }
               },
-              "required": [
-                "field",
-                "counts"
-              ]
+              "required": ["field", "counts"]
             }
           }
         },
-        "required": [
-          "page",
-          "perPage",
-          "found",
-          "outOf",
-          "searchTimeMs"
-        ]
+        "required": ["page", "perPage", "found", "outOf", "searchTimeMs"]
       },
       "BuildingListResponse": {
         "type": "object",
@@ -424,10 +382,7 @@
             "$ref": "#/components/schemas/BuildingListMeta"
           }
         },
-        "required": [
-          "data",
-          "meta"
-        ]
+        "required": ["data", "meta"]
       },
       "UpdateBuildingBody": {
         "type": "object",
@@ -491,18 +446,10 @@
                     "maximum": 180
                   }
                 },
-                "required": [
-                  "lat",
-                  "lng"
-                ]
+                "required": ["lat", "lng"]
               }
             },
-            "required": [
-              "formatted",
-              "streetAddress",
-              "locality",
-              "countryCode"
-            ]
+            "required": ["formatted", "streetAddress", "locality", "countryCode"]
           },
           "areaSqm": {
             "type": "number",
@@ -539,9 +486,7 @@
   "paths": {
     "/building/admin/buildings": {
       "post": {
-        "tags": [
-          "Building Admin"
-        ],
+        "tags": ["Building Admin"],
         "security": [
           {
             "Bearer": []
@@ -590,9 +535,7 @@
         }
       },
       "get": {
-        "tags": [
-          "Building Admin"
-        ],
+        "tags": ["Building Admin"],
         "security": [
           {
             "Bearer": []
@@ -682,9 +625,7 @@
     },
     "/building/admin/buildings/{id}": {
       "get": {
-        "tags": [
-          "Building Admin"
-        ],
+        "tags": ["Building Admin"],
         "security": [
           {
             "Bearer": []
@@ -726,9 +667,7 @@
         }
       },
       "patch": {
-        "tags": [
-          "Building Admin"
-        ],
+        "tags": ["Building Admin"],
         "security": [
           {
             "Bearer": []
@@ -783,9 +722,7 @@
         }
       },
       "delete": {
-        "tags": [
-          "Building Admin"
-        ],
+        "tags": ["Building Admin"],
         "security": [
           {
             "Bearer": []
@@ -822,9 +759,7 @@
     },
     "/building/admin/buildings/{id}:archive": {
       "post": {
-        "tags": [
-          "Building Admin"
-        ],
+        "tags": ["Building Admin"],
         "security": [
           {
             "Bearer": []
@@ -871,9 +806,7 @@
     },
     "/building/admin/buildings/{id}:activate": {
       "post": {
-        "tags": [
-          "Building Admin"
-        ],
+        "tags": ["Building Admin"],
         "security": [
           {
             "Bearer": []
@@ -920,9 +853,7 @@
     },
     "/building/user/buildings": {
       "get": {
-        "tags": [
-          "Building User"
-        ],
+        "tags": ["Building User"],
         "security": [
           {
             "Bearer": []
@@ -1012,9 +943,7 @@
     },
     "/building/user/buildings/{id}": {
       "get": {
-        "tags": [
-          "Building User"
-        ],
+        "tags": ["Building User"],
         "security": [
           {
             "Bearer": []

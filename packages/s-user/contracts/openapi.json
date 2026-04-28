@@ -46,14 +46,7 @@
             }
           }
         },
-        "required": [
-          "id",
-          "firstName",
-          "lastName",
-          "displayName",
-          "createdAtMs",
-          "updatedAtMs"
-        ]
+        "required": ["id", "firstName", "lastName", "displayName", "createdAtMs", "updatedAtMs"]
       },
       "UserListMeta": {
         "type": "object",
@@ -77,13 +70,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "page",
-          "perPage",
-          "found",
-          "outOf",
-          "searchTimeMs"
-        ]
+        "required": ["page", "perPage", "found", "outOf", "searchTimeMs"]
       },
       "UserListResponse": {
         "type": "object",
@@ -98,10 +85,7 @@
             "$ref": "#/components/schemas/UserListMeta"
           }
         },
-        "required": [
-          "data",
-          "meta"
-        ]
+        "required": ["data", "meta"]
       },
       "UserProfile": {
         "type": "object",
@@ -154,9 +138,7 @@
             "$ref": "#/components/schemas/UserProfile"
           }
         },
-        "required": [
-          "data"
-        ]
+        "required": ["data"]
       },
       "UpdateProfileBody": {
         "type": "object",
@@ -194,9 +176,7 @@
   "paths": {
     "/user/admin/users": {
       "get": {
-        "tags": [
-          "User Admin"
-        ],
+        "tags": ["User Admin"],
         "security": [
           {
             "Bearer": []
@@ -281,9 +261,7 @@
     },
     "/user/admin/users/{id}": {
       "get": {
-        "tags": [
-          "User Admin"
-        ],
+        "tags": ["User Admin"],
         "security": [
           {
             "Bearer": []
@@ -327,9 +305,7 @@
     },
     "/user/user/users/me": {
       "get": {
-        "tags": [
-          "User"
-        ],
+        "tags": ["User"],
         "security": [
           {
             "Bearer": []
@@ -357,9 +333,7 @@
         }
       },
       "patch": {
-        "tags": [
-          "User"
-        ],
+        "tags": ["User"],
         "security": [
           {
             "Bearer": []

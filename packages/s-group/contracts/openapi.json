@@ -27,20 +27,11 @@
           },
           "rel": {
             "type": "string",
-            "enum": [
-              "owner",
-              "manual",
-              "domain",
-              "group"
-            ]
+            "enum": ["owner", "manual", "domain", "group"]
           },
           "status": {
             "type": "string",
-            "enum": [
-              "active",
-              "pending",
-              "rejected"
-            ]
+            "enum": ["active", "pending", "rejected"]
           },
           "addedBy": {
             "type": "string"
@@ -52,15 +43,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "id",
-          "groupId",
-          "userId",
-          "rel",
-          "status",
-          "createdAt",
-          "updatedAt"
-        ]
+        "required": ["id", "groupId", "userId", "rel", "status", "createdAt", "updatedAt"]
       },
       "MembershipListResponse": {
         "type": "object",
@@ -72,9 +55,7 @@
             }
           }
         },
-        "required": [
-          "data"
-        ]
+        "required": ["data"]
       },
       "Group": {
         "type": "object",
@@ -90,11 +71,7 @@
           },
           "type": {
             "type": "string",
-            "enum": [
-              "company",
-              "team",
-              "building"
-            ]
+            "enum": ["company", "team", "building"]
           },
           "emailDomainNames": {
             "type": "array",
@@ -128,9 +105,7 @@
             "$ref": "#/components/schemas/Group"
           }
         },
-        "required": [
-          "data"
-        ]
+        "required": ["data"]
       },
       "CreateGroupBody": {
         "type": "object",
@@ -146,11 +121,7 @@
           },
           "type": {
             "type": "string",
-            "enum": [
-              "company",
-              "team",
-              "building"
-            ]
+            "enum": ["company", "team", "building"]
           },
           "emailDomainNames": {
             "type": "array",
@@ -164,9 +135,7 @@
             "default": true
           }
         },
-        "required": [
-          "name"
-        ]
+        "required": ["name"]
       }
     },
     "parameters": {}
@@ -174,9 +143,7 @@
   "paths": {
     "/group/user/me/groups": {
       "get": {
-        "tags": [
-          "Group"
-        ],
+        "tags": ["Group"],
         "security": [
           {
             "Bearer": []
@@ -203,9 +170,7 @@
     },
     "/group/admin/groups": {
       "post": {
-        "tags": [
-          "Group Admin"
-        ],
+        "tags": ["Group Admin"],
         "security": [
           {
             "Bearer": []
@@ -248,9 +213,7 @@
     },
     "/group/admin/groups/{id}": {
       "get": {
-        "tags": [
-          "Group Admin"
-        ],
+        "tags": ["Group Admin"],
         "security": [
           {
             "Bearer": []
@@ -291,9 +254,7 @@
         }
       },
       "delete": {
-        "tags": [
-          "Group Admin"
-        ],
+        "tags": ["Group Admin"],
         "security": [
           {
             "Bearer": []
@@ -329,9 +290,7 @@
     },
     "/group/admin/groups/{id}/users/{userId}": {
       "post": {
-        "tags": [
-          "Group Admin"
-        ],
+        "tags": ["Group Admin"],
         "security": [
           {
             "Bearer": []
@@ -376,9 +335,7 @@
         }
       },
       "delete": {
-        "tags": [
-          "Group Admin"
-        ],
+        "tags": ["Group Admin"],
         "security": [
           {
             "Bearer": []

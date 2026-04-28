@@ -28,10 +28,7 @@
             "example": "Test1234!"
           }
         },
-        "required": [
-          "email",
-          "password"
-        ]
+        "required": ["email", "password"]
       },
       "TokenResponse": {
         "type": "object",
@@ -49,16 +46,10 @@
                 "type": "number"
               }
             },
-            "required": [
-              "accessToken",
-              "refreshToken",
-              "expiresIn"
-            ]
+            "required": ["accessToken", "refreshToken", "expiresIn"]
           }
         },
-        "required": [
-          "data"
-        ]
+        "required": ["data"]
       },
       "LoginBody": {
         "type": "object",
@@ -71,10 +62,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "email",
-          "password"
-        ]
+        "required": ["email", "password"]
       },
       "RefreshTokenBody": {
         "type": "object",
@@ -83,9 +71,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "refreshToken"
-        ]
+        "required": ["refreshToken"]
       },
       "JwksResponse": {
         "type": "object",
@@ -114,20 +100,11 @@
                   "type": "string"
                 }
               },
-              "required": [
-                "kid",
-                "kty",
-                "alg",
-                "use",
-                "n",
-                "e"
-              ]
+              "required": ["kid", "kty", "alg", "use", "n", "e"]
             }
           }
         },
-        "required": [
-          "keys"
-        ]
+        "required": ["keys"]
       },
       "ChangePasswordBody": {
         "type": "object",
@@ -141,10 +118,7 @@
             "maxLength": 128
           }
         },
-        "required": [
-          "currentPassword",
-          "newPassword"
-        ]
+        "required": ["currentPassword", "newPassword"]
       }
     },
     "parameters": {}
@@ -152,9 +126,7 @@
   "paths": {
     "/authn/auth/register": {
       "post": {
-        "tags": [
-          "Auth"
-        ],
+        "tags": ["Auth"],
         "summary": "Register a new user",
         "description": "Creates a new enabled user identity from an email and password. To avoid user enumeration, this endpoint returns 201 Created regardless of whether the email was already registered, and does not return authentication tokens. No bearer token is required.",
         "requestBody": {
@@ -176,9 +148,7 @@
     },
     "/authn/auth/login": {
       "post": {
-        "tags": [
-          "Auth"
-        ],
+        "tags": ["Auth"],
         "summary": "Log in with email and password",
         "description": "Authenticates an existing enabled user with email and password, then returns an access token and refresh token. No bearer token is required.",
         "requestBody": {
@@ -213,9 +183,7 @@
     },
     "/authn/auth/token/refresh": {
       "post": {
-        "tags": [
-          "Auth"
-        ],
+        "tags": ["Auth"],
         "summary": "Rotate refresh token and return a new token pair",
         "description": "Accepts a valid refresh token, revokes it, and returns a new access token and refresh token. The old refresh token cannot be reused after a successful rotation.",
         "requestBody": {
@@ -247,9 +215,7 @@
     },
     "/authn/auth/jwks": {
       "get": {
-        "tags": [
-          "Auth"
-        ],
+        "tags": ["Auth"],
         "summary": "JWKS for verifying JWTs issued by this service",
         "description": "Returns the JSON Web Key Set used by clients and platform services to verify JWTs issued by s-authn. Publicly reachable; no authentication is required.",
         "responses": {
@@ -268,9 +234,7 @@
     },
     "/authn/user/sessions:revoke": {
       "post": {
-        "tags": [
-          "User"
-        ],
+        "tags": ["User"],
         "summary": "Revoke the caller's refresh token",
         "description": "Revokes the caller's refresh token identified by the `X-Refresh-JTI` header. Requires a valid bearer access token. Returns 204 when the token record has been marked revoked.",
         "security": [
@@ -293,9 +257,7 @@
     },
     "/authn/user/users/me/password": {
       "patch": {
-        "tags": [
-          "User"
-        ],
+        "tags": ["User"],
         "summary": "Change the caller's password",
         "description": "Changes the authenticated caller's password after verifying `currentPassword`. The request body supplies both the current password and the replacement password.",
         "security": [
