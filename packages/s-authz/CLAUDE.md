@@ -69,7 +69,7 @@ Some permissions carry a per-user scope (e.g. `building_admin` on buildings `[A,
 - **Role template** — each `Permission` in the role's `permissions` array may or may not carry a `value` field:
   - `{ id: "X" }` (no field) → **global permission**. Consumers ignore scope. Assignment `value` is dropped.
   - `{ id: "X", value: [] }` (empty array marker) → **scope-required permission**. Assignment `value` flows through.
-- **Assignment** (`AuthzUserRole`) carries an optional `value: unknown[]`. `POST /authz/admin/users/{userId}/roles/{roleId}` accepts body `{ value?: unknown[] }`. Re-assigning the same role to the same user **unions** the incoming `value` with the existing row's value — no 409.
+- **Assignment** (`AuthzUserRole`) carries an optional `value: unknown[]`. `POST /authz/admin/users/{userId}/roles/{roleId}` accepts body `{ value?: unknown[] }`. Re-assigning the same role to the same user **unions** the incoming `value` with the existing row's value — no 409. The stored unique assignment scope is capped at 500 entries and 65,536 serialized bytes; oversized values return `400 VALIDATION_ERROR`.
 - **View rebuild** (`rebuildViewForUser` → `resolvePermissionsForAssignments`):
   - For each assignment, walk the role's permission template.
   - Scope-required permissions get `unique([...template.value, ...assignment.value])`.

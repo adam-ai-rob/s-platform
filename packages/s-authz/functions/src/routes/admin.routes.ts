@@ -1,6 +1,10 @@
 import { OpenAPIHono, createRoute, z } from "@hono/zod-openapi";
 import { createRole, deleteRole, getRole } from "@s-authz/core/roles/roles.service";
 import {
+  MAX_ASSIGNMENT_VALUE_COUNT,
+  MAX_ASSIGNMENT_VALUE_JSON_BYTES,
+} from "@s-authz/core/user-roles/user-roles.entity";
+import {
   assignRoleToUser,
   unassignRoleFromUser,
 } from "@s-authz/core/user-roles/user-roles.service";
@@ -100,8 +104,7 @@ admin.openapi(
     tags: ["Authz Admin"],
     security: [{ Bearer: [] }],
     summary: "Assign a role to a user (optionally with a scope value)",
-    description:
-      "Assigns `roleId` to `userId`. The optional `value` array is the per-assignment scope for scope-requiring permissions (for example building ids for the `building-admin` role). Idempotent: re-assigning the same role unions the incoming `value` with any existing scope on the row — no 409.",
+    description: `Assigns \`roleId\` to \`userId\`. The optional \`value\` array is the per-assignment scope for scope-requiring permissions (for example building ids for the \`building-admin\` role). Idempotent: re-assigning the same role unions the incoming \`value\` with any existing scope on the row — no 409. The stored unique scope is capped at ${MAX_ASSIGNMENT_VALUE_COUNT} entries and ${MAX_ASSIGNMENT_VALUE_JSON_BYTES} serialized bytes.`,
     request: {
       params: z.object({ userId: z.string(), roleId: z.string() }),
       body: {
@@ -111,6 +114,7 @@ admin.openapi(
     },
     responses: {
       204: { description: "Assigned (or scope extended)" },
+      400: { description: "Invalid request body or assignment scope exceeds limits" },
       401: { description: "Missing or invalid bearer token" },
       403: { description: "Missing authz_admin permission" },
       404: { description: "Role not found" },

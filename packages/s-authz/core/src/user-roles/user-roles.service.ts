@@ -2,7 +2,7 @@ import { NotFoundError } from "@s/shared/errors";
 import { logger } from "@s/shared/logger";
 import { getRole } from "../roles/roles.service";
 import { rebuildViewForUser } from "../view/view.service";
-import { createAuthzUserRole, uniqueValues } from "./user-roles.entity";
+import { createAuthzUserRole, normalizeAssignmentValue } from "./user-roles.entity";
 import { authzUserRolesRepository } from "./user-roles.repository";
 
 /**
@@ -41,10 +41,10 @@ export async function assignRoleToUser(params: {
       // the view rebuild — nothing would change.
       return;
     }
-    const merged = uniqueValues([...existingValues, ...addedValues]);
+    const merged = normalizeAssignmentValue([...existingValues, ...addedValues]);
     await authzUserRolesRepository.insert({
       ...existing,
-      value: merged.length > 0 ? merged : undefined,
+      value: merged,
     });
     logger.info("🔒 Role scope extended", {
       userId: params.userId,
