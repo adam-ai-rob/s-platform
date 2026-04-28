@@ -12,6 +12,8 @@ import {
 } from "../schemas/auth.schema";
 import type { AppEnv } from "../types";
 
+import { envLimit } from "./_env";
+
 const auth = new OpenAPIHono<AppEnv>();
 
 // POST /register
@@ -28,7 +30,7 @@ auth.openapi(
         service: "s-authn",
         action: "register",
         windowMs: 60 * 1000,
-        limit: 5,
+        limit: envLimit("RATE_LIMIT_REGISTER_PER_MIN", 5),
       }),
     ],
     request: {
@@ -61,7 +63,7 @@ auth.openapi(
         service: "s-authn",
         action: "login",
         windowMs: 60 * 1000,
-        limit: 10,
+        limit: envLimit("RATE_LIMIT_LOGIN_PER_MIN", 10),
       }),
     ],
     request: {
@@ -94,7 +96,7 @@ auth.openapi(
         service: "s-authn",
         action: "refresh",
         windowMs: 60 * 1000,
-        limit: 20,
+        limit: envLimit("RATE_LIMIT_REFRESH_PER_MIN", 20),
       }),
     ],
     request: {

@@ -108,6 +108,18 @@ export async function buildStack() {
       RATE_LIMITS_TABLE_NAME: rateLimitsTable.name,
       AUTHZ_VIEW_TABLE_NAME: authzViewTableName,
       EVENT_BUS_NAME: eventBusName,
+      // Stage-tuned rate-limit caps. `dev` runs the deployed-test journey
+      // suite from a single GitHub-runner IP; the prod-safe defaults
+      // (5/10/20) trip on the first run. `test` and `prod` rely on the
+      // hardcoded defaults in auth.routes.ts so anti-enumeration /
+      // anti-brute-force protections stay intact.
+      ...(stage === "dev"
+        ? {
+            RATE_LIMIT_REGISTER_PER_MIN: "100",
+            RATE_LIMIT_LOGIN_PER_MIN: "200",
+            RATE_LIMIT_REFRESH_PER_MIN: "200",
+          }
+        : {}),
     },
     permissions: [
       { actions: ["kms:Sign", "kms:GetPublicKey"], resources: [jwtSigningKeyArn] },
