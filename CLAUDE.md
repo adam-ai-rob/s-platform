@@ -103,7 +103,7 @@ Prefer the `gh` and `git` CLIs over GitHub MCP tools for identity-sensitive GitH
 Unless explicitly told otherwise:
 
 1. **Start from a GitHub issue.** Every implementation task needs an issue number before coding. If no issue exists, create or ask for one unless the task is a trivial documentation-only change.
-2. **Create a feature branch** from `main` using `codex/<issue>-<short-slug>` for Codex work, for example `codex/105-authz-assignment-value-cap`. Use `jules/<issue>-<short-slug>` or another agent prefix only when that agent owns the branch.
+2. **Create a feature branch** from `main` using `<agent>/<issue>-<short-slug>`, where `<agent>` is the AI agent that owns the branch: `codex/` for Codex, `claude/` for Claude, `jules/` for Jules, etc. Example: `claude/107-auth-jwt-env-explicit`. Human-only branches may use any conventional prefix (`fix/`, `feat/`, ...).
 3. **Commit to the branch**, never directly to `main` or `stage/*`
 4. **Open a PR** targeting `main`
 5. **CI runs** (typecheck, lint, unit, integration, contract, contract backwards-compat). Add the `deployed-test` label if you want a real-AWS round-trip against dev before merging; see the PR labels table below.
@@ -117,7 +117,7 @@ Use issue numbers everywhere a human scans history:
 
 | Item | Required format | Example |
 |---|---|---|
-| Branch | `codex/<issue>-<short-slug>` | `codex/105-authz-assignment-value-cap` |
+| Branch | `<agent>/<issue>-<short-slug>` | `codex/105-authz-assignment-value-cap`, `claude/107-auth-jwt-env-explicit` |
 | PR title | Conventional Commit title with issue suffix | `security(s-authz): cap assignment scope values (#105)` |
 | Commit subject | Same style as PR title; include the issue suffix | `security(s-authz): cap assignment scope values (#105)` |
 | PR body | Must close or reference the issue | `Closes #105` |
@@ -158,7 +158,7 @@ Implementation prompt:
 Implement issue #<issue> following the approved plan.
 
 Requirements:
-- use branch `codex/<issue>-<short-slug>`
+- use branch `<agent>/<issue>-<short-slug>` (e.g. `codex/...`, `claude/...`)
 - use PR title and commit subject format `<type>(<scope>): <summary> (#<issue>)`
 - keep scope narrow and follow existing project patterns
 - update tests, docs, contracts, README, CLAUDE notes, and Postman when client-facing behavior changes
@@ -208,7 +208,7 @@ Closes #<issue>
 
 ### Legacy branch format
 
-Older branches used `fix/...` or `feat/...`. New GPT-driven implementation work uses `codex/<issue>-<short-slug>` unless the user explicitly requests a different prefix.
+Older branches used `fix/...` or `feat/...`. New AI-agent implementation work uses `<agent>/<issue>-<short-slug>` (`codex/`, `claude/`, ...) unless the user explicitly requests a different prefix.
 
 ### Release notes
 

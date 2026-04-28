@@ -108,6 +108,8 @@ export async function buildStack() {
       STAGE: stage,
       SERVICE_NAME: "s-authz",
       AUTHN_URL: gatewayUrl,
+      JWT_ISSUER: "s-authn",
+      JWT_AUDIENCE: "s-platform",
       AUTHZ_ROLES_TABLE_NAME: authzRolesTable.name,
       AUTHZ_USER_ROLES_TABLE_NAME: authzUserRolesTable.name,
       AUTHZ_GROUP_ROLES_TABLE_NAME: authzGroupRolesTable.name,

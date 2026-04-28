@@ -7,11 +7,11 @@ import { UnauthorizedError } from "../errors/domain-error";
  * Uses `jose.createRemoteJWKSet` which caches the JWKS for 1 hour and
  * handles KID rotation automatically.
  *
- * Configure via env vars:
- *   AUTHN_URL — base URL of s-authn, e.g. https://s-api.smartiqi.com
- *               (JWKS is fetched from ${AUTHN_URL}/authn/auth/jwks)
- *   JWT_ISSUER — expected `iss` claim (default: "s-authn")
- *   JWT_AUDIENCE — expected `aud` claim (default: "s-platform")
+ * Required env vars (all three — no defaults, so signer and verifier
+ * cannot drift apart silently):
+ *   AUTHN_URL — base URL of s-authn (JWKS fetched from `${AUTHN_URL}/authn/auth/jwks`)
+ *   JWT_ISSUER — expected `iss` claim (platform value: `s-authn`)
+ *   JWT_AUDIENCE — expected `aud` claim (platform value: `s-platform`)
  */
 
 let jwks: ReturnType<typeof createRemoteJWKSet> | null = null;
@@ -46,11 +46,19 @@ export function __resetJwksForTests(): void {
   jwks = null;
 }
 
+function requireEnv(name: string): string {
+  const value = process.env[name];
+  if (!value) {
+    throw new Error(`${name} env var not set — required for JWT verification`);
+  }
+  return value;
+}
+
 export async function verifyAccessToken(token: string): Promise<AccessTokenPayload> {
   try {
     const { payload } = await jwtVerify(token, getJwks(), {
-      issuer: process.env.JWT_ISSUER ?? "s-authn",
-      audience: process.env.JWT_AUDIENCE ?? "s-platform",
+      issuer: requireEnv("JWT_ISSUER"),
+      audience: requireEnv("JWT_AUDIENCE"),
     });
 
     if (!payload.sub) {

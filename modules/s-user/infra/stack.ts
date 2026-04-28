@@ -82,6 +82,8 @@ export async function buildStack() {
       SERVICE_NAME: "s-user",
       USER_PROFILES_TABLE_NAME: userProfilesTable.name,
       AUTHN_URL: gatewayUrl,
+      JWT_ISSUER: "s-authn",
+      JWT_AUDIENCE: "s-platform",
       AUTHZ_VIEW_TABLE_NAME: authzViewTableName,
       EVENT_BUS_NAME: eventBusName,
     },
