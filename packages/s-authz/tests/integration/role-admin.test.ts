@@ -502,6 +502,34 @@ describe("s-authz admin flow (integration)", () => {
     expect(res.body.error.code).toBe("VALIDATION_ERROR");
   });
 
+  test("unassigning an over-cap user is allowed when it reduces assignments to the cap", async () => {
+    const adminToken = await jwt.sign({ sub: ADMIN_USER_ID });
+    const USER_ID = "01HXASSIGNCAP0000000000DEL";
+    const roleId = "dummy-removable-overcap-role";
+
+    await seedUserRoleAssignments(USER_ID, [
+      { roleId },
+      ...Array.from({ length: MAX_USER_ROLE_ASSIGNMENTS }, (_, i) => ({
+        roleId: `dummy-delete-recovery-role-${i}`,
+      })),
+    ]);
+
+    const res = await invoke(app, `/authz/admin/users/${USER_ID}/roles/${roleId}`, {
+      method: "DELETE",
+      token: adminToken,
+    });
+
+    expect(res.status).toBe(204);
+
+    const deleted = await getDdbClient().send(
+      new GetCommand({
+        TableName: USER_ROLES_TABLE,
+        Key: { id: `${USER_ID}-assignment-0` },
+      }),
+    );
+    expect(deleted.Item).toBeUndefined();
+  });
+
   test("reassigning an existing role at per-user assignment cap still succeeds", async () => {
     const adminToken = await jwt.sign({ sub: ADMIN_USER_ID });
     const USER_ID = "01HXASSIGNCAP00000000000EX";

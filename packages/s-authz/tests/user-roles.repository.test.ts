@@ -98,3 +98,26 @@ describe("AuthzUserRolesRepository.listByUserBounded", () => {
     ]);
   });
 });
+
+describe("AuthzUserRolesRepository.findByUserAndRole", () => {
+  test("continues scanning pages so over-cap users can delete a target assignment", async () => {
+    const target = { ...assignment(120), roleId: "target-role" };
+    const calls = stubPages([
+      {
+        items: Array.from({ length: MAX_USER_ROLE_ASSIGNMENTS + 1 }, (_, i) => assignment(i)),
+        nextToken: "page-2",
+      },
+      {
+        items: [target],
+      },
+    ]);
+
+    const result = await authzUserRolesRepository.findByUserAndRole("user-1", "target-role");
+
+    expect(result).toEqual(target);
+    expect(calls).toEqual([
+      { limit: MAX_USER_ROLE_ASSIGNMENTS + 1, nextToken: undefined },
+      { limit: MAX_USER_ROLE_ASSIGNMENTS + 1, nextToken: "page-2" },
+    ]);
+  });
+});

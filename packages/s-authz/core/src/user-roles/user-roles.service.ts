@@ -82,10 +82,7 @@ export async function unassignRoleFromUser(params: {
   userId: string;
   roleId: string;
 }): Promise<void> {
-  const lookup = await authzUserRolesRepository.findByUserAndRole(params.userId, params.roleId);
-  assertUserRoleAssignmentCount(lookup.observedCount);
-
-  const existing = lookup.assignment;
+  const existing = await authzUserRolesRepository.findByUserAndRole(params.userId, params.roleId);
   if (!existing) throw new NotFoundError("Role assignment not found");
 
   await authzUserRolesRepository.delete(existing.id);
@@ -99,6 +96,5 @@ export async function unassignRoleFromUser(params: {
 
 export async function listRolesForUser(userId: string): Promise<string[]> {
   const assignments = await authzUserRolesRepository.listByUserBounded(userId);
-  assertUserRoleAssignmentCount(assignments.observedCount);
   return assignments.items.map((e) => e.roleId);
 }

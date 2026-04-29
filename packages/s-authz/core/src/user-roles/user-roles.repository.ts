@@ -11,12 +11,6 @@ export interface BoundedUserRolesResult {
   overLimit: boolean;
 }
 
-export interface BoundedUserRoleLookup {
-  assignment: AuthzUserRole | undefined;
-  observedCount: number;
-  overLimit: boolean;
-}
-
 function tableName(): string {
   const name = process.env.AUTHZ_USER_ROLES_TABLE_NAME;
   if (!name) throw new Error("AUTHZ_USER_ROLES_TABLE_NAME env var not set");
@@ -35,13 +29,19 @@ class AuthzUserRolesRepository extends BaseRepository<AuthzUserRole, AuthzUserRo
     await this.put(entry);
   }
 
-  async findByUserAndRole(userId: string, roleId: string): Promise<BoundedUserRoleLookup> {
-    const result = await this.listByUserBounded(userId);
-    return {
-      assignment: result.items.find((u) => u.roleId === roleId),
-      observedCount: result.observedCount,
-      overLimit: result.overLimit,
-    };
+  async findByUserAndRole(userId: string, roleId: string): Promise<AuthzUserRole | undefined> {
+    let nextToken: string | undefined;
+    do {
+      const res = await this.queryByIndex("ByUserId", "userId", userId, {
+        limit: MAX_USER_ROLE_ASSIGNMENTS + 1,
+        nextToken,
+      });
+      const assignment = res.items.find((u) => u.roleId === roleId);
+      if (assignment) return assignment;
+      nextToken = res.nextToken;
+    } while (nextToken);
+
+    return undefined;
   }
 
   async listByUserBounded(

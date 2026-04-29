@@ -48,7 +48,7 @@ export async function rebuildViewForUser(userId: string): Promise<Permission[]> 
 
   logger.info("🔑 AuthzView rebuilt", {
     userId,
-    assignmentCount: assignments.items.length,
+    assignmentCount: assignments.observedCount,
     permissionCount: permissions.length,
   });
 
