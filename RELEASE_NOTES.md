@@ -5,6 +5,7 @@ Versioning: **CalVer** (`vYYYY.MM.N`). Releases cut on merge to `stage/prod`.
 ## Unreleased
 
 ### Changes
+- **Perf**: Replace per-assignment role lookup in `AuthzView` rebuild with a single deduped `findByIds` batch — eliminates N+1 DynamoDB round-trips that scaled with assignment count. (Issue #108)
 - **Refactor**: Make s-authn rate-limit caps env-configurable (`RATE_LIMIT_REGISTER_PER_MIN`, `RATE_LIMIT_LOGIN_PER_MIN`, `RATE_LIMIT_REFRESH_PER_MIN`). Defaults match the prod-safe values from #121 (5/10/20). `dev` stage now sets higher caps (100/200/200) so the deployed-test journey suite stops exhausting per-IP quotas; `test` and `prod` keep the strict defaults. (Issue #129)
 - **Refactor**: Drop `JWT_ISSUER` / `JWT_AUDIENCE` defaults from `@s/shared/auth` and `s-authn` token signer. Every module Lambda (`s-authz`, `s-building`, `s-user`, `s-group`, `s-authn`) and the module template now sets both env vars explicitly so signer and verifier cannot drift apart silently. Verifier and signer throw if either var is missing — no backward-compat shim. (Issue #107)
 - **Test**: Repair `user-search` and `building` deployed-journey tests after #121 changed `POST /authn/auth/register` to return an empty body — both now register, then login, then decode `sub` from the login token. (Issue #127)
