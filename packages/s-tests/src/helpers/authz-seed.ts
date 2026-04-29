@@ -1,6 +1,11 @@
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
 import { GetParameterCommand, SSMClient } from "@aws-sdk/client-ssm";
-import { DeleteCommand, DynamoDBDocumentClient, PutCommand } from "@aws-sdk/lib-dynamodb";
+import {
+  DeleteCommand,
+  DynamoDBDocumentClient,
+  GetCommand,
+  PutCommand,
+} from "@aws-sdk/lib-dynamodb";
 
 /**
  * Journey-test authz seeder.
@@ -51,11 +56,37 @@ async function authzViewTableName(): Promise<string> {
   return value;
 }
 
+// s-authz subscribes to `user.registered` and asynchronously calls
+// `initViewForUser` → writes `{ userId, permissions: [] }` to AuthzView.
+// If we seed before the handler runs, the handler will overwrite our
+// permissions with empty. So poll until the handler-created entry appears,
+// then put the seed on top. The handler doesn't fire a second time, so
+// the seeded value sticks. (Issue #132.)
+const SEED_WAIT_TIMEOUT_MS = 30_000;
+const SEED_WAIT_INTERVAL_MS = 500;
+
 export async function seedAuthzPermissions(
   userId: string,
   permissions: Permission[],
 ): Promise<void> {
   const tableName = await authzViewTableName();
+
+  const deadline = Date.now() + SEED_WAIT_TIMEOUT_MS;
+  let initialized = false;
+  while (Date.now() < deadline) {
+    const res = await ddb.send(new GetCommand({ TableName: tableName, Key: { userId } }));
+    if (res.Item) {
+      initialized = true;
+      break;
+    }
+    await new Promise((resolve) => setTimeout(resolve, SEED_WAIT_INTERVAL_MS));
+  }
+  if (!initialized) {
+    throw new Error(
+      `seedAuthzPermissions: AuthzView entry for ${userId} did not appear within ${SEED_WAIT_TIMEOUT_MS}ms — has the s-authz user.registered handler stalled?`,
+    );
+  }
+
   await ddb.send(
     new PutCommand({
       TableName: tableName,
