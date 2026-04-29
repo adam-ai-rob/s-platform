@@ -1,8 +1,13 @@
-import { NotFoundError } from "@s/shared/errors";
+import { NotFoundError, ValidationError } from "@s/shared/errors";
 import { logger } from "@s/shared/logger";
 import { getRole } from "../roles/roles.service";
 import { rebuildViewForUser } from "../view/view.service";
-import { createAuthzUserRole, normalizeAssignmentValue } from "./user-roles.entity";
+import {
+  MAX_USER_ROLE_ASSIGNMENTS,
+  assertUserRoleAssignmentCount,
+  createAuthzUserRole,
+  normalizeAssignmentValue,
+} from "./user-roles.entity";
 import { authzUserRolesRepository } from "./user-roles.repository";
 
 /**
@@ -25,7 +30,10 @@ export async function assignRoleToUser(params: {
 }): Promise<void> {
   await getRole(params.roleId);
 
-  const existing = await authzUserRolesRepository.findByUserAndRole(params.userId, params.roleId);
+  const assignments = await authzUserRolesRepository.listByUserBounded(params.userId);
+  assertUserRoleAssignmentCount(assignments.observedCount);
+
+  const existing = assignments.items.find((u) => u.roleId === params.roleId);
 
   if (existing) {
     const existingValues = existing.value ?? [];
@@ -52,6 +60,12 @@ export async function assignRoleToUser(params: {
       addedCount: addedValues.length,
     });
   } else {
+    if (assignments.items.length >= MAX_USER_ROLE_ASSIGNMENTS) {
+      throw new ValidationError(
+        `User can have at most ${MAX_USER_ROLE_ASSIGNMENTS} role assignments`,
+      );
+    }
+
     const entry = createAuthzUserRole(params);
     await authzUserRolesRepository.insert(entry);
     logger.info("🔒 Role assigned", {
@@ -81,6 +95,6 @@ export async function unassignRoleFromUser(params: {
 }
 
 export async function listRolesForUser(userId: string): Promise<string[]> {
-  const entries = await authzUserRolesRepository.listByUser(userId);
-  return entries.map((e) => e.roleId);
+  const assignments = await authzUserRolesRepository.listByUserBounded(userId);
+  return assignments.items.map((e) => e.roleId);
 }

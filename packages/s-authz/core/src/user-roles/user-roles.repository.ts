@@ -1,5 +1,15 @@
 import { BaseRepository } from "@s/shared/ddb";
-import type { AuthzUserRole, AuthzUserRoleKeys } from "./user-roles.entity";
+import {
+  type AuthzUserRole,
+  type AuthzUserRoleKeys,
+  MAX_USER_ROLE_ASSIGNMENTS,
+} from "./user-roles.entity";
+
+export interface BoundedUserRolesResult {
+  items: AuthzUserRole[];
+  observedCount: number;
+  overLimit: boolean;
+}
 
 function tableName(): string {
   const name = process.env.AUTHZ_USER_ROLES_TABLE_NAME;
@@ -20,22 +30,43 @@ class AuthzUserRolesRepository extends BaseRepository<AuthzUserRole, AuthzUserRo
   }
 
   async findByUserAndRole(userId: string, roleId: string): Promise<AuthzUserRole | undefined> {
-    const { items } = await this.queryByIndex("ByUserId", "userId", userId, { limit: 100 });
-    return items.find((u) => u.roleId === roleId);
-  }
-
-  async listByUser(userId: string): Promise<AuthzUserRole[]> {
-    const results: AuthzUserRole[] = [];
     let nextToken: string | undefined;
     do {
       const res = await this.queryByIndex("ByUserId", "userId", userId, {
-        limit: 100,
+        limit: MAX_USER_ROLE_ASSIGNMENTS + 1,
+        nextToken,
+      });
+      const assignment = res.items.find((u) => u.roleId === roleId);
+      if (assignment) return assignment;
+      nextToken = res.nextToken;
+    } while (nextToken);
+
+    return undefined;
+  }
+
+  async listByUserBounded(
+    userId: string,
+    maxItems = MAX_USER_ROLE_ASSIGNMENTS,
+  ): Promise<BoundedUserRolesResult> {
+    const results: AuthzUserRole[] = [];
+    let nextToken: string | undefined;
+    do {
+      const remaining = maxItems + 1 - results.length;
+      if (remaining <= 0) break;
+
+      const res = await this.queryByIndex("ByUserId", "userId", userId, {
+        limit: remaining,
         nextToken,
       });
       results.push(...res.items);
       nextToken = res.nextToken;
-    } while (nextToken);
-    return results;
+    } while (nextToken && results.length <= maxItems);
+
+    return {
+      items: results.slice(0, maxItems),
+      observedCount: results.length,
+      overLimit: results.length > maxItems,
+    };
   }
 }
 

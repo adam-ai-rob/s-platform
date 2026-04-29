@@ -3,6 +3,7 @@ import { ulid } from "ulid";
 
 export const MAX_ASSIGNMENT_VALUE_COUNT = 500;
 export const MAX_ASSIGNMENT_VALUE_JSON_BYTES = 64 * 1024;
+export const MAX_USER_ROLE_ASSIGNMENTS = 100;
 
 /**
  * AuthzUserRole — an individual user ↔ role assignment.
@@ -73,6 +74,14 @@ export function normalizeAssignmentValue(value?: readonly unknown[]): unknown[] 
   }
 
   return unique.length > 0 ? unique : undefined;
+}
+
+export function assertUserRoleAssignmentCount(count: number): void {
+  if (count > MAX_USER_ROLE_ASSIGNMENTS) {
+    throw new ValidationError(
+      `User can have at most ${MAX_USER_ROLE_ASSIGNMENTS} role assignments`,
+    );
+  }
 }
 
 /**

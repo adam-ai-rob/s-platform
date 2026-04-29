@@ -1,8 +1,9 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
-import { GetCommand } from "@aws-sdk/lib-dynamodb";
+import { GetCommand, PutCommand } from "@aws-sdk/lib-dynamodb";
 import {
   MAX_ASSIGNMENT_VALUE_COUNT,
   MAX_ASSIGNMENT_VALUE_JSON_BYTES,
+  MAX_USER_ROLE_ASSIGNMENTS,
 } from "@s-authz/core/user-roles/user-roles.entity";
 import { getDdbClient } from "@s/shared/ddb";
 import {
@@ -25,6 +26,29 @@ const ADMIN_USER_ID = "01HXADMIN00000000000000000A";
 const TARGET_USER_ID = "01HXTARGET0000000000000000T";
 
 type ErrorBody = { error: { code: string; message: string; details: unknown } };
+
+async function seedUserRoleAssignments(
+  userId: string,
+  assignments: Array<{ roleId: string; value?: unknown[] }>,
+): Promise<void> {
+  await Promise.all(
+    assignments.map((assignment, index) =>
+      getDdbClient().send(
+        new PutCommand({
+          TableName: USER_ROLES_TABLE,
+          Item: {
+            id: `${userId}-assignment-${index}`,
+            userId,
+            roleId: assignment.roleId,
+            ...(assignment.value ? { value: assignment.value } : {}),
+            createdAt: "2026-04-29T00:00:00.000Z",
+            createdBy: ADMIN_USER_ID,
+          },
+        }),
+      ),
+    ),
+  );
+}
 
 let dynamo: LocalDynamo;
 let jwt: JwtStub;
@@ -445,6 +469,118 @@ describe("s-authz admin flow (integration)", () => {
     const superadmin = perms.find((p) => p.id === "building_superadmin");
     expect(superadmin).toBeDefined();
     expect(superadmin?.value).toBeUndefined();
+  });
+
+  test("new assignment over per-user assignment cap → 400", async () => {
+    const adminToken = await jwt.sign({ sub: ADMIN_USER_ID });
+    const USER_ID = "01HXASSIGNCAP00000000000100";
+
+    await seedUserRoleAssignments(
+      USER_ID,
+      Array.from({ length: MAX_USER_ROLE_ASSIGNMENTS }, (_, i) => ({
+        roleId: `dummy-role-${i}`,
+      })),
+    );
+
+    const createRes = await invoke<{ data: { id: string } }>(app, "/authz/admin/roles", {
+      method: "POST",
+      token: adminToken,
+      body: {
+        name: "assignment-cap-new-role-test",
+        permissions: [{ id: "assignment_cap_extra" }],
+      },
+    });
+    expect(createRes.status).toBe(201);
+
+    const res = await invoke<ErrorBody>(
+      app,
+      `/authz/admin/users/${USER_ID}/roles/${createRes.body.data.id}`,
+      { method: "POST", token: adminToken },
+    );
+
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe("VALIDATION_ERROR");
+  });
+
+  test("unassigning an over-cap user is allowed when it reduces assignments to the cap", async () => {
+    const adminToken = await jwt.sign({ sub: ADMIN_USER_ID });
+    const USER_ID = "01HXASSIGNCAP0000000000DEL";
+    const roleId = "dummy-removable-overcap-role";
+
+    await seedUserRoleAssignments(USER_ID, [
+      { roleId },
+      ...Array.from({ length: MAX_USER_ROLE_ASSIGNMENTS }, (_, i) => ({
+        roleId: `dummy-delete-recovery-role-${i}`,
+      })),
+    ]);
+
+    const res = await invoke(app, `/authz/admin/users/${USER_ID}/roles/${roleId}`, {
+      method: "DELETE",
+      token: adminToken,
+    });
+
+    expect(res.status).toBe(204);
+
+    const deleted = await getDdbClient().send(
+      new GetCommand({
+        TableName: USER_ROLES_TABLE,
+        Key: { id: `${USER_ID}-assignment-0` },
+      }),
+    );
+    expect(deleted.Item).toBeUndefined();
+  });
+
+  test("reassigning an existing role at per-user assignment cap still succeeds", async () => {
+    const adminToken = await jwt.sign({ sub: ADMIN_USER_ID });
+    const USER_ID = "01HXASSIGNCAP00000000000EX";
+
+    const createRes = await invoke<{ data: { id: string } }>(app, "/authz/admin/roles", {
+      method: "POST",
+      token: adminToken,
+      body: {
+        name: "assignment-cap-existing-role-test",
+        permissions: [{ id: "assignment_cap_scoped", value: [] }],
+      },
+    });
+    expect(createRes.status).toBe(201);
+    const roleId = createRes.body.data.id;
+
+    await seedUserRoleAssignments(USER_ID, [
+      { roleId, value: ["scope-old"] },
+      ...Array.from({ length: MAX_USER_ROLE_ASSIGNMENTS - 1 }, (_, i) => ({
+        roleId: `dummy-existing-role-${i}`,
+      })),
+    ]);
+
+    const res = await invoke(app, `/authz/admin/users/${USER_ID}/roles/${roleId}`, {
+      method: "POST",
+      token: adminToken,
+      body: { value: ["scope-new"] },
+    });
+    expect(res.status).toBe(204);
+
+    const viewRow = await getDdbClient().send(
+      new GetCommand({ TableName: AUTHZ_VIEW_TABLE, Key: { userId: USER_ID } }),
+    );
+    const perms = (viewRow.Item?.permissions ?? []) as { id: string; value?: unknown[] }[];
+    const scoped = perms.find((p) => p.id === "assignment_cap_scoped");
+    expect(new Set(scoped?.value)).toEqual(new Set(["scope-old", "scope-new"]));
+  });
+
+  test("rebuildViewForUser fails loudly when stored assignments exceed cap", async () => {
+    const USER_ID = "01HXASSIGNCAP00000000000101";
+    const { rebuildViewForUser } = await import("@s-authz/core/view/view.service");
+
+    await seedUserRoleAssignments(
+      USER_ID,
+      Array.from({ length: MAX_USER_ROLE_ASSIGNMENTS + 1 }, (_, i) => ({
+        roleId: `dummy-overcap-role-${i}`,
+      })),
+    );
+
+    await expect(rebuildViewForUser(USER_ID)).rejects.toThrow(
+      `User can have at most ${MAX_USER_ROLE_ASSIGNMENTS} role assignments`,
+    );
   });
 
   test("GET /user/me/permissions reflects seeded view", async () => {
