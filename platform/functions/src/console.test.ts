@@ -22,12 +22,18 @@ describe("platform console", () => {
 
     expect(html).toContain("swagger-ui-dist@5.17.14/swagger-ui.css");
     expect(html).toContain("swagger-ui-dist@5.17.14/swagger-ui-bundle.js");
+    expect(html).toContain("swagger-ui-dist@5.17.14/swagger-ui-standalone-preset.js");
     expect(html).toContain(
       'integrity="sha384-wxLW6kwyHktdDGr6Pv1zgm/VGJh99lfUbzSn6HNHBENZlCN7W602k9VkGdxuFvPn"',
     );
     expect(html).toContain(
       'integrity="sha384-wmyclcVGX/WhUkdkATwhaK1X1JtiNrr2EoYJ+diV3vj4v6OC5yCeSu+yW13SYJep"',
     );
+    expect(html).toContain(
+      'integrity="sha384-2YH8WDRaj7V2OqU/trsmzSagmk/E2SutiCsGkdgoQwC9pNUJV1u/141DHB6jgs8t"',
+    );
+    expect(html).toContain("SwaggerUIStandalonePreset");
+    expect(html).toContain('layout: "StandaloneLayout"');
   });
 
   test("derives the primary OpenAPI spec from the registry", () => {
