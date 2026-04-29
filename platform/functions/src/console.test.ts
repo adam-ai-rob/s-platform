@@ -43,6 +43,13 @@ describe("platform console", () => {
     expect(html).not.toContain('"urls.primaryName": "authn - Authentication"');
   });
 
+  test("leaves the Swagger UI topbar visible for module selection", () => {
+    const html = renderConsolePage();
+
+    expect(html).toContain('class="console-topbar"');
+    expect(html).not.toContain(".swagger-ui .topbar");
+  });
+
   test("serves the console as hardened uncached HTML", async () => {
     const response = await handler({ requestContext: { http: { method: "GET" } } });
 
