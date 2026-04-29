@@ -3,10 +3,14 @@ import { platformModules } from "./module-registry";
 const swaggerCssUrl = "https://cdn.jsdelivr.net/npm/swagger-ui-dist@5.17.14/swagger-ui.css";
 const swaggerBundleUrl =
   "https://cdn.jsdelivr.net/npm/swagger-ui-dist@5.17.14/swagger-ui-bundle.js";
+const swaggerStandalonePresetUrl =
+  "https://cdn.jsdelivr.net/npm/swagger-ui-dist@5.17.14/swagger-ui-standalone-preset.js";
 const swaggerCssIntegrity =
   "sha384-wxLW6kwyHktdDGr6Pv1zgm/VGJh99lfUbzSn6HNHBENZlCN7W602k9VkGdxuFvPn";
 const swaggerBundleIntegrity =
   "sha384-wmyclcVGX/WhUkdkATwhaK1X1JtiNrr2EoYJ+diV3vj4v6OC5yCeSu+yW13SYJep";
+const swaggerStandalonePresetIntegrity =
+  "sha384-2YH8WDRaj7V2OqU/trsmzSagmk/E2SutiCsGkdgoQwC9pNUJV1u/141DHB6jgs8t";
 
 export function renderConsolePage(): string {
   const modulesJson = JSON.stringify(platformModules);
@@ -334,6 +338,11 @@ export function renderConsolePage(): string {
       integrity="${swaggerBundleIntegrity}"
       crossorigin="anonymous"
     ></script>
+    <script
+      src="${swaggerStandalonePresetUrl}"
+      integrity="${swaggerStandalonePresetIntegrity}"
+      crossorigin="anonymous"
+    ></script>
     <script>
       const modules = ${modulesJson};
       const sectionIds = ["health", "docs", "info"];
@@ -438,6 +447,9 @@ export function renderConsolePage(): string {
             name: module.id + " - " + module.name,
             url: module.basePath + "/openapi.json",
           })),
+          presets: [SwaggerUIBundle.presets.apis, SwaggerUIStandalonePreset],
+          plugins: [SwaggerUIBundle.plugins.DownloadUrl],
+          layout: "StandaloneLayout",
           deepLinking: true,
           persistAuthorization: false,
           validatorUrl: null,
