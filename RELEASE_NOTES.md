@@ -5,6 +5,7 @@ Versioning: **CalVer** (`vYYYY.MM.N`). Releases cut on merge to `stage/prod`.
 ## Unreleased
 
 ### Changes
+- **Feature**: Add a platform-owned `/platform/status` console that consolidates module health, Swagger/OpenAPI docs, and authenticated `/info` metadata without duplicating module contracts. (Issue #137)
 - **Perf**: Bound s-authz per-user role assignment reads with a hard 100-assignment cap. New assignments over the cap return `400 VALIDATION_ERROR`, existing reassignments at the cap still work, and AuthzView rebuilds fail loudly instead of silently truncating permissions. (Issue #109)
 - **Test**: Make `seedAuthzPermissions` race-safe — wait for the s-authz `user.registered` handler to materialize the initial empty `AuthzView` entry before writing the seed, so the handler can't overwrite the seed afterward. Fixes flaky `user-search.journey` failures when the test ran faster than the handler. (Issue #132)
 - **Perf**: Replace per-assignment role lookup in `AuthzView` rebuild with a single deduped `findByIds` batch — eliminates N+1 DynamoDB round-trips that scaled with assignment count. (Issue #108)

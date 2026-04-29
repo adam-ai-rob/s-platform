@@ -3,6 +3,6 @@
   "compilerOptions": {
     "types": ["node", "sst"]
   },
-  "include": ["sst.config.ts", "infra/**/*.ts"],
+  "include": ["sst.config.ts", "infra/**/*.ts", "functions/**/*.ts"],
   "exclude": ["node_modules", ".sst"]
 }
