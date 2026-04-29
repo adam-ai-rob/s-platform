@@ -65,7 +65,7 @@ export function renderConsolePage(): string {
         margin: 0 auto;
       }
 
-      .topbar {
+      .console-topbar {
         display: flex;
         align-items: center;
         justify-content: space-between;
@@ -256,12 +256,8 @@ export function renderConsolePage(): string {
         min-height: 640px;
       }
 
-      .swagger-ui .topbar {
-        display: none;
-      }
-
       @media (max-width: 700px) {
-        .topbar {
+        .console-topbar {
           align-items: flex-start;
           flex-direction: column;
         }
@@ -281,7 +277,7 @@ export function renderConsolePage(): string {
   <body>
     <header>
       <div class="wrap">
-        <div class="topbar">
+        <div class="console-topbar">
           <div>
             <h1>s-platform console</h1>
             <div class="stage" id="origin-label"></div>
