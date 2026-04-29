@@ -141,7 +141,7 @@
             }
           }
         },
-        "description": "Optional per-assignment scope. The stored unique scope is capped at 500 entries and 65536 serialized bytes."
+        "description": "Optional per-assignment scope. Each user can have at most 100 role assignments. The stored unique scope is capped at 500 entries and 65536 serialized bytes."
       }
     },
     "parameters": {}
@@ -306,7 +306,7 @@
           }
         ],
         "summary": "Assign a role to a user (optionally with a scope value)",
-        "description": "Assigns `roleId` to `userId`. The optional `value` array is the per-assignment scope for scope-requiring permissions (for example building ids for the `building-admin` role). Idempotent: re-assigning the same role unions the incoming `value` with any existing scope on the row — no 409. The stored unique scope is capped at 500 entries and 65536 serialized bytes.",
+        "description": "Assigns `roleId` to `userId`. The optional `value` array is the per-assignment scope for scope-requiring permissions (for example building ids for the `building-admin` role). Idempotent: re-assigning the same role unions the incoming `value` with any existing scope on the row — no 409. Each user can have at most 100 role assignments. The stored unique scope is capped at 500 entries and 65536 serialized bytes.",
         "parameters": [
           {
             "schema": {
@@ -340,7 +340,7 @@
             "description": "Assigned (or scope extended)"
           },
           "400": {
-            "description": "Invalid request body or assignment scope exceeds limits"
+            "description": "Invalid request body, assignment count cap, or scope cap exceeded"
           },
           "401": {
             "description": "Missing or invalid bearer token"

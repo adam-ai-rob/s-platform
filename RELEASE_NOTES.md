@@ -5,6 +5,7 @@ Versioning: **CalVer** (`vYYYY.MM.N`). Releases cut on merge to `stage/prod`.
 ## Unreleased
 
 ### Changes
+- **Perf**: Bound s-authz per-user role assignment reads with a hard 100-assignment cap. New assignments over the cap return `400 VALIDATION_ERROR`, existing reassignments at the cap still work, and AuthzView rebuilds fail loudly instead of silently truncating permissions. (Issue #109)
 - **Test**: Make `seedAuthzPermissions` race-safe — wait for the s-authz `user.registered` handler to materialize the initial empty `AuthzView` entry before writing the seed, so the handler can't overwrite the seed afterward. Fixes flaky `user-search.journey` failures when the test ran faster than the handler. (Issue #132)
 - **Perf**: Replace per-assignment role lookup in `AuthzView` rebuild with a single deduped `findByIds` batch — eliminates N+1 DynamoDB round-trips that scaled with assignment count. (Issue #108)
 - **Refactor**: Make s-authn rate-limit caps env-configurable (`RATE_LIMIT_REGISTER_PER_MIN`, `RATE_LIMIT_LOGIN_PER_MIN`, `RATE_LIMIT_REFRESH_PER_MIN`). Defaults match the prod-safe values from #121 (5/10/20). `dev` stage now sets higher caps (100/200/200) so the deployed-test journey suite stops exhausting per-IP quotas; `test` and `prod` keep the strict defaults. (Issue #129)

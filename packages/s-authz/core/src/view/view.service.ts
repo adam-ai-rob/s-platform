@@ -1,7 +1,7 @@
 import { logger } from "@s/shared/logger";
 import type { Permission } from "@s/shared/types";
 import { authzRolesRepository } from "../roles/roles.repository";
-import type { AuthzUserRole } from "../user-roles/user-roles.entity";
+import { type AuthzUserRole, assertUserRoleAssignmentCount } from "../user-roles/user-roles.entity";
 import { authzUserRolesRepository } from "../user-roles/user-roles.repository";
 import type { AuthzViewEntry } from "./view.entity";
 import { authzViewRepository } from "./view.repository";
@@ -33,8 +33,10 @@ import { authzViewRepository } from "./view.repository";
  *     permission id.
  */
 export async function rebuildViewForUser(userId: string): Promise<Permission[]> {
-  const assignments = await authzUserRolesRepository.listByUser(userId);
-  const permissions = await resolvePermissionsForAssignments(assignments);
+  const assignments = await authzUserRolesRepository.listByUserBounded(userId);
+  assertUserRoleAssignmentCount(assignments.observedCount);
+
+  const permissions = await resolvePermissionsForAssignments(assignments.items);
 
   const entry: AuthzViewEntry = {
     userId,
@@ -46,7 +48,7 @@ export async function rebuildViewForUser(userId: string): Promise<Permission[]> 
 
   logger.info("🔑 AuthzView rebuilt", {
     userId,
-    assignmentCount: assignments.length,
+    assignmentCount: assignments.items.length,
     permissionCount: permissions.length,
   });
 
