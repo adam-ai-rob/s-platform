@@ -65,9 +65,13 @@ export async function resolvePermissionsForAssignments(
   assignments: AuthzUserRole[],
 ): Promise<Permission[]> {
   const byId = new Map<string, Permission>();
+  if (assignments.length === 0) return [];
+
+  // Single deduped batch fetch instead of one round-trip per assignment.
+  const rolesById = await authzRolesRepository.findByIds(assignments.map((a) => a.roleId));
 
   for (const assignment of assignments) {
-    const role = await authzRolesRepository.findById(assignment.roleId);
+    const role = rolesById.get(assignment.roleId);
     if (!role) continue;
 
     for (const templatePerm of role.permissions) {
