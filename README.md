@@ -16,6 +16,21 @@ Serverless, event-driven, DDD-based microservice platform on AWS. Monorepo conta
 | **Stages** | `dev`, `test`, `prod`, plus personal developer stages |
 | **Versioning** | CalVer `vYYYY.MM.N` |
 
+## Platform Console
+
+Each deployed stage exposes `GET /platform/status`, a consolidated inspection console for
+module health, Swagger/OpenAPI docs, and authenticated `/info` metadata.
+
+| Stage | URL |
+|---|---|
+| dev | `https://dev.s-api.smartiqi.com/platform/status` |
+| test | `https://test.s-api.smartiqi.com/platform/status` |
+| prod | `https://s-api.smartiqi.com/platform/status` |
+
+The console reads each module's existing `/health`, `/openapi.json`, and `/info` endpoints.
+It does not replace CloudWatch, deployment checks, or smoke tests, and `/info` remains
+protected by bearer-token authentication.
+
 ## Getting Started
 
 **Prerequisites:** Bun 1.1+, Node 22+, AWS CLI v2 with `itinn-bot` profile configured (SSO).

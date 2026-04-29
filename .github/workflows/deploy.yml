@@ -170,6 +170,6 @@ jobs:
         run: bun install --frozen-lockfile
         timeout-minutes: 5
       - name: Smoke tests
-        run: STAGE=$STAGE bun run test:e2e || true
+        run: RUN_DEPLOYED_SMOKE=1 STAGE=$STAGE bun run test:e2e || true
         # Non-blocking until the journey is tuned for cold-start latency
         # on fresh stages (see docs/runbooks/fresh-stage-bootstrap.md).

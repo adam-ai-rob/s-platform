@@ -42,7 +42,10 @@ export default $config({
     const bus = await import("./infra/event-bus");
     const alarms = await import("./infra/alarms");
     const gateway = await import("./infra/gateway");
+    const console = await import("./infra/console");
     const outputs = await import("./infra/ssm-outputs");
+
+    const consoleOutputs = await console.attachPlatformConsole(gateway.gateway);
 
     outputs.publish({
       gateway: gateway.gateway,
@@ -60,6 +63,7 @@ export default $config({
       jwtSigningKeyArn: kms.jwtSigningKey.arn,
       jwtSigningKeyAlias: kms.jwtSigningKeyAlias.name,
       alarmsTopicArn: alarms.platformAlarmsTopic.arn,
+      platformConsoleUrl: consoleOutputs.platformConsoleUrl,
     };
   },
 });
