@@ -42,10 +42,10 @@ export default $config({
     const bus = await import("./infra/event-bus");
     const alarms = await import("./infra/alarms");
     const gateway = await import("./infra/gateway");
-    const console = await import("./infra/console");
+    const consoleInfra = await import("./infra/console");
     const outputs = await import("./infra/ssm-outputs");
 
-    const consoleOutputs = await console.attachPlatformConsole(gateway.gateway);
+    const consoleOutputs = await consoleInfra.attachPlatformConsole(gateway.gateway);
 
     outputs.publish({
       gateway: gateway.gateway,

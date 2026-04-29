@@ -29,11 +29,17 @@ describe("platform smoke", () => {
     expect(response.status).toBe(200);
     expect(response.headers.get("content-type")).toContain("text/html");
     expect(body).toContain("s-platform console");
-    expect(body).toContain('"basePath":"/authn"');
-    expect(body).toContain('"basePath":"/building"');
+    expect(body).toContain('"id":"authn"');
+    expect(body).toContain('"id":"building"');
     expect(body).toContain('module.basePath + "/health"');
     expect(body).toContain('module.basePath + "/openapi.json"');
     expect(body).toContain('module.basePath + "/info"');
+  });
+
+  deployedSmokeTest("module info endpoints require bearer token #smoke", async () => {
+    const response = await fetch(new URL("/authn/info", client.baseUrl));
+
+    expect(response.status).toBe(401);
   });
 
   deployedSmokeTest("module health endpoints return ok #smoke", async () => {

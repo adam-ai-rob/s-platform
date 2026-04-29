@@ -17,12 +17,37 @@ describe("platform console", () => {
     expect(html).toContain('module.basePath + "/info"');
   });
 
-  test("serves the console as uncached HTML", async () => {
+  test("loads pinned Swagger UI assets with integrity checks", () => {
+    const html = renderConsolePage();
+
+    expect(html).toContain("swagger-ui-dist@5.17.14/swagger-ui.css");
+    expect(html).toContain("swagger-ui-dist@5.17.14/swagger-ui-bundle.js");
+    expect(html).toContain(
+      'integrity="sha384-wxLW6kwyHktdDGr6Pv1zgm/VGJh99lfUbzSn6HNHBENZlCN7W602k9VkGdxuFvPn"',
+    );
+    expect(html).toContain(
+      'integrity="sha384-wmyclcVGX/WhUkdkATwhaK1X1JtiNrr2EoYJ+diV3vj4v6OC5yCeSu+yW13SYJep"',
+    );
+  });
+
+  test("derives the primary OpenAPI spec from the registry", () => {
+    const html = renderConsolePage();
+
+    expect(html).toContain("const primaryModule = modules[0]");
+    expect(html).not.toContain('"urls.primaryName": "authn - Authentication"');
+  });
+
+  test("serves the console as hardened uncached HTML", async () => {
     const response = await handler({ requestContext: { http: { method: "GET" } } });
 
     expect(response.statusCode).toBe(200);
     expect(response.headers["content-type"]).toBe("text/html; charset=UTF-8");
     expect(response.headers["cache-control"]).toBe("no-store");
+    expect(response.headers["content-security-policy"]).toContain("connect-src 'self'");
+    expect(response.headers["content-security-policy"]).toContain("frame-ancestors 'none'");
+    expect(response.headers["referrer-policy"]).toBe("same-origin");
+    expect(response.headers["x-content-type-options"]).toBe("nosniff");
+    expect(response.headers["x-frame-options"]).toBe("DENY");
     expect(response.body).toContain("s-platform console");
   });
 
@@ -30,6 +55,7 @@ describe("platform console", () => {
     const response = await handler({ requestContext: { http: { method: "POST" } } });
 
     expect(response.statusCode).toBe(405);
+    expect(response.headers["content-security-policy"]).toContain("default-src 'self'");
     expect(JSON.parse(response.body)).toEqual({
       error: { code: "METHOD_NOT_ALLOWED", message: "Method not allowed" },
     });

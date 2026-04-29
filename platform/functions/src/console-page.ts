@@ -1,7 +1,12 @@
 import { platformModules } from "./module-registry";
 
-const swaggerCssUrl = "https://cdn.jsdelivr.net/npm/swagger-ui-dist/swagger-ui.css";
-const swaggerBundleUrl = "https://cdn.jsdelivr.net/npm/swagger-ui-dist/swagger-ui-bundle.js";
+const swaggerCssUrl = "https://cdn.jsdelivr.net/npm/swagger-ui-dist@5.17.14/swagger-ui.css";
+const swaggerBundleUrl =
+  "https://cdn.jsdelivr.net/npm/swagger-ui-dist@5.17.14/swagger-ui-bundle.js";
+const swaggerCssIntegrity =
+  "sha384-wxLW6kwyHktdDGr6Pv1zgm/VGJh99lfUbzSn6HNHBENZlCN7W602k9VkGdxuFvPn";
+const swaggerBundleIntegrity =
+  "sha384-wmyclcVGX/WhUkdkATwhaK1X1JtiNrr2EoYJ+diV3vj4v6OC5yCeSu+yW13SYJep";
 
 export function renderConsolePage(): string {
   const modulesJson = JSON.stringify(platformModules);
@@ -12,7 +17,12 @@ export function renderConsolePage(): string {
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>s-platform console</title>
-    <link rel="stylesheet" href="${swaggerCssUrl}" />
+    <link
+      rel="stylesheet"
+      href="${swaggerCssUrl}"
+      integrity="${swaggerCssIntegrity}"
+      crossorigin="anonymous"
+    />
     <style>
       :root {
         color-scheme: light;
@@ -319,7 +329,11 @@ export function renderConsolePage(): string {
       </section>
     </main>
 
-    <script src="${swaggerBundleUrl}" crossorigin="anonymous"></script>
+    <script
+      src="${swaggerBundleUrl}"
+      integrity="${swaggerBundleIntegrity}"
+      crossorigin="anonymous"
+    ></script>
     <script>
       const modules = ${modulesJson};
       const sectionIds = ["health", "docs", "info"];
@@ -414,16 +428,22 @@ export function renderConsolePage(): string {
       function loadDocs() {
         if (swaggerLoaded) return;
         swaggerLoaded = true;
-        window.ui = SwaggerUIBundle({
+        const primaryModule = modules[0];
+        const primarySpecName = primaryModule
+          ? primaryModule.id + " - " + primaryModule.name
+          : undefined;
+        const swaggerConfig = {
           dom_id: "#swagger-ui",
           urls: modules.map((module) => ({
             name: module.id + " - " + module.name,
             url: module.basePath + "/openapi.json",
           })),
-          "urls.primaryName": "authn - Authentication",
           deepLinking: true,
           persistAuthorization: false,
-        });
+          validatorUrl: null,
+        };
+        if (primarySpecName) swaggerConfig["urls.primaryName"] = primarySpecName;
+        window.ui = SwaggerUIBundle(swaggerConfig);
       }
 
       async function loadInfo() {
