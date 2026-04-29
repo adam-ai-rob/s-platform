@@ -1,12 +1,15 @@
 import { BatchGetCommand } from "@aws-sdk/lib-dynamodb";
 import { BaseRepository, type PaginatedResult, getDdbClient } from "@s/shared/ddb";
+import { ServiceUnavailableError } from "@s/shared/errors";
 import type { AuthzRole, AuthzRoleKeys } from "./roles.entity";
 
 // DynamoDB BatchGetItem caps at 100 keys per request.
 const BATCH_GET_CHUNK_SIZE = 100;
-// Bounded retry for UnprocessedKeys (throttling). Throttling is rare for
-// our workload; an exponential backoff would be overkill.
+// Bounded retry for UnprocessedKeys (throttling response). Five attempts
+// with jittered exponential backoff (~100, 200, 400, 800ms) is enough for
+// transient throttle bursts without making the throttle worse.
 const BATCH_GET_MAX_ATTEMPTS = 5;
+const BATCH_GET_BACKOFF_BASE_MS = 100;
 
 function tableName(): string {
   const name = process.env.AUTHZ_ROLES_TABLE_NAME;
@@ -32,8 +35,9 @@ class AuthzRolesRepository extends BaseRepository<AuthzRole, AuthzRoleKeys> {
    * same role (or many distinct roles). Missing ids are absent from the
    * returned map.
    *
-   * Throws if `UnprocessedKeys` survives `BATCH_GET_MAX_ATTEMPTS` retries —
-   * silently dropping roles would corrupt the materialized view.
+   * Throws `ServiceUnavailableError` (503) if `UnprocessedKeys` survives
+   * `BATCH_GET_MAX_ATTEMPTS` retries — silently dropping roles would
+   * materialize a stale `AuthzView` and quietly degrade authorization.
    */
   async findByIds(ids: readonly string[]): Promise<Map<string, AuthzRole>> {
     const out = new Map<string, AuthzRole>();
@@ -45,6 +49,13 @@ class AuthzRolesRepository extends BaseRepository<AuthzRole, AuthzRoleKeys> {
       let keys: { id: string }[] = unique.slice(i, i + BATCH_GET_CHUNK_SIZE).map((id) => ({ id }));
 
       for (let attempt = 0; attempt < BATCH_GET_MAX_ATTEMPTS && keys.length > 0; attempt++) {
+        if (attempt > 0) {
+          // Jittered exponential backoff between retries — immediate retries
+          // make active throttling worse.
+          const delayMs = BATCH_GET_BACKOFF_BASE_MS * 2 ** (attempt - 1) + Math.random() * 50;
+          await new Promise((resolve) => setTimeout(resolve, delayMs));
+        }
+
         const res = await getDdbClient().send(
           new BatchGetCommand({
             RequestItems: { [this.tableName]: { Keys: keys } },
@@ -54,12 +65,26 @@ class AuthzRolesRepository extends BaseRepository<AuthzRole, AuthzRoleKeys> {
           const role = item as AuthzRole;
           out.set(role.id, role);
         }
-        keys = (res.UnprocessedKeys?.[this.tableName]?.Keys as { id: string }[] | undefined) ?? [];
+
+        // The SDK types `Keys` as Record<string, NativeAttributeValue>[].
+        // We know our schema: `id` is a string PK. Validate at the boundary
+        // rather than `as`-casting the SDK type away — surfaces SDK shape
+        // changes immediately rather than silently feeding garbage back in.
+        const unprocessed = res.UnprocessedKeys?.[this.tableName]?.Keys ?? [];
+        keys = unprocessed.map((k) => {
+          const id = k.id;
+          if (typeof id !== "string") {
+            throw new Error(
+              "AuthzRolesRepository.findByIds: malformed UnprocessedKey, expected string id",
+            );
+          }
+          return { id };
+        });
       }
 
       if (keys.length > 0) {
-        throw new Error(
-          `AuthzRolesRepository.findByIds: ${keys.length} unprocessed keys after ${BATCH_GET_MAX_ATTEMPTS} attempts`,
+        throw new ServiceUnavailableError(
+          `Authz role lookup failed after ${BATCH_GET_MAX_ATTEMPTS} BatchGetItem retries (${keys.length} unprocessed)`,
         );
       }
     }
